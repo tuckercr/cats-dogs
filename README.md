@@ -49,4 +49,5 @@ The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not co
 - `WeatherUnitsTest` - Weather unit geolocation test (used on Android 13 and earlier)
 
 ## Demo Video
+Note: this video is too large to view on GitHub so you'll need to download it as Raw)
 [![Watch the Demo Video](./screen_recording/thumbnail.png)](./screen_recording/cats_and_dogs_demo_vid.mp4)
