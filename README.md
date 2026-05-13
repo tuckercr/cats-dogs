@@ -17,7 +17,7 @@ The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not co
 ## Application flow
 
 1. On launch a branded splash screen is displayed
-2. The app reads `DataStore` preferences to check if the welcome screen was oreviously shown.
+2. The app reads `DataStore` preferences to check if the welcome screen was previously shown.
 2. A welcome screen appears.  User advances by clicking the button or automatically after 5 seconds.
 3. The user enters a city and clicks a button.  The UI shows conditions, OpenWeather icon (Coil), temperature, “feels like”, humidity and wind speed.
 4. As a bonus I added **OpenWeatherMap Geocoding** suggestions. If the user picks a suggestion, **latitude/longitude** are sent so the result matches that place.
@@ -31,17 +31,17 @@ The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not co
 - **UI** - Compose & Material 3
 - **DI** - Hilt (Repositories and View Model are injected)
 - **Navigation** - Compose Navigation was used
-- **Async** - Coroutines with `viewModelScope` are used with Retrofit suspend calls
+- **Async** - Coroutines with `viewModelScope` are used with Retrofit `suspend` calls
 - **Networking** - Retrofit, OkHttp and Kotlinx Serialization
 - **Image Download** - used a standard Coil `AsyncImage`
 - **Data Storage** - used `DataStore` preferences to store the welcome flag and last resolved city name
-- **API** - Used OpenWeatherMap.  Considered using Accuweather since I recently worked on a widget powered by Accuweather, but decided on a more open API as per the specs.
+- **API** - Used OpenWeatherMap.  Considered using Accuweather since I recently worked on a widget powered by Accuweather, but decided on a more open API as per the spec.
 
 ## Assumptions/Special Notes
 
 - Forecast comes from the free 5-day endpointm, with the closest sample to noon chosen.
 - On Android 14+ the temperature unit is based on user system settings, otherwise it falls back to basic geolocation based on the locale.  A real app would allow the user to choose.
-- The welcome screen is marked seen when the user taps **Get started** or when the **5-second** auto-dismiss runs; a process kill mid-welcome may show it once more.
+- The welcome screen is marked seen when the user taps **Get started** or when the **5-second** auto-dismiss runs - if the app is killed mid-welcome will show again.  The timer is a strange UX pattern that I would not recommend.  A real app would likely have some TOS/Privacy Policies that the user must accept.
 
 ## Tests
 - `ForecastAggregatorTest` - Forecast aggregation logic
