@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Main app theme is configured in Compose -->
     <style name="Theme.CatsDogs" parent="android:Theme.Material.Light.NoActionBar" />
@@ -10,6 +10,8 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
         <item name="windowSplashScreenAnimationDuration">400</item>
         <item name="postSplashScreenTheme">@style/Theme.CatsDogs</item>
-        <item name="android:windowSplashScreenBrandingImage">@drawable/ic_brand_image</item>
+        <item name="android:windowSplashScreenBrandingImage" tools:targetApi="31">
+            @drawable/ic_brand_image
+        </item>
     </style>
 </resources>
