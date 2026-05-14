@@ -219,16 +219,17 @@ class WeatherViewModel @Inject constructor(
         _forecast.update { if (it is LoadingState.Error) LoadingState.Idle else it }
     }
 
-    private fun resolveUserMessage(error: Throwable): String = when (error.message) {
-        "missing_api_key" ->
-            "Weather API key is missing. Add OWM_API_KEY to local.properties and rebuild."
-        "empty_query" ->
-            "Please enter a city name."
-        "network" ->
-            "We could not reach the weather service. Check your connection and try again."
-        else -> {
-            val raw = error.message?.takeIf { it.isNotBlank() }
-            raw ?: "Weather data is not available right now. Please try again later."
+    private fun resolveUserMessage(error: Throwable): String =
+        when (error.message) {
+            "missing_api_key" ->
+                "Weather API key is missing. Add OWM_API_KEY to local.properties and rebuild."
+            "empty_query" ->
+                "Please enter a city name."
+            "network" ->
+                "We could not reach the weather service. Check your connection and try again."
+            else -> {
+                val raw = error.message?.takeIf { it.isNotBlank() }
+                raw ?: "Weather data is not available right now. Please try again later."
+            }
         }
-    }
 }

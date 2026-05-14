@@ -18,9 +18,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -32,8 +32,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -235,7 +235,7 @@ private fun CurrentWeatherScreenSuggestionsPreview() {
             city = "Lon",
             citySuggestions = listOf(
                 CitySuggestion("London, GB", 51.5074, -0.1278),
-                CitySuggestion("London, ON, CA", 42.9849, -81.2453)
+                CitySuggestion("London, ON, CA", 42.9849, -81.2453),
             ),
             citySuggestLoading = false,
             onCityChange = {},
@@ -308,8 +308,8 @@ private fun CurrentWeatherScreenSuccessPreview() {
                     feelsLike = 14.2,
                     humidityPercent = 72,
                     windSpeed = 4.1,
-                    units = WeatherUnits.METRIC
-                )
+                    units = WeatherUnits.METRIC,
+                ),
             ),
             onRetry = {},
             onOpenForecast = { /* no-op */ },
@@ -338,7 +338,7 @@ private fun CurrentWeatherContent(
                 WeatherIcon(
                     iconCode = weather.iconCode,
                     contentDescription = weather.description,
-                    sizeDp = 72
+                    sizeDp = 72,
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -373,16 +373,24 @@ private fun CurrentWeatherContent(
 }
 
 @Composable
-private fun formatTemperature(value: Double, units: WeatherUnits): String = when (units) {
-    WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
-    WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
-}
+private fun formatTemperature(
+    value: Double,
+    units: WeatherUnits,
+): String =
+    when (units) {
+        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
+        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
+    }
 
 @Composable
-private fun formatWind(speed: Double, units: WeatherUnits): String = when (units) {
-    WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-    WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
-}
+private fun formatWind(
+    speed: Double,
+    units: WeatherUnits,
+): String =
+    when (units) {
+        WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
+        WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
+    }
 
 @Composable
 private fun MetricRow(

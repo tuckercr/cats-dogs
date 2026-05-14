@@ -14,12 +14,13 @@ fun WeatherIcon(
     iconCode: String,
     contentDescription: String,
     sizeDp: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     // These aren't very pretty but they do the job
-    val url = "https://openweathermap.org/img/wn/${iconCode}@2x.png"
+    val url = "https://openweathermap.org/img/wn/$iconCode@2x.png"
     AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
+        model = ImageRequest
+            .Builder(LocalContext.current)
             .data(url)
             .crossfade(true)
             .build(),

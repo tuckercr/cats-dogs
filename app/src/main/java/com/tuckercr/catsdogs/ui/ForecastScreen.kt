@@ -133,16 +133,17 @@ fun ForecastScreen(
 }
 
 @Composable
-private fun formatTempFeels(day: DayForecast): String = when (day.units) {
-    WeatherUnits.METRIC -> stringResource(
-        R.string.format_temp_feels,
-        day.temperature,
-        day.feelsLike
-    )
+private fun formatTempFeels(day: DayForecast): String =
+    when (day.units) {
+        WeatherUnits.METRIC -> stringResource(
+            R.string.format_temp_feels,
+            day.temperature,
+            day.feelsLike,
+        )
 
-    WeatherUnits.IMPERIAL ->
-        stringResource(R.string.format_temp_feels_imperial, day.temperature, day.feelsLike)
-}
+        WeatherUnits.IMPERIAL ->
+            stringResource(R.string.format_temp_feels_imperial, day.temperature, day.feelsLike)
+    }
 
 @Composable
 private fun ForecastDayCard(
@@ -163,7 +164,7 @@ private fun ForecastDayCard(
             WeatherIcon(
                 iconCode = day.iconCode,
                 contentDescription = day.description,
-                sizeDp = 64
+                sizeDp = 64,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = day.dateLabel, style = MaterialTheme.typography.titleMedium)
@@ -216,7 +217,7 @@ private fun ForecastScreenSuccessPreview() {
             iconCode = "04d",
             temperature = 22.0,
             feelsLike = 21.5,
-            units = WeatherUnits.METRIC
+            units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Tomorrow",
@@ -225,7 +226,7 @@ private fun ForecastScreenSuccessPreview() {
             iconCode = "10d",
             temperature = 18.0,
             feelsLike = 17.5,
-            units = WeatherUnits.METRIC
+            units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Wednesday",
@@ -234,8 +235,8 @@ private fun ForecastScreenSuccessPreview() {
             iconCode = "01d",
             temperature = 25.0,
             feelsLike = 24.5,
-            units = WeatherUnits.METRIC
-        )
+            units = WeatherUnits.METRIC,
+        ),
     )
 
     CatsDogsTheme {

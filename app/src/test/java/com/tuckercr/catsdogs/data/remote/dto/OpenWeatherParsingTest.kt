@@ -10,7 +10,8 @@ class OpenWeatherParsingTest {
 
     @Test
     fun `parses current weather payload`() {
-        val jsonStr = """
+        val jsonStr =
+            """
             {
               "name": "Austin",
               "weather": [
@@ -19,7 +20,7 @@ class OpenWeatherParsingTest {
               "main": { "temp": 21.3, "feels_like": 20.1, "humidity": 55 },
               "wind": { "speed": 4.2 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = json.decodeFromString<CurrentWeatherResponse>(jsonStr)
 
@@ -33,7 +34,8 @@ class OpenWeatherParsingTest {
 
     @Test
     fun `parses forecast payload list`() {
-        val jsonStr = """
+        val jsonStr =
+            """
             {
               "list": [
                 {
@@ -45,13 +47,20 @@ class OpenWeatherParsingTest {
               ],
               "city": { "name": "Denver" }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = json.decodeFromString<ForecastResponse>(jsonStr)
 
         assertEquals(1, parsed.list.size)
         assertEquals(1700000000L, parsed.list.single().dt)
-        assertEquals("Rain", parsed.list.single().weather.single().main)
+        assertEquals(
+            "Rain",
+            parsed.list
+                .single()
+                .weather
+                .single()
+                .main,
+        )
         assertEquals("Denver", parsed.city?.name)
     }
 }

@@ -27,7 +27,11 @@ object ForecastAggregator {
         val iconCode: String,
     )
 
-    fun aggregate(slots: List<Slot>, zoneId: ZoneId, units: WeatherUnits): List<DayForecast> {
+    fun aggregate(
+        slots: List<Slot>,
+        zoneId: ZoneId,
+        units: WeatherUnits,
+    ): List<DayForecast> {
         if (slots.isEmpty()) return emptyList()
 
         val byDay = slots.groupBy { slot ->

@@ -140,22 +140,29 @@ class WeatherRepository @Inject constructor(
         )
     }
 
-    private fun <T> Result<T>.mapApiFailure(): Result<T> = fold(
-        onSuccess = { Result.success(it) },
-        onFailure = { throwable ->
-            Result.failure(mapThrowable(throwable))
-        },
-    )
+    private fun <T> Result<T>.mapApiFailure(): Result<T> =
+        fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { throwable ->
+                Result.failure(mapThrowable(throwable))
+            },
+        )
 
-    private fun mapThrowable(throwable: Throwable): Throwable = when (throwable) {
-        is IOException -> IOException("network", throwable)
-        is HttpException -> {
-            val body = throwable.response()?.errorBody()?.string().orEmpty()
-            val parsed = runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }
-                .getOrNull()
-            val message = parsed?.message?.takeIf { it.isNotBlank() } ?: "http_${throwable.code()}"
-            IllegalStateException(message, throwable)
+    private fun mapThrowable(throwable: Throwable): Throwable =
+        when (throwable) {
+            is IOException -> IOException("network", throwable)
+            is HttpException -> {
+                val body = throwable
+                    .response()
+                    ?.errorBody()
+                    ?.string()
+                    .orEmpty()
+                val parsed = runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }
+                    .getOrNull()
+                val message = parsed?.message?.takeIf { it.isNotBlank() } ?: "http_${throwable.code()}"
+                IllegalStateException(message, throwable)
+            }
+
+            else -> throwable
         }
-        else -> throwable
-    }
 }

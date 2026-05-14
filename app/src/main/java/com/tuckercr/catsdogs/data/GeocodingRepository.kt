@@ -32,7 +32,7 @@ class GeocodingRepository @Inject constructor(
         val labelParts = listOfNotNull(
             name,
             state?.takeIf { it.isNotBlank() },
-            country
+            country,
         )
         val label = labelParts.joinToString(", ")
 

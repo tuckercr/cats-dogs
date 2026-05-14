@@ -9,5 +9,5 @@ data class GeocodingDirectDto(
     @SerialName("lat") val lat: Double,
     @SerialName("lon") val lon: Double,
     @SerialName("country") val country: String,
-    @SerialName("state") val state: String? = null
+    @SerialName("state") val state: String? = null,
 )

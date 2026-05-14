@@ -19,6 +19,7 @@ coilCompose = "2.7.0"
 hilt = "2.59.2"
 ksp = "2.3.2"
 kotlinxSerialization = "1.11.0"
+ktlint = "14.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -56,4 +57,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 devtoolsKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 daggerHiltAndroid = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 
