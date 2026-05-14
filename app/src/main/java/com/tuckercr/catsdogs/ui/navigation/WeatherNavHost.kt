@@ -13,9 +13,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.tuckercr.catsdogs.model.WeatherViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
-import com.tuckercr.catsdogs.model.WeatherViewModel
 import com.tuckercr.catsdogs.ui.WelcomeScreen
 
 object WeatherDestinations {
@@ -24,6 +24,7 @@ object WeatherDestinations {
     const val CURRENT = "current"
     const val FORECAST = "forecast"
 }
+
 @Composable
 fun WeatherNavHost(
     viewModel: WeatherViewModel,

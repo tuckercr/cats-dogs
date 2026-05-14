@@ -5,4 +5,5 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.devtoolsKsp) apply false
     alias(libs.plugins.daggerHiltAndroid) apply false
+    alias(libs.plugins.ktlint) apply false
 }

@@ -5,7 +5,9 @@ import com.tuckercr.catsdogs.data.remote.OpenWeatherApi.Companion.UNITS_METRIC
 import java.util.Locale
 
 enum class WeatherUnits {
-    METRIC, IMPERIAL;
+    METRIC,
+    IMPERIAL,
+    ;
 
     val units: String
         get() = when (this) {
