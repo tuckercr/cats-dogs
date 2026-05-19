@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -32,7 +34,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -93,6 +97,8 @@ fun CurrentWeatherScreen(
     forecastEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -128,6 +134,13 @@ fun CurrentWeatherScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.field_city_label)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = {
+                            keyboardController?.hide()
+                            onSearch()
+                        },
+                    ),
                 )
                 if (citySuggestLoading) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -147,7 +160,10 @@ fun CurrentWeatherScreen(
                         ) {
                             citySuggestions.forEach { suggestion ->
                                 TextButton(
-                                    onClick = { onCitySuggestionChosen(suggestion) },
+                                    onClick = {
+                                        keyboardController?.hide()
+                                        onCitySuggestionChosen(suggestion)
+                                    },
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     Text(
@@ -163,7 +179,10 @@ fun CurrentWeatherScreen(
                 }
             }
             Button(
-                onClick = onSearch,
+                onClick = {
+                    keyboardController?.hide()
+                    onSearch()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = state !is LoadingState.Loading,
             ) {
