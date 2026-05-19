@@ -14,7 +14,7 @@ Simple weather client for a city: current conditions and a multi-day forecast, b
 
 The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not committed to source control.
 
-On GitHub this API key securely injected with CI/CD using GitHub Actions.
+On GitHub this API key is securely injected with CI/CD using GitHub Actions.
 
 ## Application flow
 
