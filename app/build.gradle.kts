@@ -20,12 +20,12 @@ val owmApiKey: String = localProperties.getProperty("OWM_API_KEY") ?: ""
 
 android {
     namespace = "com.tuckercr.catsdogs"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.tuckercr.catsdogs"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 

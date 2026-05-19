@@ -10,9 +10,11 @@ Simple weather client for a city: current conditions and a multi-day forecast, b
    ```
    OWM_API_KEY=your_key_here
    ```
-3. Build & Run.  Note that a new key can take up to 2 hours to become active.  If requested I can send one over.
+3. Build & Run.  Note that a new key can take up to 2 hours to become active.
 
-The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not committed to source control.  In a production app this would be securely injected with CI/CD.
+The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not committed to source control.
+
+On GitHub this API key securely injected with CI/CD using GitHub Actions.
 
 ## Application flow
 
