@@ -36,6 +36,7 @@ import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
+import com.tuckercr.catsdogs.ui.activityHiltViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
@@ -43,10 +44,10 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForecastRoute(
-    geoLocationViewModel: GeoLocationViewModel,
-    weatherForecastViewModel: WeatherForecastViewModel,
     onNavigateBack: () -> Unit,
 ) {
+    val geoLocationViewModel = activityHiltViewModel<GeoLocationViewModel>()
+    val weatherForecastViewModel = activityHiltViewModel<WeatherForecastViewModel>()
     val state by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
     val resolvedCity by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
 

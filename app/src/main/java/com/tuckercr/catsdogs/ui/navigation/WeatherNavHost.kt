@@ -13,12 +13,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.tuckercr.catsdogs.model.GeoLocationViewModel
-import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
+import com.tuckercr.catsdogs.ui.activityHiltViewModel
 
 object WeatherDestinations {
     const val LOADING = "loading"
@@ -29,12 +28,10 @@ object WeatherDestinations {
 
 @Composable
 fun WeatherNavHost(
-    welcomeViewModel: WelcomeViewModel,
-    geoLocationViewModel: GeoLocationViewModel,
-    weatherForecastViewModel: WeatherForecastViewModel,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
+    val welcomeViewModel = activityHiltViewModel<WelcomeViewModel>()
     val welcomeDone by welcomeViewModel.welcomeDone.collectAsStateWithLifecycle()
 
     NavHost(
@@ -75,8 +72,6 @@ fun WeatherNavHost(
         }
         composable(WeatherDestinations.CURRENT) {
             CurrentWeatherRoute(
-                geoLocationViewModel = geoLocationViewModel,
-                weatherForecastViewModel = weatherForecastViewModel,
                 onOpenForecast = {
                     navController.navigate(WeatherDestinations.FORECAST)
                 },
@@ -84,8 +79,6 @@ fun WeatherNavHost(
         }
         composable(WeatherDestinations.FORECAST) {
             ForecastRoute(
-                geoLocationViewModel = geoLocationViewModel,
-                weatherForecastViewModel = weatherForecastViewModel,
                 onNavigateBack = { navController.popBackStack() },
             )
         }
