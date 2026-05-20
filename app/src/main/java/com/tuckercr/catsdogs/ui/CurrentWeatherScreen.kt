@@ -46,16 +46,13 @@ import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
-import com.tuckercr.catsdogs.ui.activityHiltViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(
-    onOpenForecast: () -> Unit,
-) {
+fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
     val geoLocationViewModel = activityHiltViewModel<GeoLocationViewModel>()
     val weatherForecastViewModel = activityHiltViewModel<WeatherForecastViewModel>()
     val city by geoLocationViewModel.cityInput.collectAsStateWithLifecycle()
