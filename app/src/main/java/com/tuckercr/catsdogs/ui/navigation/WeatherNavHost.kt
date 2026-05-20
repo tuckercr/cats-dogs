@@ -13,7 +13,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.tuckercr.catsdogs.model.WeatherViewModel
+import com.tuckercr.catsdogs.model.GeoLocationViewModel
+import com.tuckercr.catsdogs.model.WeatherForecastViewModel
+import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
@@ -27,11 +29,13 @@ object WeatherDestinations {
 
 @Composable
 fun WeatherNavHost(
-    viewModel: WeatherViewModel,
+    welcomeViewModel: WelcomeViewModel,
+    geoLocationViewModel: GeoLocationViewModel,
+    weatherForecastViewModel: WeatherForecastViewModel,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
-    val welcomeDone by viewModel.welcomeDone.collectAsStateWithLifecycle()
+    val welcomeDone by welcomeViewModel.welcomeDone.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -61,7 +65,7 @@ fun WeatherNavHost(
         composable(WeatherDestinations.WELCOME) {
             WelcomeScreen(
                 onGetStarted = {
-                    viewModel.completeWelcome()
+                    welcomeViewModel.completeWelcome()
                     navController.navigate(WeatherDestinations.CURRENT) {
                         popUpTo(WeatherDestinations.WELCOME) { inclusive = true }
                         launchSingleTop = true
@@ -71,7 +75,8 @@ fun WeatherNavHost(
         }
         composable(WeatherDestinations.CURRENT) {
             CurrentWeatherRoute(
-                viewModel = viewModel,
+                geoLocationViewModel = geoLocationViewModel,
+                weatherForecastViewModel = weatherForecastViewModel,
                 onOpenForecast = {
                     navController.navigate(WeatherDestinations.FORECAST)
                 },
@@ -79,7 +84,8 @@ fun WeatherNavHost(
         }
         composable(WeatherDestinations.FORECAST) {
             ForecastRoute(
-                viewModel = viewModel,
+                geoLocationViewModel = geoLocationViewModel,
+                weatherForecastViewModel = weatherForecastViewModel,
                 onNavigateBack = { navController.popBackStack() },
             )
         }
