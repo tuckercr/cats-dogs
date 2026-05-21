@@ -1,5 +1,7 @@
 package com.tuckercr.catsdogs.ui.navigation
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -8,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -17,7 +20,6 @@ import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
-import com.tuckercr.catsdogs.ui.activityHiltViewModel
 
 object WeatherDestinations {
     const val LOADING = "loading"
@@ -31,7 +33,8 @@ fun WeatherNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
-    val welcomeViewModel = activityHiltViewModel<WelcomeViewModel>()
+    val activity = LocalActivity.current as ComponentActivity
+    val welcomeViewModel = hiltViewModel<WelcomeViewModel>(viewModelStoreOwner = activity)
     val welcomeDone by welcomeViewModel.welcomeDone.collectAsStateWithLifecycle()
 
     NavHost(

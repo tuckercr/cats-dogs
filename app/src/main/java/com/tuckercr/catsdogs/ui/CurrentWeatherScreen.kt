@@ -1,5 +1,7 @@
 package com.tuckercr.catsdogs.ui
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +42,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
@@ -53,8 +56,9 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
-    val geoLocationViewModel = activityHiltViewModel<GeoLocationViewModel>()
-    val weatherForecastViewModel = activityHiltViewModel<WeatherForecastViewModel>()
+    val activity = LocalActivity.current as ComponentActivity
+    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
     val city by geoLocationViewModel.cityInput.collectAsStateWithLifecycle()
     val suggestions by geoLocationViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoLocationViewModel.citySuggestLoading.collectAsStateWithLifecycle()
