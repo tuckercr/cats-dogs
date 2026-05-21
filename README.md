@@ -1,6 +1,8 @@
 # Cats & Dogs
 
-Simple weather client for a city: current conditions and a multi-day forecast, built for the recruiting exercise requirements.
+Simple weather client for a city: current conditions and a multi-day forecast, built for a
+coding challenge but later extended with various minor bug fixes and used as a tool to learn
+GitHub Actions.
 
 ## How to run
 
@@ -18,15 +20,15 @@ On GitHub this API key is securely injected with CI/CD using GitHub Actions.
 
 ## Application flow
 
-1. On launch a branded splash screen is displayed
+1. On launch a branded splash screen is displayed.
 2. The app reads `DataStore` preferences to check if the welcome screen was previously shown.
-2. A welcome screen appears.  User advances by clicking the button or automatically after 5 seconds.
-3. The user enters a city and clicks a button.  The UI shows conditions, OpenWeather icon (Coil), temperature, “feels like”, humidity and wind speed.
-4. As a bonus I added **OpenWeatherMap Geocoding** suggestions. If the user picks a suggestion, **latitude/longitude** are sent so the result matches that place.
-5. A successful response saves the location in `DataStore` so it is prefilled after an app restart.
-5. Network failures, HTTP errors, empty API keys, and malformed payloads surface as an inline error message with **Retry** where appropriate.
-4. From the current weather screen, the calendar icon opens the forecast screen. The app calls `data/2.5/forecast` using the same location as the last successful current fetch.
-5. These are displayed as one row per calendar day, using the sample closest to local noon
+3. A welcome screen appears.  User advances by clicking the button or automatically after 5 seconds.
+4. The user enters a city and clicks a button.  The UI shows conditions, OpenWeather icon (Coil), temperature, “feels like”, humidity and wind speed.
+5. As a bonus I added **OpenWeatherMap Geocoding** suggestions. If the user picks a suggestion, **latitude/longitude** are sent so the result matches that place.
+6. A successful response saves the location in `DataStore` so it is prefilled after an app restart.
+7. Network failures, HTTP errors, empty API keys, and malformed payloads surface as an inline error message with **Retry** where appropriate.
+8. From the current weather screen, the calendar icon opens the forecast screen. The app calls `data/2.5/forecast` using the same location as the last successful current fetch.
+9. These are displayed as one row per calendar day, using the sample closest to local noon.
 
 ## Framework, libraries, and API choices
 
@@ -37,7 +39,7 @@ On GitHub this API key is securely injected with CI/CD using GitHub Actions.
 - **Networking** - Retrofit, OkHttp and Kotlinx Serialization
 - **Image Download** - used a standard Coil `AsyncImage`
 - **Data Storage** - used `DataStore` preferences to store the welcome flag and last resolved city name
-- **API** - Used OpenWeatherMap.  Considered using Accuweather since I recently worked on a widget powered by Accuweather, but decided on a more open API as per the spec.
+- **API** - Used OpenWeatherMap for geolocation and weather forecasting.
 
 ## Assumptions/Special Notes
 
