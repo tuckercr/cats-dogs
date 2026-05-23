@@ -115,7 +115,7 @@ class WeatherRepositoryTest {
             json = Json { ignoreUnknownKeys = true },
         )
 
-    private class FakeOpenWeatherApi : OpenWeatherApi {
+    private inner class FakeOpenWeatherApi : OpenWeatherApi {
         val currentWeatherCalls = mutableListOf<ApiCall>()
         val forecastCalls = mutableListOf<ApiCall>()
         var currentWeatherError: Throwable? = null
