@@ -20,99 +20,106 @@ import java.time.ZoneOffset
 class WeatherRepositoryTest {
 
     @Test
-    fun `current weather uses selected coordinates and display label`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = " weather-key ",
-            zoneId = ZoneOffset.UTC,
-            json = Json { ignoreUnknownKeys = true },
-        )
+    fun `current weather uses selected coordinates and display label`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = " weather-key ",
+                zoneId = ZoneOffset.UTC,
+                json = Json { ignoreUnknownKeys = true },
+            )
 
-        val weather = repository.fetchCurrentWeather(
-            units = WeatherUnits.IMPERIAL,
-            locationLabel = " London, ON, CA ",
-            cityQuery = "London",
-            latitude = 42.9849,
-            longitude = -81.2453,
-        ).getOrThrow()
+            val weather = repository
+                .fetchCurrentWeather(
+                    units = WeatherUnits.IMPERIAL,
+                    locationLabel = " London, ON, CA ",
+                    cityQuery = "London",
+                    latitude = 42.9849,
+                    longitude = -81.2453,
+                ).getOrThrow()
 
-        assertEquals("London, ON, CA", weather.cityName)
-        assertEquals("Broken clouds", weather.description)
-        assertEquals(WeatherUnits.IMPERIAL, weather.units)
+            assertEquals("London, ON, CA", weather.cityName)
+            assertEquals("Broken clouds", weather.description)
+            assertEquals(WeatherUnits.IMPERIAL, weather.units)
 
-        val call = api.currentWeatherCalls.single()
-        assertNull(call.cityQuery)
-        assertEquals(42.9849, call.latitude!!, 0.0001)
-        assertEquals(-81.2453, call.longitude!!, 0.0001)
-        assertEquals("weather-key", call.apiKey)
-        assertEquals("imperial", call.units)
-    }
+            val call = api.currentWeatherCalls.single()
+            assertNull(call.cityQuery)
+            assertEquals(42.9849, call.latitude!!, 0.0001)
+            assertEquals(-81.2453, call.longitude!!, 0.0001)
+            assertEquals("weather-key", call.apiKey)
+            assertEquals("imperial", call.units)
+        }
 
     @Test
-    fun `forecast uses selected coordinates instead of ambiguous city query`() = runBlocking {
-        val api = FakeOpenWeatherApi(
-            forecastResponse = ForecastResponse(
-                list = listOf(
-                    forecastItem(
-                        epochSeconds = 1_704_110_400L,
-                        conditionMain = "Clouds",
-                        description = "scattered clouds",
+    fun `forecast uses selected coordinates instead of ambiguous city query`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                forecastResponse = ForecastResponse(
+                    list = listOf(
+                        forecastItem(
+                            epochSeconds = 1_704_110_400L,
+                            conditionMain = "Clouds",
+                            description = "scattered clouds",
+                        ),
                     ),
+                    city = CityDto("London"),
                 ),
-                city = CityDto("London"),
-            ),
-        )
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = "weather-key",
-            zoneId = ZoneOffset.UTC,
-            json = Json { ignoreUnknownKeys = true },
-        )
+            )
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = "weather-key",
+                zoneId = ZoneOffset.UTC,
+                json = Json { ignoreUnknownKeys = true },
+            )
 
-        val forecast = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = "London",
-            latitude = 42.9849,
-            longitude = -81.2453,
-        ).getOrThrow()
+            val forecast = repository
+                .fetchForecast(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "London",
+                    latitude = 42.9849,
+                    longitude = -81.2453,
+                ).getOrThrow()
 
-        assertEquals(1, forecast.size)
-        assertEquals("Clouds", forecast.single().conditionMain)
-        assertEquals("Scattered clouds", forecast.single().description)
+            assertEquals(1, forecast.size)
+            assertEquals("Clouds", forecast.single().conditionMain)
+            assertEquals("Scattered clouds", forecast.single().description)
 
-        val call = api.forecastCalls.single()
-        assertNull(call.cityQuery)
-        assertEquals(42.9849, call.latitude!!, 0.0001)
-        assertEquals(-81.2453, call.longitude!!, 0.0001)
-        assertEquals("weather-key", call.apiKey)
-        assertEquals("metric", call.units)
-    }
+            val call = api.forecastCalls.single()
+            assertNull(call.cityQuery)
+            assertEquals(42.9849, call.latitude!!, 0.0001)
+            assertEquals(-81.2453, call.longitude!!, 0.0001)
+            assertEquals("weather-key", call.apiKey)
+            assertEquals("metric", call.units)
+        }
 
     @Test
-    fun `missing api key fails before calling weather api`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = " ",
-            zoneId = ZoneOffset.UTC,
-            json = Json { ignoreUnknownKeys = true },
-        )
+    fun `missing api key fails before calling weather api`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = " ",
+                zoneId = ZoneOffset.UTC,
+                json = Json { ignoreUnknownKeys = true },
+            )
 
-        val currentError = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "London",
-        ).exceptionOrNull()
-        val forecastError = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = "London",
-        ).exceptionOrNull()
+            val currentError = repository
+                .fetchCurrentWeather(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "London",
+                ).exceptionOrNull()
+            val forecastError = repository
+                .fetchForecast(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "London",
+                ).exceptionOrNull()
 
-        assertEquals("missing_api_key", currentError?.message)
-        assertEquals("missing_api_key", forecastError?.message)
-        assertTrue(api.currentWeatherCalls.isEmpty())
-        assertTrue(api.forecastCalls.isEmpty())
-    }
+            assertEquals("missing_api_key", currentError?.message)
+            assertEquals("missing_api_key", forecastError?.message)
+            assertTrue(api.currentWeatherCalls.isEmpty())
+            assertTrue(api.forecastCalls.isEmpty())
+        }
 
     private class FakeOpenWeatherApi(
         private val currentWeatherResponse: CurrentWeatherResponse = sampleCurrentWeatherResponse(),
@@ -157,22 +164,23 @@ class WeatherRepositoryTest {
     )
 
     companion object {
-        private fun sampleCurrentWeatherResponse() = CurrentWeatherResponse(
-            name = "London",
-            weather = listOf(
-                WeatherDescDto(
-                    main = "Clouds",
-                    description = "broken clouds",
-                    icon = "04d",
+        private fun sampleCurrentWeatherResponse() =
+            CurrentWeatherResponse(
+                name = "London",
+                weather = listOf(
+                    WeatherDescDto(
+                        main = "Clouds",
+                        description = "broken clouds",
+                        icon = "04d",
+                    ),
                 ),
-            ),
-            main = MainDto(
-                temp = 15.0,
-                feelsLike = 14.1,
-                humidity = 72,
-            ),
-            wind = WindDto(speed = 4.2),
-        )
+                main = MainDto(
+                    temp = 15.0,
+                    feelsLike = 14.1,
+                    humidity = 72,
+                ),
+                wind = WindDto(speed = 4.2),
+            )
 
         private fun forecastItem(
             epochSeconds: Long,
