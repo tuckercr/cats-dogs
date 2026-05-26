@@ -270,7 +270,10 @@ class WeatherRepositoryTest {
             city = null,
         )
 
-        private fun httpException(code: Int, body: String): HttpException =
+        private fun httpException(
+            code: Int,
+            body: String,
+        ): HttpException =
             HttpException(
                 Response.error<Any>(
                     code,
