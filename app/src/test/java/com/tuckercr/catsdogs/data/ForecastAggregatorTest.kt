@@ -3,6 +3,8 @@ package com.tuckercr.catsdogs.data
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 class ForecastAggregatorTest {
@@ -73,5 +75,36 @@ class ForecastAggregatorTest {
 
         assertEquals(2, days.size)
         assertEquals("B", days.last().conditionMain)
+    }
+
+    @Test
+    fun `aggregate groups and labels days in provided local zone`() {
+        val newYork = ZoneId.of("America/New_York")
+        val slots = listOf(
+            ForecastAggregator.Slot(
+                epochSeconds = Instant.parse("2024-01-01T04:30:00Z").epochSecond,
+                temperature = 1.0,
+                feelsLike = 0.0,
+                conditionMain = "LateNight",
+                description = "late night",
+                iconCode = "01n",
+            ),
+            ForecastAggregator.Slot(
+                epochSeconds = Instant.parse("2024-01-01T17:00:00Z").epochSecond,
+                temperature = 10.0,
+                feelsLike = 9.0,
+                conditionMain = "Noon",
+                description = "noon",
+                iconCode = "02d",
+            ),
+        )
+
+        val days = ForecastAggregator.aggregate(slots, newYork, WeatherUnits.METRIC)
+
+        assertEquals(2, days.size)
+        assertEquals("Sun, Dec 31", days[0].dateLabel)
+        assertEquals("LateNight", days[0].conditionMain)
+        assertEquals("Mon, Jan 1", days[1].dateLabel)
+        assertEquals("Noon", days[1].conditionMain)
     }
 }
