@@ -143,14 +143,13 @@ class WeatherRepositoryTest {
     private fun repository(
         api: OpenWeatherApi,
         apiKey: String = "test-key",
-    ): WeatherRepository {
-        return WeatherRepository(
+    ): WeatherRepository =
+        WeatherRepository(
             api = api,
             apiKey = apiKey,
             zoneId = ZoneOffset.UTC,
             json = json,
         )
-    }
 
     private class FakeOpenWeatherApi(
         private val currentFailure: Throwable? = null,
