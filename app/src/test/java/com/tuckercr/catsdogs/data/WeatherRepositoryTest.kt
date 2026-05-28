@@ -23,121 +23,134 @@ class WeatherRepositoryTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `fetchCurrentWeather trims query and maps successful city response`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = repository(api = api, apiKey = " test-key ")
+    fun `fetchCurrentWeather trims query and maps successful city response`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = repository(api = api, apiKey = " test-key ")
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.IMPERIAL,
-            cityQuery = " Austin ",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.IMPERIAL,
+                cityQuery = " Austin ",
+            )
 
-        assertTrue(result.isSuccess)
-        val weather = result.getOrThrow()
-        assertEquals("Austin", api.currentRequest?.cityQuery)
-        assertNull(api.currentRequest?.latitude)
-        assertNull(api.currentRequest?.longitude)
-        assertEquals("test-key", api.currentRequest?.apiKey)
-        assertEquals("imperial", api.currentRequest?.units)
-        assertEquals("Remote City", weather.cityName)
-        assertEquals("Clear sky", weather.description)
-        assertEquals(WeatherUnits.IMPERIAL, weather.units)
+            assertTrue(result.isSuccess)
+            val weather = result.getOrThrow()
+            assertEquals("Austin", api.currentRequest?.cityQuery)
+            assertNull(api.currentRequest?.latitude)
+            assertNull(api.currentRequest?.longitude)
+            assertEquals("test-key", api.currentRequest?.apiKey)
+            assertEquals("imperial", api.currentRequest?.units)
+            assertEquals("Remote City", weather.cityName)
+            assertEquals("Clear sky", weather.description)
+            assertEquals(WeatherUnits.IMPERIAL, weather.units)
+        }
     }
 
     @Test
-    fun `fetchCurrentWeather uses coordinates and display label when provided`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = repository(api = api)
+    fun `fetchCurrentWeather uses coordinates and display label when provided`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = repository(api = api)
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            locationLabel = " London, GB ",
-            cityQuery = "ignored city",
-            latitude = 51.5074,
-            longitude = -0.1278,
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                locationLabel = " London, GB ",
+                cityQuery = "ignored city",
+                latitude = 51.5074,
+                longitude = -0.1278,
+            )
 
-        assertTrue(result.isSuccess)
-        val weather = result.getOrThrow()
-        assertNull(api.currentRequest?.cityQuery)
-        assertEquals(51.5074, api.currentRequest?.latitude ?: 0.0, 0.0001)
-        assertEquals(-0.1278, api.currentRequest?.longitude ?: 0.0, 0.0001)
-        assertEquals("London, GB", weather.cityName)
+            assertTrue(result.isSuccess)
+            val weather = result.getOrThrow()
+            assertNull(api.currentRequest?.cityQuery)
+            assertEquals(51.5074, api.currentRequest?.latitude ?: 0.0, 0.0001)
+            assertEquals(-0.1278, api.currentRequest?.longitude ?: 0.0, 0.0001)
+            assertEquals("London, GB", weather.cityName)
+        }
     }
 
     @Test
-    fun `fetchCurrentWeather rejects blank query before calling api`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = repository(api = api)
+    fun `fetchCurrentWeather rejects blank query before calling api`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = repository(api = api)
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "   ",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                cityQuery = "   ",
+            )
 
-        assertFalse(result.isSuccess)
-        assertEquals("empty_query", result.exceptionOrNull()?.message)
-        assertNull(api.currentRequest)
+            assertFalse(result.isSuccess)
+            assertEquals("empty_query", result.exceptionOrNull()?.message)
+            assertNull(api.currentRequest)
+        }
     }
 
     @Test
-    fun `fetchCurrentWeather rejects blank api key before calling api`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = repository(api = api, apiKey = "   ")
+    fun `fetchCurrentWeather rejects blank api key before calling api`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = repository(api = api, apiKey = "   ")
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "Austin",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
 
-        assertFalse(result.isSuccess)
-        assertEquals("missing_api_key", result.exceptionOrNull()?.message)
-        assertNull(api.currentRequest)
+            assertFalse(result.isSuccess)
+            assertEquals("missing_api_key", result.exceptionOrNull()?.message)
+            assertNull(api.currentRequest)
+        }
     }
 
     @Test
-    fun `fetchForecast uses coordinates when provided`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = repository(api = api)
+    fun `fetchForecast uses coordinates when provided`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = repository(api = api)
 
-        val result = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = "ignored city",
-            latitude = 40.7128,
-            longitude = -74.0060,
-        )
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "ignored city",
+                latitude = 40.7128,
+                longitude = -74.0060,
+            )
 
-        assertTrue(result.isSuccess)
-        assertNull(api.forecastRequest?.cityQuery)
-        assertEquals(40.7128, api.forecastRequest?.latitude ?: 0.0, 0.0001)
-        assertEquals(-74.0060, api.forecastRequest?.longitude ?: 0.0, 0.0001)
-        assertEquals("Clear sky", result.getOrThrow().single().description)
+            assertTrue(result.isSuccess)
+            assertNull(api.forecastRequest?.cityQuery)
+            assertEquals(40.7128, api.forecastRequest?.latitude ?: 0.0, 0.0001)
+            assertEquals(-74.0060, api.forecastRequest?.longitude ?: 0.0, 0.0001)
+            assertEquals("Clear sky", result.getOrThrow().single().description)
+        }
     }
 
     @Test
-    fun `fetchForecast maps io failures to network error`() = runBlocking {
-        val api = FakeOpenWeatherApi(forecastFailure = IOException("timeout"))
-        val repository = repository(api = api)
+    fun `fetchForecast maps io failures to network error`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastFailure = IOException("timeout"))
+            val repository = repository(api = api)
 
-        val result = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = "Austin",
-        )
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
 
-        assertFalse(result.isSuccess)
-        assertEquals("network", result.exceptionOrNull()?.message)
+            assertFalse(result.isSuccess)
+            assertEquals("network", result.exceptionOrNull()?.message)
+        }
     }
 
     private fun repository(
         api: OpenWeatherApi,
         apiKey: String = "test-key",
-    ): WeatherRepository =
-        WeatherRepository(
+    ): WeatherRepository {
+        return WeatherRepository(
             api = api,
             apiKey = apiKey,
             zoneId = ZoneOffset.UTC,
             json = json,
         )
+    }
 
     private class FakeOpenWeatherApi(
         private val currentFailure: Throwable? = null,
