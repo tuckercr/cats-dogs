@@ -19,114 +19,124 @@ class WeatherRepositoryTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `fetch current weather trims city query and uses searched location label`() = runBlocking {
-        val api = FakeOpenWeatherApi(
-            currentWeatherResponse = currentWeatherResponse(
-                name = "OpenWeather Name",
-                description = "light rain",
-            ),
-        )
-        val repository = WeatherRepository(api, apiKey = " api-key ", zoneId = ZoneOffset.UTC, json = json)
+    fun `fetch current weather trims city query and uses searched location label`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                currentWeatherResponse = currentWeatherResponse(
+                    name = "OpenWeather Name",
+                    description = "light rain",
+                ),
+            )
+            val repository = WeatherRepository(api, apiKey = " api-key ", zoneId = ZoneOffset.UTC, json = json)
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            locationLabel = " Paris, FR ",
-            cityQuery = " Paris ",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                locationLabel = " Paris, FR ",
+                cityQuery = " Paris ",
+            )
 
-        val weather = result.getOrThrow()
-        assertEquals("Paris, FR", weather.cityName)
-        assertEquals("Light rain", weather.description)
-        assertEquals(WeatherUnits.METRIC, weather.units)
-        assertEquals(
-            CurrentWeatherCall(
-                cityQuery = "Paris",
-                latitude = null,
-                longitude = null,
-                apiKey = "api-key",
-                units = "metric",
-            ),
-            api.currentWeatherCalls.single(),
-        )
+            val weather = result.getOrThrow()
+            assertEquals("Paris, FR", weather.cityName)
+            assertEquals("Light rain", weather.description)
+            assertEquals(WeatherUnits.METRIC, weather.units)
+            assertEquals(
+                CurrentWeatherCall(
+                    cityQuery = "Paris",
+                    latitude = null,
+                    longitude = null,
+                    apiKey = "api-key",
+                    units = "metric",
+                ),
+                api.currentWeatherCalls.single(),
+            )
+        }
     }
 
     @Test
-    fun `fetch forecast uses coordinates when available instead of city query`() = runBlocking {
-        val api = FakeOpenWeatherApi(
-            forecastResponse = ForecastResponse(
-                list = listOf(
-                    forecastItem(
-                        epochSeconds = 1_704_110_400L, // 2024-01-01T12:00:00Z
-                        conditionMain = "Clear",
+    fun `fetch forecast uses coordinates when available instead of city query`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                forecastResponse = ForecastResponse(
+                    list = listOf(
+                        forecastItem(
+                            epochSeconds = 1_704_110_400L, // 2024-01-01T12:00:00Z
+                            conditionMain = "Clear",
+                        ),
                     ),
+                    city = null,
                 ),
-                city = null,
-            ),
-        )
-        val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
+            )
+            val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
 
-        val result = repository.fetchForecast(
-            units = WeatherUnits.IMPERIAL,
-            cityQuery = "Springfield",
-            latitude = 39.7817,
-            longitude = -89.6501,
-        )
-
-        val forecast = result.getOrThrow()
-        assertEquals("Clear", forecast.single().conditionMain)
-        assertEquals(
-            ForecastCall(
-                cityQuery = null,
+            val result = repository.fetchForecast(
+                units = WeatherUnits.IMPERIAL,
+                cityQuery = "Springfield",
                 latitude = 39.7817,
                 longitude = -89.6501,
-                apiKey = "api-key",
-                units = "imperial",
-            ),
-            api.forecastCalls.single(),
-        )
+            )
+
+            val forecast = result.getOrThrow()
+            assertEquals("Clear", forecast.single().conditionMain)
+            assertEquals(
+                ForecastCall(
+                    cityQuery = null,
+                    latitude = 39.7817,
+                    longitude = -89.6501,
+                    apiKey = "api-key",
+                    units = "imperial",
+                ),
+                api.forecastCalls.single(),
+            )
+        }
     }
 
     @Test
-    fun `missing API key fails current weather before calling API`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = WeatherRepository(api, apiKey = "  ", zoneId = ZoneOffset.UTC, json = json)
+    fun `missing API key fails current weather before calling API`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = WeatherRepository(api, apiKey = "  ", zoneId = ZoneOffset.UTC, json = json)
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "Paris",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Paris",
+            )
 
-        assertEquals("missing_api_key", result.exceptionOrNull()?.message)
-        assertTrue(api.currentWeatherCalls.isEmpty())
+            assertEquals("missing_api_key", result.exceptionOrNull()?.message)
+            assertTrue(api.currentWeatherCalls.isEmpty())
+        }
     }
 
     @Test
-    fun `blank city query without coordinates fails forecast before calling API`() = runBlocking {
-        val api = FakeOpenWeatherApi()
-        val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
+    fun `blank city query without coordinates fails forecast before calling API`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
 
-        val result = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = "  ",
-        )
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "  ",
+            )
 
-        assertEquals("empty_query", result.exceptionOrNull()?.message)
-        assertTrue(api.forecastCalls.isEmpty())
+            assertEquals("empty_query", result.exceptionOrNull()?.message)
+            assertTrue(api.forecastCalls.isEmpty())
+        }
     }
 
     @Test
-    fun `invalid current weather payload returns failure`() = runBlocking {
-        val api = FakeOpenWeatherApi(
-            currentWeatherResponse = currentWeatherResponse(weather = emptyList()),
-        )
-        val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
+    fun `invalid current weather payload returns failure`() {
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                currentWeatherResponse = currentWeatherResponse(weather = emptyList()),
+            )
+            val repository = WeatherRepository(api, apiKey = "api-key", zoneId = ZoneOffset.UTC, json = json)
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "Paris",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Paris",
+            )
 
-        assertEquals("invalid_payload", result.exceptionOrNull()?.message)
+            assertEquals("invalid_payload", result.exceptionOrNull()?.message)
+        }
     }
 
     private class FakeOpenWeatherApi(
