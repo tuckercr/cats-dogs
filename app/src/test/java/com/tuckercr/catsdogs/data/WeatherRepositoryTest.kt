@@ -21,72 +21,75 @@ class WeatherRepositoryTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun `fetchCurrentWeather with coordinates uses lat lon instead of city query`() = runBlocking {
-        val api = RecordingOpenWeatherApi()
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = " test-key ",
-            zoneId = ZoneOffset.UTC,
-            json = json,
-        )
+    fun `fetchCurrentWeather with coordinates uses lat lon instead of city query`() =
+        runBlocking {
+            val api = RecordingOpenWeatherApi()
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = " test-key ",
+                zoneId = ZoneOffset.UTC,
+                json = json,
+            )
 
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.IMPERIAL,
-            locationLabel = "Springfield, IL, US",
-            cityQuery = "Springfield",
-            latitude = 39.7817,
-            longitude = -89.6501,
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.IMPERIAL,
+                locationLabel = "Springfield, IL, US",
+                cityQuery = "Springfield",
+                latitude = 39.7817,
+                longitude = -89.6501,
+            )
 
-        assertTrue(result.isSuccess)
-        assertNull(api.lastCurrentCityQuery)
-        assertEquals(39.7817, api.lastCurrentLatitude ?: 0.0, 0.0001)
-        assertEquals(-89.6501, api.lastCurrentLongitude ?: 0.0, 0.0001)
-        assertEquals("test-key", api.lastCurrentApiKey)
-        assertEquals("imperial", api.lastCurrentUnits)
-        assertEquals("Springfield, IL, US", result.getOrThrow().cityName)
-        assertEquals("Scattered clouds", result.getOrThrow().description)
-    }
-
-    @Test
-    fun `fetchCurrentWeather maps io failures to network message`() = runBlocking {
-        val api = RecordingOpenWeatherApi(currentFailure = IOException("socket closed"))
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = "test-key",
-            zoneId = ZoneOffset.UTC,
-            json = json,
-        )
-
-        val result = repository.fetchCurrentWeather(
-            units = WeatherUnits.METRIC,
-            cityQuery = "Austin",
-        )
-
-        assertTrue(result.isFailure)
-        assertEquals("Austin", api.lastCurrentCityQuery)
-        assertEquals("network", result.exceptionOrNull()?.message)
-    }
+            assertTrue(result.isSuccess)
+            assertNull(api.lastCurrentCityQuery)
+            assertEquals(39.7817, api.lastCurrentLatitude ?: 0.0, 0.0001)
+            assertEquals(-89.6501, api.lastCurrentLongitude ?: 0.0, 0.0001)
+            assertEquals("test-key", api.lastCurrentApiKey)
+            assertEquals("imperial", api.lastCurrentUnits)
+            assertEquals("Springfield, IL, US", result.getOrThrow().cityName)
+            assertEquals("Scattered clouds", result.getOrThrow().description)
+        }
 
     @Test
-    fun `fetchForecast fails before api call when query is blank`() = runBlocking {
-        val api = RecordingOpenWeatherApi()
-        val repository = WeatherRepository(
-            api = api,
-            apiKey = "test-key",
-            zoneId = ZoneOffset.UTC,
-            json = json,
-        )
+    fun `fetchCurrentWeather maps io failures to network message`() =
+        runBlocking {
+            val api = RecordingOpenWeatherApi(currentFailure = IOException("socket closed"))
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = "test-key",
+                zoneId = ZoneOffset.UTC,
+                json = json,
+            )
 
-        val result = repository.fetchForecast(
-            units = WeatherUnits.METRIC,
-            cityQuery = " ",
-        )
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
 
-        assertTrue(result.isFailure)
-        assertEquals("empty_query", result.exceptionOrNull()?.message)
-        assertEquals(0, api.forecastCallCount)
-    }
+            assertTrue(result.isFailure)
+            assertEquals("Austin", api.lastCurrentCityQuery)
+            assertEquals("network", result.exceptionOrNull()?.message)
+        }
+
+    @Test
+    fun `fetchForecast fails before api call when query is blank`() =
+        runBlocking {
+            val api = RecordingOpenWeatherApi()
+            val repository = WeatherRepository(
+                api = api,
+                apiKey = "test-key",
+                zoneId = ZoneOffset.UTC,
+                json = json,
+            )
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = " ",
+            )
+
+            assertTrue(result.isFailure)
+            assertEquals("empty_query", result.exceptionOrNull()?.message)
+            assertEquals(0, api.forecastCallCount)
+        }
 
     private class RecordingOpenWeatherApi(
         private val currentFailure: Throwable? = null,
