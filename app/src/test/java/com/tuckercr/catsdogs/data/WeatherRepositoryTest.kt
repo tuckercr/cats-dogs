@@ -22,15 +22,14 @@ class WeatherRepositoryTest {
             val api = FakeOpenWeatherApi()
             val repository = WeatherRepository(api, " test-key ", ZoneOffset.UTC, Json)
 
-            val weather = repository
-                .fetchCurrentWeather(
-                    units = WeatherUnits.IMPERIAL,
-                    locationLabel = "Austin, Texas, US",
-                    cityQuery = "Austin",
-                    latitude = 30.2672,
-                    longitude = -97.7431,
-                )
-                .getOrThrow()
+            val result = repository.fetchCurrentWeather(
+                units = WeatherUnits.IMPERIAL,
+                locationLabel = "Austin, Texas, US",
+                cityQuery = "Austin",
+                latitude = 30.2672,
+                longitude = -97.7431,
+            )
+            val weather = result.getOrThrow()
 
             assertEquals("Austin, Texas, US", weather.cityName)
             assertEquals("Clear sky", weather.description)
