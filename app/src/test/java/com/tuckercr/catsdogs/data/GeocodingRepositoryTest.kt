@@ -10,41 +10,43 @@ import org.junit.Test
 class GeocodingRepositoryTest {
 
     @Test
-    fun `searchCities trims input and formats suggestion labels`() = runBlocking {
-        val api = FakeGeocodingApi(
-            response = listOf(
-                GeocodingDirectDto(
-                    name = "Austin",
-                    lat = 30.2672,
-                    lon = -97.7431,
-                    country = "US",
-                    state = "",
+    fun `searchCities trims input and formats suggestion labels`() =
+        runBlocking {
+            val api = FakeGeocodingApi(
+                response = listOf(
+                    GeocodingDirectDto(
+                        name = "Austin",
+                        lat = 30.2672,
+                        lon = -97.7431,
+                        country = "US",
+                        state = "",
+                    ),
                 ),
-            ),
-        )
-        val repository = GeocodingRepository(api, " test-key ")
+            )
+            val repository = GeocodingRepository(api, " test-key ")
 
-        val suggestions = repository.searchCities("  Austin  ").getOrThrow()
+            val suggestions = repository.searchCities("  Austin  ").getOrThrow()
 
-        assertEquals("Austin", api.lastQuery)
-        assertEquals(8, api.lastLimit)
-        assertEquals("test-key", api.lastApiKey)
-        assertEquals(1, suggestions.size)
-        assertEquals("Austin, US", suggestions.single().label)
-        assertEquals(30.2672, suggestions.single().weatherLat, 0.0001)
-        assertEquals(-97.7431, suggestions.single().weatherLon, 0.0001)
-    }
+            assertEquals("Austin", api.lastQuery)
+            assertEquals(8, api.lastLimit)
+            assertEquals("test-key", api.lastApiKey)
+            assertEquals(1, suggestions.size)
+            assertEquals("Austin, US", suggestions.single().label)
+            assertEquals(30.2672, suggestions.single().weatherLat, 0.0001)
+            assertEquals(-97.7431, suggestions.single().weatherLon, 0.0001)
+        }
 
     @Test
-    fun `searchCities returns empty result for short query without calling api`() = runBlocking {
-        val api = FakeGeocodingApi()
-        val repository = GeocodingRepository(api, "test-key")
+    fun `searchCities returns empty result for short query without calling api`() =
+        runBlocking {
+            val api = FakeGeocodingApi()
+            val repository = GeocodingRepository(api, "test-key")
 
-        val suggestions = repository.searchCities(" a ").getOrThrow()
+            val suggestions = repository.searchCities(" a ").getOrThrow()
 
-        assertTrue(suggestions.isEmpty())
-        assertEquals(0, api.callCount)
-    }
+            assertTrue(suggestions.isEmpty())
+            assertEquals(0, api.callCount)
+        }
 
     private class FakeGeocodingApi(
         private val response: List<GeocodingDirectDto> = emptyList(),
