@@ -52,10 +52,11 @@ class WeatherRepositoryTest {
             val api = FakeOpenWeatherApi()
             val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
 
-            val weather = repository.fetchCurrentWeather(
+            val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
                 cityQuery = "  Denver  ",
-            ).getOrThrow()
+            )
+            val weather = result.getOrThrow()
 
             assertEquals("OpenWeather City", weather.cityName)
             assertEquals("Denver", api.lastCurrentCityQuery)
@@ -118,11 +119,12 @@ class WeatherRepositoryTest {
             )
             val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
 
-            val forecast = repository.fetchForecast(
+            val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
                 latitude = 30.2672,
                 longitude = -97.7431,
-            ).getOrThrow()
+            )
+            val forecast = result.getOrThrow()
 
             assertEquals(1, forecast.size)
             assertEquals("Noon", forecast.single().conditionMain)
