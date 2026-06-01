@@ -1,5 +1,7 @@
 package com.tuckercr.catsdogs.ui
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,42 +42,63 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.WeatherUnits
+import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
-import com.tuckercr.catsdogs.model.WeatherViewModel
+import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(
-    viewModel: WeatherViewModel,
-    onOpenForecast: () -> Unit,
-) {
-    val city by viewModel.cityInput.collectAsStateWithLifecycle()
-    val suggestions by viewModel.citySuggestions.collectAsStateWithLifecycle()
-    val suggestLoading by viewModel.citySuggestLoading.collectAsStateWithLifecycle()
-    val state by viewModel.currentWeather.collectAsStateWithLifecycle()
-    val resolved by viewModel.resolvedCity.collectAsStateWithLifecycle()
+fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
+    val activity = LocalActivity.current as ComponentActivity
+    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
+    val city by geoLocationViewModel.cityInput.collectAsStateWithLifecycle()
+    val suggestions by geoLocationViewModel.citySuggestions.collectAsStateWithLifecycle()
+    val suggestLoading by geoLocationViewModel.citySuggestLoading.collectAsStateWithLifecycle()
+    val state by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
+    val resolved by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        viewModel.restoreSavedCityOnce()
+        geoLocationViewModel.restoreSavedCityOnce()?.let { restoredCity ->
+            geoLocationViewModel.dismissSuggestions()
+            weatherForecastViewModel.refreshCurrent(
+                city = restoredCity,
+                latitude = geoLocationViewModel.pinnedLatitude(),
+                longitude = geoLocationViewModel.pinnedLongitude(),
+            )
+        }
     }
 
     CurrentWeatherScreen(
         city = city,
         citySuggestions = suggestions,
         citySuggestLoading = suggestLoading,
-        onCityChange = viewModel::onCityInputChange,
-        onCitySuggestionChosen = viewModel::onCitySuggestionChosen,
-        onSearch = { viewModel.refreshCurrent() },
+        onCityChange = geoLocationViewModel::onCityInputChange,
+        onCitySuggestionChosen = geoLocationViewModel::onCitySuggestionChosen,
+        onSearch = {
+            geoLocationViewModel.dismissSuggestions()
+            weatherForecastViewModel.refreshCurrent(
+                city = city,
+                latitude = geoLocationViewModel.pinnedLatitude(),
+                longitude = geoLocationViewModel.pinnedLongitude(),
+            )
+        },
         state = state,
         onRetry = {
-            viewModel.clearCurrentError()
-            viewModel.refreshCurrent()
+            weatherForecastViewModel.clearCurrentError()
+            geoLocationViewModel.dismissSuggestions()
+            weatherForecastViewModel.refreshCurrent(
+                city = city,
+                latitude = geoLocationViewModel.pinnedLatitude(),
+                longitude = geoLocationViewModel.pinnedLongitude(),
+            )
         },
         onOpenForecast = onOpenForecast,
         forecastEnabled = resolved != null,

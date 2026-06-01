@@ -1,5 +1,7 @@
 package com.tuckercr.catsdogs.ui
 
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,31 +33,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.WeatherUnits
+import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
-import com.tuckercr.catsdogs.model.WeatherViewModel
+import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForecastRoute(
-    viewModel: WeatherViewModel,
-    onNavigateBack: () -> Unit,
-) {
-    val state by viewModel.forecast.collectAsStateWithLifecycle()
+fun ForecastRoute(onNavigateBack: () -> Unit) {
+    val activity = LocalActivity.current as ComponentActivity
+    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
+    val state by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
+    val resolvedCity by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        viewModel.refreshForecast()
+        weatherForecastViewModel.refreshForecast(
+            resolvedCityName = resolvedCity.orEmpty(),
+            latitude = geoLocationViewModel.pinnedLatitude(),
+            longitude = geoLocationViewModel.pinnedLongitude(),
+        )
     }
 
     ForecastScreen(
         state = state,
         onRetry = {
-            viewModel.clearForecastError()
-            viewModel.refreshForecast()
+            weatherForecastViewModel.clearForecastError()
+            weatherForecastViewModel.refreshForecast(
+                resolvedCityName = resolvedCity.orEmpty(),
+                latitude = geoLocationViewModel.pinnedLatitude(),
+                longitude = geoLocationViewModel.pinnedLongitude(),
+            )
         },
         onNavigateBack = onNavigateBack,
     )
