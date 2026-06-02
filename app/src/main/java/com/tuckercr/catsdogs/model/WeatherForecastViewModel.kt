@@ -130,7 +130,6 @@ class WeatherForecastViewModel @Inject constructor(
     fun clearForecastError() {
         _forecast.update { if (it is LoadingState.Error) LoadingState.Idle else it }
     }
-
 }
 
 internal fun resolveWeatherForecastUserMessage(error: Throwable): String =
