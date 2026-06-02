@@ -98,6 +98,22 @@ class WeatherRepositoryTest {
         }
 
     @Test
+    fun `fetchForecast with blank city query fails before calling api`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "   ",
+            )
+
+            val error = result.exceptionOrNull()
+            assertEquals("empty_query", error?.message)
+            assertEquals(0, api.forecastCallCount)
+        }
+
+    @Test
     fun `fetchForecast maps forecast slots through aggregator`() =
         runBlocking {
             val api = FakeOpenWeatherApi(
@@ -134,6 +150,72 @@ class WeatherRepositoryTest {
             assertNull(api.lastForecastCityQuery)
             assertEquals(30.2672, api.lastForecastLatitude ?: 0.0, 0.0001)
             assertEquals(-97.7431, api.lastForecastLongitude ?: 0.0, 0.0001)
+        }
+
+    @Test
+    fun `fetchForecast maps network failures to network message`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastThrowable = IOException("timeout"))
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
+
+            val error = result.exceptionOrNull()
+            assertEquals("network", error?.message)
+        }
+
+    @Test
+    fun `fetchForecast maps http failures without error message to status code`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                forecastThrowable = httpException(
+                    code = 500,
+                    body = """{"cod":"500","message":"   "}""",
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
+
+            val error = result.exceptionOrNull()
+            assertEquals("http_500", error?.message)
+        }
+
+    @Test
+    fun `fetchForecast maps missing weather entry to invalid payload`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                forecastResponse = ForecastResponse(
+                    list = listOf(
+                        ForecastListItemDto(
+                            dt = 1_704_067_200L,
+                            main = MainDto(
+                                temp = 21.0,
+                                feelsLike = 20.0,
+                                humidity = 55,
+                            ),
+                            weather = emptyList(),
+                            wind = WindDto(speed = 4.2),
+                        ),
+                    ),
+                    city = null,
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Broken City",
+            )
+
+            val error = result.exceptionOrNull()
+            assertEquals("invalid_payload", error?.message)
         }
 
     @Test
@@ -204,6 +286,7 @@ class WeatherRepositoryTest {
             city = null,
         ),
         private val currentThrowable: Throwable? = null,
+        private val forecastThrowable: Throwable? = null,
     ) : OpenWeatherApi {
         var currentWeatherCallCount = 0
         var forecastCallCount = 0
@@ -244,6 +327,7 @@ class WeatherRepositoryTest {
             lastForecastCityQuery = cityQuery
             lastForecastLatitude = latitude
             lastForecastLongitude = longitude
+            forecastThrowable?.let { throw it }
             return forecastResponse
         }
     }

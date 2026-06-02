@@ -78,7 +78,7 @@ class WeatherForecastViewModel @Inject constructor(
                     LoadingState.Success(weather)
                 },
                 onFailure = { e ->
-                    LoadingState.Error(resolveUserMessage(e), canRetry = true)
+                    LoadingState.Error(resolveWeatherForecastUserMessage(e), canRetry = true)
                 },
             )
         }
@@ -118,7 +118,7 @@ class WeatherForecastViewModel @Inject constructor(
             if (fetchId != forecastFetchGeneration.get()) return@launch
             _forecast.value = result.fold(
                 onSuccess = { LoadingState.Success(it) },
-                onFailure = { e -> LoadingState.Error(resolveUserMessage(e), canRetry = true) },
+                onFailure = { e -> LoadingState.Error(resolveWeatherForecastUserMessage(e), canRetry = true) },
             )
         }
     }
@@ -131,17 +131,18 @@ class WeatherForecastViewModel @Inject constructor(
         _forecast.update { if (it is LoadingState.Error) LoadingState.Idle else it }
     }
 
-    private fun resolveUserMessage(error: Throwable): String =
-        when (error.message) {
-            "missing_api_key" ->
-                "Weather API key is missing. Add OWM_API_KEY to local.properties and rebuild."
-            "empty_query" ->
-                "Please enter a city name."
-            "network" ->
-                "We could not reach the weather service. Check your connection and try again."
-            else -> {
-                val raw = error.message?.takeIf { it.isNotBlank() }
-                raw ?: "Weather data is not available right now. Please try again later."
-            }
-        }
 }
+
+internal fun resolveWeatherForecastUserMessage(error: Throwable): String =
+    when (error.message) {
+        "missing_api_key" ->
+            "Weather API key is missing. Add OWM_API_KEY to local.properties and rebuild."
+        "empty_query" ->
+            "Please enter a city name."
+        "network" ->
+            "We could not reach the weather service. Check your connection and try again."
+        else -> {
+            val raw = error.message?.takeIf { it.isNotBlank() }
+            raw ?: "Weather data is not available right now. Please try again later."
+        }
+    }
