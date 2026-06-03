@@ -18,7 +18,7 @@ private val Context.weatherDataStore: DataStore<Preferences> by preferencesDataS
 
 @Singleton
 class PreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) : WeatherPreferences {
 
     private val dataStore get() = context.weatherDataStore
