@@ -20,14 +20,14 @@ class WeatherRepository @Inject constructor(
     @param:Named(AppConfigModule.OWM_API_KEY) private val apiKey: String,
     private val zoneId: ZoneId,
     private val json: Json,
-) {
+) : WeatherDataSource {
 
-    suspend fun fetchCurrentWeather(
+    override suspend fun fetchCurrentWeather(
         units: WeatherUnits,
-        locationLabel: String = "",
-        cityQuery: String? = null,
-        latitude: Double? = null,
-        longitude: Double? = null,
+        locationLabel: String,
+        cityQuery: String?,
+        latitude: Double?,
+        longitude: Double?,
     ): Result<CurrentWeather> {
         val key = apiKey.trim()
         if (key.isEmpty()) {
@@ -61,11 +61,11 @@ class WeatherRepository @Inject constructor(
         }.mapApiFailure()
     }
 
-    suspend fun fetchForecast(
+    override suspend fun fetchForecast(
         units: WeatherUnits,
-        cityQuery: String? = null,
-        latitude: Double? = null,
-        longitude: Double? = null,
+        cityQuery: String?,
+        latitude: Double?,
+        longitude: Double?,
     ): Result<List<DayForecast>> {
         val key = apiKey.trim()
         if (key.isEmpty()) {

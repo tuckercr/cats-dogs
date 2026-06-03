@@ -19,27 +19,27 @@ private val Context.weatherDataStore: DataStore<Preferences> by preferencesDataS
 @Singleton
 class PreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : WeatherPreferences {
 
     private val dataStore get() = context.weatherDataStore
 
-    val hasSeenWelcome: Flow<Boolean> = dataStore.data.map { prefs ->
+    override val hasSeenWelcome: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_HAS_SEEN_WELCOME] == true
     }
 
-    val lastCity: Flow<String?> = dataStore.data.map { prefs ->
+    override val lastCity: Flow<String?> = dataStore.data.map { prefs ->
         prefs[KEY_LAST_CITY]?.takeIf { it.isNotBlank() }
     }
 
-    suspend fun setHasSeenWelcome(value: Boolean) {
+    override suspend fun setHasSeenWelcome(value: Boolean) {
         dataStore.edit { it[KEY_HAS_SEEN_WELCOME] = value }
     }
 
-    suspend fun setLastCity(cityName: String) {
+    override suspend fun setLastCity(cityName: String) {
         dataStore.edit { it[KEY_LAST_CITY] = cityName }
     }
 
-    suspend fun hasSeenWelcomeOnce(): Boolean = hasSeenWelcome.first()
+    override suspend fun hasSeenWelcomeOnce(): Boolean = hasSeenWelcome.first()
 
     companion object {
         private val KEY_HAS_SEEN_WELCOME = booleanPreferencesKey("has_seen_welcome")

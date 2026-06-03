@@ -2,8 +2,8 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.GeocodingRepository
-import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.CitySearchDataSource
+import com.tuckercr.catsdogs.data.WeatherPreferences
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -17,8 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GeoLocationViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
-    private val geocodingRepository: GeocodingRepository,
+    private val preferencesRepository: WeatherPreferences,
+    private val citySearchDataSource: CitySearchDataSource,
 ) : ViewModel() {
 
     private val _cityInput = MutableStateFlow("")
@@ -61,7 +61,7 @@ class GeoLocationViewModel @Inject constructor(
                 _citySuggestLoading.value = false
                 return@launch
             }
-            val result = geocodingRepository.searchCities(trimmed)
+            val result = citySearchDataSource.searchCities(trimmed)
             if (_cityInput.value.trim() != trimmed) {
                 _citySuggestLoading.value = false
                 return@launch
