@@ -16,10 +16,14 @@ import javax.inject.Singleton
 
 private val Context.weatherDataStore: DataStore<Preferences> by preferencesDataStore(name = "weather_prefs")
 
+interface SavedCityRepository {
+    val lastCity: Flow<String?>
+}
+
 @Singleton
 class PreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : SavedCityRepository {
 
     private val dataStore get() = context.weatherDataStore
 
@@ -27,7 +31,7 @@ class PreferencesRepository @Inject constructor(
         prefs[KEY_HAS_SEEN_WELCOME] == true
     }
 
-    val lastCity: Flow<String?> = dataStore.data.map { prefs ->
+    override val lastCity: Flow<String?> = dataStore.data.map { prefs ->
         prefs[KEY_LAST_CITY]?.takeIf { it.isNotBlank() }
     }
 

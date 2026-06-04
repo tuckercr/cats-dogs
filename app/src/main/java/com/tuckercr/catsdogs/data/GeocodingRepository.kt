@@ -8,13 +8,17 @@ import javax.inject.Inject
 import javax.inject.Named
 import javax.inject.Singleton
 
+interface CitySearchRepository {
+    suspend fun searchCities(query: String): Result<List<CitySuggestion>>
+}
+
 @Singleton
 class GeocodingRepository @Inject constructor(
     private val api: GeocodingApi,
     @param:Named(AppConfigModule.OWM_API_KEY) private val apiKey: String,
-) {
+) : CitySearchRepository {
 
-    suspend fun searchCities(query: String): Result<List<CitySuggestion>> {
+    override suspend fun searchCities(query: String): Result<List<CitySuggestion>> {
         val key = apiKey.trim()
         if (key.isEmpty()) {
             return Result.failure(IllegalStateException("missing_api_key"))

@@ -2,8 +2,8 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.GeocodingRepository
-import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.CitySearchRepository
+import com.tuckercr.catsdogs.data.SavedCityRepository
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -17,8 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GeoLocationViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
-    private val geocodingRepository: GeocodingRepository,
+    private val preferencesRepository: SavedCityRepository,
+    private val geocodingRepository: CitySearchRepository,
 ) : ViewModel() {
 
     private val _cityInput = MutableStateFlow("")
@@ -36,7 +36,7 @@ class GeoLocationViewModel @Inject constructor(
 
     private var suggestJob: Job? = null
 
-    /** Guard so we only read [PreferencesRepository.lastCity] once per ViewModel. */
+    /** Guard so we only read [SavedCityRepository.lastCity] once per ViewModel. */
     private var savedCityRestoreDone = false
 
     fun pinnedLatitude(): Double? = pinnedWeatherLat
