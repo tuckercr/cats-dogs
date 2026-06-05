@@ -54,7 +54,10 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
+                locationLabel = "",
                 cityQuery = "  Denver  ",
+                latitude = null,
+                longitude = null,
             )
             val weather = result.getOrThrow()
 
@@ -73,7 +76,10 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
+                locationLabel = "",
                 cityQuery = "   ",
+                latitude = null,
+                longitude = null,
             )
 
             val error = result.exceptionOrNull()
@@ -90,6 +96,8 @@ class WeatherRepositoryTest {
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
                 cityQuery = "Austin",
+                latitude = null,
+                longitude = null,
             )
 
             val error = result.exceptionOrNull()
@@ -121,6 +129,7 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
+                cityQuery = null,
                 latitude = 30.2672,
                 longitude = -97.7431,
             )
@@ -144,7 +153,10 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
+                locationLabel = "",
                 cityQuery = "Austin",
+                latitude = null,
+                longitude = null,
             )
 
             val error = result.exceptionOrNull()
@@ -164,7 +176,10 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
+                locationLabel = "",
                 cityQuery = "Missing City",
+                latitude = null,
+                longitude = null,
             )
 
             val error = result.exceptionOrNull()
@@ -190,7 +205,10 @@ class WeatherRepositoryTest {
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
+                locationLabel = "",
                 cityQuery = "Broken City",
+                latitude = null,
+                longitude = null,
             )
 
             val error = result.exceptionOrNull()
