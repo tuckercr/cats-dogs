@@ -12,7 +12,7 @@ interface WeatherUnitsProvider {
 
 @Singleton
 class ContextWeatherUnitsProvider @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) : WeatherUnitsProvider {
     override fun resolve(): WeatherUnits = context.resolveWeatherUnits()
 }
