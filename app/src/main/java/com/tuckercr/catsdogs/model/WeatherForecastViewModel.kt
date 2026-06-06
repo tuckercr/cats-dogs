@@ -1,13 +1,12 @@
 package com.tuckercr.catsdogs.model
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.PreferencesRepository
-import com.tuckercr.catsdogs.data.WeatherRepository
+import com.tuckercr.catsdogs.data.UserPreferences
+import com.tuckercr.catsdogs.data.WeatherDataRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
-import com.tuckercr.catsdogs.util.resolveWeatherUnits
+import com.tuckercr.catsdogs.util.WeatherUnitsProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +18,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WeatherForecastViewModel @Inject constructor(
-    application: Application,
-    private val preferencesRepository: PreferencesRepository,
-    private val weatherRepository: WeatherRepository,
-) : AndroidViewModel(application) {
+    private val preferencesRepository: UserPreferences,
+    private val weatherRepository: WeatherDataRepository,
+    private val weatherUnitsProvider: WeatherUnitsProvider,
+) : ViewModel() {
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
     val currentWeather: StateFlow<LoadingState<CurrentWeather>> = _currentWeather.asStateFlow()
@@ -52,7 +51,7 @@ class WeatherForecastViewModel @Inject constructor(
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _currentWeather.value = LoadingState.Loading
-            val units = getApplication<Application>().resolveWeatherUnits()
+            val units = weatherUnitsProvider.resolve()
             val result = if (lat != null && lon != null) {
                 weatherRepository.fetchCurrentWeather(
                     units = units,
@@ -99,7 +98,7 @@ class WeatherForecastViewModel @Inject constructor(
         val fetchId = forecastFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _forecast.value = LoadingState.Loading
-            val units = getApplication<Application>().resolveWeatherUnits()
+            val units = weatherUnitsProvider.resolve()
             val result = if (lat != null && lon != null) {
                 weatherRepository.fetchForecast(
                     units = units,
