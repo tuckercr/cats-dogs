@@ -3,7 +3,7 @@ package com.tuckercr.catsdogs.model
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.UserPreferences
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
@@ -20,7 +20,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WeatherForecastViewModel @Inject constructor(
     application: Application,
-    private val preferencesRepository: PreferencesRepository,
+    private val preferencesRepository: UserPreferences,
     private val weatherRepository: WeatherRepository,
 ) : AndroidViewModel(application) {
 
