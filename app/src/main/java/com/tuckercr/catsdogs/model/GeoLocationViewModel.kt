@@ -2,13 +2,12 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.GeocodingRepository
-import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.CitySearchRepository
+import com.tuckercr.catsdogs.data.WeatherPreferences
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,16 +17,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GeoLocationViewModel @Inject constructor(
-    preferencesRepository: PreferencesRepository,
-    geocodingRepository: GeocodingRepository,
-) : this(
-    lastCity = preferencesRepository.lastCity,
-    searchCities = geocodingRepository::searchCities,
-)
-
-internal constructor(
-    private val lastCity: Flow<String?>,
-    private val searchCities: suspend (String) -> Result<List<CitySuggestion>>,
+    private val preferences: WeatherPreferences,
+    private val citySearchRepository: CitySearchRepository,
 ) : ViewModel() {
 
     private val _cityInput = MutableStateFlow("")
@@ -70,7 +61,7 @@ internal constructor(
                 _citySuggestLoading.value = false
                 return@launch
             }
-            val result = searchCities(trimmed)
+            val result = citySearchRepository.searchCities(trimmed)
             if (_cityInput.value.trim() != trimmed) {
                 _citySuggestLoading.value = false
                 return@launch
@@ -102,7 +93,7 @@ internal constructor(
     suspend fun restoreSavedCityOnce(): String? {
         if (savedCityRestoreDone) return null
         savedCityRestoreDone = true
-        val last = lastCity.first()
+        val last = preferences.lastCity.first()
         if (!last.isNullOrBlank()) {
             _cityInput.value = last
             return last

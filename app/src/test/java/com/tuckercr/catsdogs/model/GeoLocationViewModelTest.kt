@@ -1,5 +1,7 @@
 package com.tuckercr.catsdogs.model
 
+import com.tuckercr.catsdogs.data.CitySearchRepository
+import com.tuckercr.catsdogs.data.WeatherPreferences
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +34,7 @@ class GeoLocationViewModelTest {
     fun `short query clears suggestions and does not search`() =
         runTest(mainDispatcherRule.dispatcher) {
             val searcher = RecordingCitySearcher()
-            val viewModel = viewModel(searchCities = searcher::search)
+            val viewModel = viewModel(citySearchRepository = searcher)
 
             viewModel.onCitySuggestionChosen(austin)
             viewModel.onCityInputChange(" a ")
@@ -69,7 +71,7 @@ class GeoLocationViewModelTest {
     fun `stale search result is ignored after input changes`() =
         runTest(mainDispatcherRule.dispatcher) {
             val searcher = DeferredCitySearcher()
-            val viewModel = viewModel(searchCities = searcher::search)
+            val viewModel = viewModel(citySearchRepository = searcher)
 
             viewModel.onCityInputChange("Austin")
             advanceTimeBy(280)
@@ -99,7 +101,7 @@ class GeoLocationViewModelTest {
     fun `restoreSavedCityOnce returns saved city only once`() =
         runTest(mainDispatcherRule.dispatcher) {
             val savedCity = MutableStateFlow<String?>("Austin, TX, US")
-            val viewModel = viewModel(lastCity = savedCity)
+            val viewModel = viewModel(preferences = FakeWeatherPreferences(lastCity = savedCity))
 
             val firstRestore = viewModel.restoreSavedCityOnce()
             savedCity.value = "Boston, MA, US"
@@ -113,7 +115,7 @@ class GeoLocationViewModelTest {
     @Test
     fun `restoreSavedCityOnce ignores blank saved city`() =
         runTest(mainDispatcherRule.dispatcher) {
-            val viewModel = viewModel(lastCity = MutableStateFlow("   "))
+            val viewModel = viewModel(preferences = FakeWeatherPreferences(lastCity = MutableStateFlow("   ")))
 
             val restored = viewModel.restoreSavedCityOnce()
 
@@ -122,27 +124,43 @@ class GeoLocationViewModelTest {
         }
 
     private fun viewModel(
-        lastCity: MutableStateFlow<String?> = MutableStateFlow(null),
-        searchCities: suspend (String) -> Result<List<CitySuggestion>> = { Result.success(emptyList()) },
+        preferences: FakeWeatherPreferences = FakeWeatherPreferences(lastCity = MutableStateFlow(null)),
+        citySearchRepository: CitySearchRepository = RecordingCitySearcher(),
     ) = GeoLocationViewModel(
-        lastCity = lastCity,
-        searchCities = searchCities,
+        preferences = preferences,
+        citySearchRepository = citySearchRepository,
     )
 
-    private class RecordingCitySearcher {
+    private class FakeWeatherPreferences(
+        override val lastCity: MutableStateFlow<String?>,
+    ) : WeatherPreferences {
+        override val hasSeenWelcome = MutableStateFlow(false)
+
+        override suspend fun setHasSeenWelcome(value: Boolean) {
+            hasSeenWelcome.value = value
+        }
+
+        override suspend fun setLastCity(cityName: String) {
+            lastCity.value = cityName
+        }
+
+        override suspend fun hasSeenWelcomeOnce(): Boolean = hasSeenWelcome.value
+    }
+
+    private class RecordingCitySearcher : CitySearchRepository {
         val queries = mutableListOf<String>()
 
-        suspend fun search(query: String): Result<List<CitySuggestion>> {
+        override suspend fun searchCities(query: String): Result<List<CitySuggestion>> {
             queries += query
             return Result.success(emptyList())
         }
     }
 
-    private class DeferredCitySearcher {
+    private class DeferredCitySearcher : CitySearchRepository {
         val queries = mutableListOf<String>()
         private val responses = mutableMapOf<String, CompletableDeferred<Result<List<CitySuggestion>>>>()
 
-        suspend fun search(query: String): Result<List<CitySuggestion>> {
+        override suspend fun searchCities(query: String): Result<List<CitySuggestion>> {
             queries += query
             val response = CompletableDeferred<Result<List<CitySuggestion>>>()
             responses[query] = response
