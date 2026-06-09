@@ -1,5 +1,8 @@
 # Cats & Dogs
 
+![Android CI](https://github.com/tuckercr/cats-dogs/actions/workflows/android.yml/badge.svg)
+![ktlint](https://github.com/tuckercr/cats-dogs/actions/workflows/ktlint.yml/badge.svg)
+
 Simple weather client for a city: current conditions and a multi-day forecast, built for a
 coding challenge but later extended with various minor bug fixes and used as a tool to learn
 GitHub Actions.
