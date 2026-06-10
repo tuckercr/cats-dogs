@@ -2,7 +2,7 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.WeatherPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +12,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class WelcomeViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
+    private val preferences: WeatherPreferences,
 ) : ViewModel() {
 
     private val _welcomeDone = MutableStateFlow<Boolean?>(null)
@@ -20,7 +20,7 @@ class WelcomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val seen = preferencesRepository.hasSeenWelcomeOnce()
+            val seen = preferences.hasSeenWelcomeOnce()
             _welcomeDone.value = seen
         }
     }
@@ -28,7 +28,7 @@ class WelcomeViewModel @Inject constructor(
     fun completeWelcome() {
         viewModelScope.launch {
             _welcomeDone.value = true
-            preferencesRepository.setHasSeenWelcome(true)
+            preferences.setHasSeenWelcome(true)
         }
     }
 }
