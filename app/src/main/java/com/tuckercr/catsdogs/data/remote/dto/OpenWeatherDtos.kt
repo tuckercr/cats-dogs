@@ -9,6 +9,13 @@ data class CurrentWeatherResponse(
     @SerialName("weather") val weather: List<WeatherDescDto>,
     @SerialName("main") val main: MainDto,
     @SerialName("wind") val wind: WindDto,
+    @SerialName("visibility") val visibility: Int? = null,
+    @SerialName("clouds") val clouds: CloudsDto? = null,
+)
+
+@Serializable
+data class CloudsDto(
+    @SerialName("all") val all: Int = 0,
 )
 
 @Serializable
@@ -41,12 +48,17 @@ data class WeatherDescDto(
 data class MainDto(
     @SerialName("temp") val temp: Double,
     @SerialName("feels_like") val feelsLike: Double,
+    @SerialName("temp_min") val tempMin: Double = 0.0,
+    @SerialName("temp_max") val tempMax: Double = 0.0,
     @SerialName("humidity") val humidity: Int,
+    @SerialName("pressure") val pressure: Int = 0,
 )
 
 @Serializable
 data class WindDto(
     @SerialName("speed") val speed: Double,
+    @SerialName("deg") val deg: Int = 0,
+    @SerialName("gust") val gust: Double? = null,
 )
 
 @Serializable

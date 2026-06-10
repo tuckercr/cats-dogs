@@ -6,18 +6,26 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-/**
- * These are very minimal color schemes, a production app with proper branding
- * would specify more.
- */
 private val LightColorScheme = lightColorScheme(
-    primary = PrimaryColor,
-    background = LightBackground,
+    primary = SkyBlue,
+    onPrimary = androidx.compose.ui.graphics.Color.White,
+    primaryContainer = SkyBlueLight,
+    onPrimaryContainer = SkyBlueDark,
+    secondary = TealAccent,
+    background = SurfaceLight,
+    surface = SurfaceLight,
+    surfaceVariant = SkyBlueLight,
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryColorDark,
-    background = DarkBackground,
+    primary = SkyBlueNight,
+    onPrimary = SurfaceDark,
+    primaryContainer = SurfaceContainerDark,
+    onPrimaryContainer = SkyBlueNight,
+    secondary = TealAccentNight,
+    background = SurfaceDark,
+    surface = SurfaceDark,
+    surfaceVariant = SurfaceContainerDark,
 )
 
 @Composable

@@ -146,16 +146,10 @@ fun ForecastScreen(
 }
 
 @Composable
-private fun formatTempFeels(day: DayForecast): String =
-    when (day.units) {
-        WeatherUnits.METRIC -> stringResource(
-            R.string.format_temp_feels,
-            day.temperature,
-            day.feelsLike,
-        )
-
-        WeatherUnits.IMPERIAL ->
-            stringResource(R.string.format_temp_feels_imperial, day.temperature, day.feelsLike)
+private fun formatTemp(value: Double, units: WeatherUnits): String =
+    when (units) {
+        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
+        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
@@ -177,18 +171,30 @@ private fun ForecastDayCard(
             WeatherIcon(
                 iconCode = day.iconCode,
                 contentDescription = day.description,
-                sizeDp = 64,
+                sizeDp = 56,
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = day.dateLabel, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = day.dateLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
                 Text(
                     text = day.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = formatTempFeels(day),
+                    text = formatTemp(day.tempMax, day.units),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                )
+                Text(
+                    text = formatTemp(day.tempMin, day.units),
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -226,28 +232,34 @@ private fun ForecastScreenSuccessPreview() {
         DayForecast(
             dateLabel = "Today",
             conditionMain = "Clouds",
-            description = "overcast clouds",
+            description = "Overcast clouds",
             iconCode = "04d",
             temperature = 22.0,
             feelsLike = 21.5,
+            tempMin = 18.0,
+            tempMax = 24.0,
             units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Tomorrow",
             conditionMain = "Rain",
-            description = "light rain",
+            description = "Light rain",
             iconCode = "10d",
             temperature = 18.0,
             feelsLike = 17.5,
+            tempMin = 15.0,
+            tempMax = 20.0,
             units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Wednesday",
             conditionMain = "Clear",
-            description = "clear sky",
+            description = "Clear sky",
             iconCode = "01d",
             temperature = 25.0,
             feelsLike = 24.5,
+            tempMin = 20.0,
+            tempMax = 27.0,
             units = WeatherUnits.METRIC,
         ),
     )
