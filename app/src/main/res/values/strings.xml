@@ -11,15 +11,20 @@
     <string name="label_temperature">Temperature</string>
     <string name="label_feels_like">Feels like</string>
     <string name="label_humidity">Humidity</string>
-    <string name="label_wind">Wind speed</string>
+    <string name="label_wind">Wind</string>
+    <string name="label_pressure">Pressure</string>
+    <string name="label_visibility">Visibility</string>
+    <string name="label_cloud_cover">Cloud cover</string>
+    <string name="label_temp_range">%1$s / %2$s</string>
+    <string name="action_view_forecast">View 5-day forecast</string>
     <string name="format_temperature_c">%.1f °C</string>
     <string name="format_temperature_f">%.1f °F</string>
     <string name="format_percent">%d%%</string>
     <string name="format_wind_ms">%.1f m/s</string>
     <string name="format_wind_mph">%.1f mph</string>
-    <string name="format_temp_feels">%.1f °C (feels like %.1f °C)</string>
-    <string name="format_temp_feels_imperial">%.1f °F (feels like %.1f °F)</string>
-    <string name="welcome">Welcome</string>
+    <string name="format_pressure_hpa">%d hPa</string>
+    <string name="format_visibility_km">%.1f km</string>
+    <string name="format_visibility_m">%d m</string>
     <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
     <string name="get_started">Get started</string>
 </resources>

@@ -22,6 +22,8 @@ object ForecastAggregator {
         val epochSeconds: Long,
         val temperature: Double,
         val feelsLike: Double,
+        val tempMin: Double = 0.0,
+        val tempMax: Double = 0.0,
         val conditionMain: String,
         val description: String,
         val iconCode: String,
@@ -46,6 +48,8 @@ object ForecastAggregator {
                 val minutes = zdt.hour * 60 + zdt.minute
                 abs(minutes - noonMinutes)
             }
+            val dailyMin = daySlots.minOf { it.tempMin.takeIf { v -> v != 0.0 } ?: it.temperature }
+            val dailyMax = daySlots.maxOf { it.tempMax.takeIf { v -> v != 0.0 } ?: it.temperature }
             DayForecast(
                 dateLabel = date.atStartOfDay(zoneId).format(dayLabelFormatter),
                 conditionMain = representative.conditionMain,
@@ -53,6 +57,8 @@ object ForecastAggregator {
                 iconCode = representative.iconCode,
                 temperature = representative.temperature,
                 feelsLike = representative.feelsLike,
+                tempMin = dailyMin,
+                tempMax = dailyMax,
                 units = units,
             )
         }

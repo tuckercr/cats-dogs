@@ -11,21 +11,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Compress
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.WbCloudy
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,8 +44,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -125,20 +135,7 @@ fun CurrentWeatherScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.screen_current_weather)) },
-                actions = {
-                    IconButton(
-                        onClick = onOpenForecast,
-                        enabled = forecastEnabled,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = stringResource(R.string.cd_open_forecast),
-                        )
-                    }
-                },
-            )
+            TopAppBar(title = { Text(stringResource(R.string.screen_current_weather)) })
         },
     ) { padding ->
         Column(
@@ -243,7 +240,11 @@ fun CurrentWeatherScreen(
                     }
                 }
 
-                is LoadingState.Success -> CurrentWeatherContent(weather = state.data)
+                is LoadingState.Success -> CurrentWeatherContent(
+                    weather = state.data,
+                    onOpenForecast = onOpenForecast,
+                    forecastEnabled = forecastEnabled,
+                )
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -293,44 +294,6 @@ private fun CurrentWeatherScreenSuggestionsPreview() {
 
 @Preview(showBackground = true)
 @Composable
-private fun CurrentWeatherScreenLoadingPreview() {
-    CatsDogsTheme {
-        CurrentWeatherScreen(
-            city = "London",
-            citySuggestions = emptyList(),
-            citySuggestLoading = false,
-            onCityChange = {},
-            onCitySuggestionChosen = {},
-            onSearch = {},
-            state = LoadingState.Loading,
-            onRetry = {},
-            onOpenForecast = {},
-            forecastEnabled = false,
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun CurrentWeatherScreenErrorPreview() {
-    CatsDogsTheme {
-        CurrentWeatherScreen(
-            city = "London",
-            citySuggestions = emptyList(),
-            citySuggestLoading = false,
-            onCityChange = {},
-            onCitySuggestionChosen = {},
-            onSearch = {},
-            state = LoadingState.Error("Network error", canRetry = true),
-            onRetry = {},
-            onOpenForecast = {},
-            forecastEnabled = false,
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
 private fun CurrentWeatherScreenSuccessPreview() {
     CatsDogsTheme {
         CurrentWeatherScreen(
@@ -340,111 +303,214 @@ private fun CurrentWeatherScreenSuccessPreview() {
             onCityChange = {},
             onCitySuggestionChosen = {},
             onSearch = {},
-            state = LoadingState.Success(
-                CurrentWeather(
-                    cityName = "London",
-                    conditionMain = "Clouds",
-                    description = "broken clouds",
-                    iconCode = "04d",
-                    temperature = 15.0,
-                    feelsLike = 14.2,
-                    humidityPercent = 72,
-                    windSpeed = 4.1,
-                    units = WeatherUnits.METRIC,
-                ),
-            ),
+            state = LoadingState.Success(previewWeather),
             onRetry = {},
-            onOpenForecast = { /* no-op */ },
+            onOpenForecast = {},
             forecastEnabled = true,
         )
     }
 }
 
+private val previewWeather = CurrentWeather(
+    cityName = "London",
+    conditionMain = "Clouds",
+    description = "Broken clouds",
+    iconCode = "04d",
+    temperature = 15.0,
+    feelsLike = 14.2,
+    tempMin = 12.0,
+    tempMax = 17.5,
+    humidityPercent = 72,
+    pressureHpa = 1012,
+    windSpeed = 4.1,
+    windDeg = 225,
+    visibilityMeters = 9000,
+    cloudPercent = 75,
+    units = WeatherUnits.METRIC,
+)
+
 @Composable
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
+    onOpenForecast: () -> Unit,
+    forecastEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-            Row(
+        // Hero card: icon, city, temperature
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 WeatherIcon(
                     iconCode = weather.iconCode,
                     contentDescription = weather.description,
-                    sizeDp = 72,
+                    sizeDp = 88,
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = weather.cityName,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    Text(
-                        text = weather.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    text = weather.cityName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = weather.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = formatTemperature(weather.temperature, weather.units),
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.label_temp_range,
+                        formatTemperature(weather.tempMin, weather.units),
+                        formatTemperature(weather.tempMax, weather.units),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(R.string.label_feels_like) + " " +
+                        formatTemperature(weather.feelsLike, weather.units),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
-        MetricRow(
-            label = stringResource(R.string.label_temperature),
-            value = formatTemperature(weather.temperature, weather.units),
-        )
-        MetricRow(
-            label = stringResource(R.string.label_feels_like),
-            value = formatTemperature(weather.feelsLike, weather.units),
-        )
-        MetricRow(
-            label = stringResource(R.string.label_humidity),
-            value = stringResource(R.string.format_percent, weather.humidityPercent),
-        )
-        MetricRow(
-            label = stringResource(R.string.label_wind),
-            value = formatWind(weather.windSpeed, weather.units),
-        )
+
+        // Details card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                MetricIconRow(
+                    icon = Icons.Default.WaterDrop,
+                    label = stringResource(R.string.label_humidity),
+                    value = stringResource(R.string.format_percent, weather.humidityPercent),
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                MetricIconRow(
+                    icon = Icons.Default.Air,
+                    label = stringResource(R.string.label_wind),
+                    value = formatWind(weather.windSpeed, weather.units) +
+                        "  " + windDirection(weather.windDeg),
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                MetricIconRow(
+                    icon = Icons.Default.Compress,
+                    label = stringResource(R.string.label_pressure),
+                    value = stringResource(R.string.format_pressure_hpa, weather.pressureHpa),
+                )
+                if (weather.visibilityMeters != null) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.Visibility,
+                        label = stringResource(R.string.label_visibility),
+                        value = formatVisibility(weather.visibilityMeters),
+                    )
+                }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                MetricIconRow(
+                    icon = Icons.Default.WbCloudy,
+                    label = stringResource(R.string.label_cloud_cover),
+                    value = stringResource(R.string.format_percent, weather.cloudPercent),
+                )
+            }
+        }
+
+        if (forecastEnabled) {
+            OutlinedButton(
+                onClick = onOpenForecast,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingFlat,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .padding(end = 0.dp),
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.action_view_forecast))
+            }
+        }
     }
 }
 
 @Composable
-private fun formatTemperature(
-    value: Double,
-    units: WeatherUnits,
-): String =
+private fun formatTemperature(value: Double, units: WeatherUnits): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
-private fun formatWind(
-    speed: Double,
-    units: WeatherUnits,
-): String =
+private fun formatWind(speed: Double, units: WeatherUnits): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
     }
 
 @Composable
-private fun MetricRow(
+private fun formatVisibility(meters: Int): String =
+    if (meters >= 1000) {
+        stringResource(R.string.format_visibility_km, meters / 1000.0)
+    } else {
+        stringResource(R.string.format_visibility_m, meters)
+    }
+
+private fun windDirection(deg: Int): String {
+    val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    return directions[((deg + 22) / 45) % 8]
+}
+
+@Composable
+private fun MetricIconRow(
+    icon: ImageVector,
     label: String,
     value: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }

@@ -3,58 +3,77 @@
 ![Android CI](https://github.com/tuckercr/cats-dogs/actions/workflows/android.yml/badge.svg)
 ![ktlint](https://github.com/tuckercr/cats-dogs/actions/workflows/ktlint.yml/badge.svg)
 
-Simple weather client for a city: current conditions and a multi-day forecast, built for a
-coding challenge but later extended with various minor bug fixes and used as a tool to learn
-GitHub Actions.
+A clean, modern Android weather app. Search any city for current conditions — temperature,
+feels-like, min/max, humidity, wind speed & direction, pressure, visibility, and cloud cover —
+plus a 5-day forecast. Built with Jetpack Compose and Material 3.
 
-## How to run
+Originally a coding-challenge project, the app has since been extended as a personal showcase of
+Android best practices: clean architecture, unidirectional data flow, Hilt DI, and full CI/CD.
 
-1. Create a free API key at [OpenWeatherMap](https://openweathermap.org/api).
-2. Add the key to `local.properties`
+## Screenshots
 
+> *Coming soon — run locally and screenshot the current-weather and forecast screens.*
+
+## Getting started
+
+1. Create a free API key at [openweathermap.org](https://openweathermap.org/api).
+2. Add it to `local.properties` (never committed to source control):
    ```
    OWM_API_KEY=your_key_here
    ```
-3. Build & Run.  Note that a new key can take up to 2 hours to become active.
+3. Build and run. New keys may take up to 2 hours to activate.
 
-The key is injected at build time into `BuildConfig.OWM_API_KEY` so it is not committed to source control.
+The key is injected at build time into `BuildConfig.OWM_API_KEY`. On GitHub it is stored as an
+Actions secret and injected automatically — no key in the repository.
 
-On GitHub this API key is securely injected with CI/CD using GitHub Actions.
+## Architecture & tech stack
 
-## Application flow
+| Layer | Choice | Notes |
+|---|---|---|
+| UI | Jetpack Compose + Material 3 | Single-Activity, screen-level composables |
+| State | `StateFlow` + `collectAsStateWithLifecycle` | Unidirectional data flow |
+| DI | Hilt | Repositories and ViewModels are injected |
+| Navigation | Compose Navigation | Type-safe destination constants |
+| Networking | Retrofit + OkHttp + kotlinx.serialization | Suspend functions, no RxJava |
+| Images | Coil `AsyncImage` | Weather condition icons from OpenWeatherMap |
+| Persistence | DataStore Preferences | Welcome-seen flag + last resolved city |
+| API | OpenWeatherMap `/weather` & `/forecast` + Geocoding | Free tier |
+| CI/CD | GitHub Actions | Build, ktlint, unit tests on every push |
 
-1. On launch a branded splash screen is displayed.
-2. The app reads `DataStore` preferences to check if the welcome screen was previously shown.
-3. A welcome screen appears.  User advances by clicking the button or automatically after 5 seconds.
-4. The user enters a city and clicks a button.  The UI shows conditions, OpenWeather icon (Coil), temperature, “feels like”, humidity and wind speed.
-5. As a bonus I added **OpenWeatherMap Geocoding** suggestions. If the user picks a suggestion, **latitude/longitude** are sent so the result matches that place.
-6. A successful response saves the location in `DataStore` so it is prefilled after an app restart.
-7. Network failures, HTTP errors, empty API keys, and malformed payloads surface as an inline error message with **Retry** where appropriate.
-8. From the current weather screen, the calendar icon opens the forecast screen. The app calls `data/2.5/forecast` using the same location as the last successful current fetch.
-9. These are displayed as one row per calendar day, using the sample closest to local noon.
+## App flow
 
-## Framework, libraries, and API choices
+1. **Splash / loading** — checks `DataStore` for prior visit; routes to Welcome or Current Weather.
+2. **Welcome screen** — shown on first launch; tap *Get started* to proceed.
+3. **Current Weather** — type a city name; autocomplete suggestions appear via the
+   [Geocoding API](https://openweathermap.org/api/geocoding-api). Selecting a suggestion pins
+   exact latitude/longitude so the result is unambiguous.  
+   Displays: condition icon, temperature (with daily min/max), feels-like, humidity, wind speed &
+   direction, pressure, visibility, and cloud cover.
+4. **5-Day Forecast** — reached via the *View 5-day forecast* button once weather loads.
+   Uses `data/2.5/forecast` (free tier, 3-hour slots) with the same coordinates. Each calendar
+   day shows the slot closest to local noon, plus the daily high/low derived from all slots.
+5. **Persistence** — a successful fetch saves the location to `DataStore` so it prefills on
+   next launch.
+6. **Error handling** — network failures, HTTP errors, empty API keys, and malformed payloads all
+   surface as inline error messages with *Retry* where appropriate.
 
-- **UI** - Compose & Material 3
-- **DI** - Hilt (Repositories and View Model are injected)
-- **Navigation** - Compose Navigation was used
-- **Async** - Coroutines with `viewModelScope` are used with Retrofit `suspend` calls
-- **Networking** - Retrofit, OkHttp and Kotlinx Serialization
-- **Image Download** - used a standard Coil `AsyncImage`
-- **Data Storage** - used `DataStore` preferences to store the welcome flag and last resolved city name
-- **API** - Used OpenWeatherMap for geolocation and weather forecasting.
+## Unit tests
 
-## Assumptions/Special Notes
+| Test class | What it covers |
+|---|---|
+| `ForecastAggregatorTest` | Noon-slot selection and multi-day grouping |
+| `OpenWeatherParsingTest` | Kotlinx Serialization round-trips for API DTOs |
+| `WeatherRepositoryTest` | Repository contract: coordinate routing, city-query trimming, error mapping |
+| `WeatherUnitsTest` | Locale-to-unit resolution (Android 13 and earlier fallback) |
 
-- Forecast comes from the free 5-day endpointm, with the closest sample to noon chosen.
-- On Android 14+ the temperature unit is based on user system settings, otherwise it falls back to basic geolocation based on the locale.  A real app would allow the user to choose.
-- The welcome screen is marked seen when the user taps **Get started** or when the **5-second** auto-dismiss runs - if the app is killed mid-welcome will show again.  The timer is a strange UX pattern that I would not recommend.  A real app would likely have some TOS/Privacy Policies that the user must accept.
+## Temperature units
 
-## Tests
-- `ForecastAggregatorTest` - Forecast aggregation logic
-- `OpenWeatherParsingTest` - Kotlinx Serialization parsing tests
-- `WeatherUnitsTest` - Weather unit geolocation test (used on Android 13 and earlier)
+On Android 14+ the app reads the system temperature preference. On earlier versions it falls back
+to a locale-based heuristic (US → Fahrenheit, otherwise Metric). A production app would surface
+an explicit user setting.
 
-## Demo Video
-Note: this video is too large to view on GitHub so you'll need to download it as Raw)
-[![Watch the Demo Video](./screen_recording/thumbnail.png)](./screen_recording/cats_and_dogs_demo_vid.mp4)
+## Demo video
+
+> Note: the file is too large to preview on GitHub — click *Raw* to download.
+
+[![Watch the demo](./screen_recording/thumbnail.png)](./screen_recording/cats_and_dogs_demo_vid.mp4)

@@ -8,8 +8,14 @@ data class CurrentWeather(
     val iconCode: String,
     val temperature: Double,
     val feelsLike: Double,
+    val tempMin: Double,
+    val tempMax: Double,
     val humidityPercent: Int,
+    val pressureHpa: Int,
     val windSpeed: Double,
+    val windDeg: Int,
+    val visibilityMeters: Int?,
+    val cloudPercent: Int,
     val units: WeatherUnits,
 )
 
@@ -20,5 +26,7 @@ data class DayForecast(
     val iconCode: String,
     val temperature: Double,
     val feelsLike: Double,
+    val tempMin: Double,
+    val tempMax: Double,
     val units: WeatherUnits,
 )
