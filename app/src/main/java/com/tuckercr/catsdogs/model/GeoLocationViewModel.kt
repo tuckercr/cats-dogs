@@ -8,6 +8,7 @@ import com.tuckercr.catsdogs.domain.CitySuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,10 +17,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class GeoLocationViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
-    private val geocodingRepository: GeocodingRepository,
+class GeoLocationViewModel internal constructor(
+    private val lastCity: Flow<String?>,
+    private val searchCities: suspend (String) -> Result<List<CitySuggestion>>,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        preferencesRepository: PreferencesRepository,
+        geocodingRepository: GeocodingRepository,
+    ) : this(
+        lastCity = preferencesRepository.lastCity,
+        searchCities = geocodingRepository::searchCities,
+    )
 
     private val _cityInput = MutableStateFlow("")
     val cityInput: StateFlow<String> = _cityInput.asStateFlow()
@@ -61,7 +71,7 @@ class GeoLocationViewModel @Inject constructor(
                 _citySuggestLoading.value = false
                 return@launch
             }
-            val result = geocodingRepository.searchCities(trimmed)
+            val result = searchCities(trimmed)
             if (_cityInput.value.trim() != trimmed) {
                 _citySuggestLoading.value = false
                 return@launch
@@ -93,7 +103,7 @@ class GeoLocationViewModel @Inject constructor(
     suspend fun restoreSavedCityOnce(): String? {
         if (savedCityRestoreDone) return null
         savedCityRestoreDone = true
-        val last = preferencesRepository.lastCity.first()
+        val last = lastCity.first()
         if (!last.isNullOrBlank()) {
             _cityInput.value = last
             return last
