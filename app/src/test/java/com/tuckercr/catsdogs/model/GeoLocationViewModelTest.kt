@@ -130,7 +130,7 @@ class GeoLocationViewModelTest {
         searchCities = searchCities,
     )
 
-    private class MainDispatcherRule(
+    class MainDispatcherRule(
         val testDispatcher: TestDispatcher = StandardTestDispatcher(),
     ) : TestWatcher() {
         override fun starting(description: Description) {
