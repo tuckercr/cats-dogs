@@ -80,19 +80,19 @@ class WeatherForecastViewModel internal constructor(
             val units = resolveWeatherUnits()
             val result = if (lat != null && lon != null) {
                 fetchCurrentWeather(
-                    units = units,
-                    locationLabel = trimmedCity,
-                    cityQuery = null,
-                    latitude = lat,
-                    longitude = lon,
+                    units,
+                    trimmedCity,
+                    null,
+                    lat,
+                    lon,
                 )
             } else {
                 fetchCurrentWeather(
-                    units = units,
-                    locationLabel = trimmedCity,
-                    cityQuery = trimmedCity,
-                    latitude = null,
-                    longitude = null,
+                    units,
+                    trimmedCity,
+                    trimmedCity,
+                    null,
+                    null,
                 )
             }
             if (fetchId != currentWeatherFetchGeneration.get()) return@launch
@@ -127,17 +127,17 @@ class WeatherForecastViewModel internal constructor(
             val units = resolveWeatherUnits()
             val result = if (lat != null && lon != null) {
                 fetchForecast(
-                    units = units,
-                    cityQuery = null,
-                    latitude = lat,
-                    longitude = lon,
+                    units,
+                    null,
+                    lat,
+                    lon,
                 )
             } else {
                 fetchForecast(
-                    units = units,
-                    cityQuery = name,
-                    latitude = null,
-                    longitude = null,
+                    units,
+                    name,
+                    null,
+                    null,
                 )
             }
             if (fetchId != forecastFetchGeneration.get()) return@launch
