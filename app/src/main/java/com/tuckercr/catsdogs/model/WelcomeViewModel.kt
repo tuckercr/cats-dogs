@@ -11,16 +11,25 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class WelcomeViewModel @Inject constructor(
-    private val preferencesRepository: PreferencesRepository,
+class WelcomeViewModel internal constructor(
+    private val hasSeenWelcomeOnce: suspend () -> Boolean,
+    private val setHasSeenWelcome: suspend (Boolean) -> Unit,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        preferencesRepository: PreferencesRepository,
+    ) : this(
+        hasSeenWelcomeOnce = preferencesRepository::hasSeenWelcomeOnce,
+        setHasSeenWelcome = preferencesRepository::setHasSeenWelcome,
+    )
 
     private val _welcomeDone = MutableStateFlow<Boolean?>(null)
     val welcomeDone: StateFlow<Boolean?> = _welcomeDone.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val seen = preferencesRepository.hasSeenWelcomeOnce()
+            val seen = hasSeenWelcomeOnce()
             _welcomeDone.value = seen
         }
     }
@@ -28,7 +37,7 @@ class WelcomeViewModel @Inject constructor(
     fun completeWelcome() {
         viewModelScope.launch {
             _welcomeDone.value = true
-            preferencesRepository.setHasSeenWelcome(true)
+            setHasSeenWelcome(true)
         }
     }
 }
