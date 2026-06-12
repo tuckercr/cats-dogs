@@ -47,4 +47,12 @@
     <string name="search_city_section">ADD A NEW CITY</string>
     <string name="empty_cities_title">No cities added yet</string>
     <string name="empty_cities_body">Tap the + button to add your first city and get started.</string>
+
+    <!-- Day detail / upcoming forecast -->
+    <string name="section_upcoming">UPCOMING</string>
+    <string name="detail_no_hourly_data">Hourly data not available for this day.</string>
+    <string name="detail_time_label">TIME</string>
+    <string name="detail_temp_label">TEMP</string>
+    <string name="detail_wind_label">WIND</string>
+    <string name="detail_humidity_label">HUM</string>
 </resources>

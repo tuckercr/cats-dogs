@@ -1,11 +1,12 @@
 package com.tuckercr.catsdogs.model
 
+import com.tuckercr.catsdogs.data.GeocodingRepository
 import com.tuckercr.catsdogs.domain.CitySuggestion
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -26,16 +27,17 @@ class GeoLocationViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    private val geocodingRepository = mockk<GeocodingRepository>(relaxed = true)
+
     @Test
     fun `short input clears suggestions without searching`() =
         runTest {
             val calls = mutableListOf<String>()
-            val viewModel = viewModel(
-                searchCities = { query ->
-                    calls += query
-                    Result.success(listOf(austinSuggestion))
-                },
-            )
+            coEvery { geocodingRepository.searchCities(any()) } answers {
+                calls += firstArg<String>()
+                Result.success(listOf(austinSuggestion))
+            }
+            val viewModel = GeoLocationViewModel(geocodingRepository)
 
             viewModel.onCityInputChange(" A ")
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
@@ -51,16 +53,17 @@ class GeoLocationViewModelTest {
             val firstSearch = CompletableDeferred<Result<List<CitySuggestion>>>()
             val secondSearch = CompletableDeferred<Result<List<CitySuggestion>>>()
             val calls = mutableListOf<String>()
-            val viewModel = viewModel(
-                searchCities = { query ->
-                    calls += query
-                    when (query) {
-                        "Au" -> firstSearch.await()
-                        "Austin" -> secondSearch.await()
-                        else -> error("Unexpected query $query")
-                    }
-                },
-            )
+
+            coEvery { geocodingRepository.searchCities(any()) } coAnswers {
+                val query = firstArg<String>()
+                calls += query
+                when (query) {
+                    "Au" -> firstSearch.await()
+                    "Austin" -> secondSearch.await()
+                    else -> error("Unexpected query $query")
+                }
+            }
+            val viewModel = GeoLocationViewModel(geocodingRepository)
 
             viewModel.onCityInputChange("Au")
             mainDispatcherRule.testDispatcher.scheduler.advanceTimeBy(DEBOUNCE_MILLIS)
@@ -89,46 +92,19 @@ class GeoLocationViewModelTest {
     @Test
     fun `choosing suggestion pins coordinates and manual edits clear the pin`() =
         runTest {
-            val viewModel = viewModel()
+            val viewModel = GeoLocationViewModel(geocodingRepository)
 
             viewModel.onCitySuggestionChosen(austinSuggestion)
 
             assertEquals("Austin, TX, US", viewModel.cityInput.value)
             assertTrue(viewModel.citySuggestions.value.isEmpty())
             assertFalse(viewModel.citySuggestLoading.value)
-            assertEquals(30.2672, viewModel.pinnedLatitude() ?: 0.0, 0.0001)
-            assertEquals(-97.7431, viewModel.pinnedLongitude() ?: 0.0, 0.0001)
+            assertEquals(austinSuggestion, viewModel.selectedSuggestion.value)
 
             viewModel.onCityInputChange("Austin")
 
-            assertNull(viewModel.pinnedLatitude())
-            assertNull(viewModel.pinnedLongitude())
+            assertNull(viewModel.selectedSuggestion.value)
         }
-
-    @Test
-    fun `restore saved city updates input only once`() =
-        runTest {
-            val lastCity = MutableStateFlow<String?>("Denver")
-            val viewModel = viewModel(lastCity = lastCity)
-
-            val restored = viewModel.restoreSavedCityOnce()
-
-            assertEquals("Denver", restored)
-            assertEquals("Denver", viewModel.cityInput.value)
-
-            lastCity.value = "Austin"
-
-            assertNull(viewModel.restoreSavedCityOnce())
-            assertEquals("Denver", viewModel.cityInput.value)
-        }
-
-    private fun viewModel(
-        lastCity: Flow<String?> = MutableStateFlow(null),
-        searchCities: suspend (String) -> Result<List<CitySuggestion>> = { Result.success(emptyList()) },
-    ) = GeoLocationViewModel(
-        lastCity = lastCity,
-        searchCities = searchCities,
-    )
 
     class MainDispatcherRule(
         val testDispatcher: TestDispatcher = StandardTestDispatcher(),

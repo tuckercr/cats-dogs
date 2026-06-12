@@ -3,6 +3,7 @@ package com.tuckercr.catsdogs.ui
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
+import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.CityListViewModel
@@ -96,6 +98,7 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
     val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
     val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
     val weatherState by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
+    val forecastState by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
     val cityInput by geoViewModel.cityInput.collectAsStateWithLifecycle()
     val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
@@ -103,20 +106,31 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
 
     // Auto-fetch whenever the active location changes
     LaunchedEffect(activeLocation) {
-        activeLocation?.let { weatherForecastViewModel.refreshCurrent(it) }
+        activeLocation?.let {
+            weatherForecastViewModel.refreshCurrent(it)
+            weatherForecastViewModel.refreshForecast(it)
+        }
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
+
+    val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
 
     CurrentWeatherScreen(
         locations = locations,
         activeIndex = activeIndex,
         weatherState = weatherState,
+        forecastDays = forecastDays,
         onTabSelected = cityListViewModel::setActiveIndex,
         onRemoveCity = cityListViewModel::removeLocation,
         onOpenForecast = onOpenForecast,
         onAddCityClick = { showAddSheet = true },
-        onRetry = { activeLocation?.let { weatherForecastViewModel.refreshCurrent(it) } },
+        onRetry = {
+            activeLocation?.let {
+                weatherForecastViewModel.refreshCurrent(it)
+                weatherForecastViewModel.refreshForecast(it)
+            }
+        },
     )
 
     if (showAddSheet) {
@@ -174,6 +188,7 @@ fun CurrentWeatherScreen(
     locations: List<SavedLocation>,
     activeIndex: Int,
     weatherState: LoadingState<CurrentWeather>,
+    forecastDays: List<DayForecast> = emptyList(),
     onTabSelected: (Int) -> Unit,
     onRemoveCity: (Int) -> Unit,
     onOpenForecast: () -> Unit,
@@ -311,6 +326,7 @@ fun CurrentWeatherScreen(
 
                         is LoadingState.Success -> CurrentWeatherContent(
                             weather = weatherState.data,
+                            forecastDays = forecastDays,
                             onOpenForecast = onOpenForecast,
                         )
                     }
@@ -499,9 +515,12 @@ fun AddCitySheetContent(
 @Composable
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
+    forecastDays: List<DayForecast>,
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -594,6 +613,19 @@ private fun CurrentWeatherContent(
             }
         }
 
+        // Upcoming days section
+        if (forecastDays.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.section_upcoming),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            forecastDays.forEach { day ->
+                UpcomingDayRow(day = day, onClick = { selectedDay = day })
+            }
+        }
+
         OutlinedButton(
             onClick = onOpenForecast,
             modifier = Modifier.fillMaxWidth(),
@@ -607,6 +639,10 @@ private fun CurrentWeatherContent(
             Spacer(modifier = Modifier.size(8.dp))
             Text(stringResource(R.string.action_view_forecast))
         }
+    }
+
+    selectedDay?.let { day ->
+        DayDetailBottomSheet(day = day, onDismiss = { selectedDay = null })
     }
 }
 
@@ -641,6 +677,31 @@ private fun formatVisibility(meters: Int): String =
 private fun windDirection(deg: Int): String {
     val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
     return directions[((deg + 22) / 45) % 8]
+}
+
+@Composable
+private fun UpcomingDayRow(
+    day: DayForecast,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        WeatherIcon(iconCode = day.iconCode, contentDescription = day.description, sizeDp = 36)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = day.dateLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(text = day.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(text = formatTemperature(day.tempMax, day.units), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+        Text(text = formatTemperature(day.tempMin, day.units), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable

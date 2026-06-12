@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.ui
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -121,18 +125,24 @@ fun ForecastScreen(
                 }
             }
 
-            is LoadingState.Success -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item { Spacer(modifier = Modifier.height(4.dp)) }
-                items(state.data, key = { it.dateLabel }) { day ->
-                    ForecastDayCard(day = day)
+            is LoadingState.Success -> {
+                var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { Spacer(modifier = Modifier.height(4.dp)) }
+                    items(state.data, key = { it.dateLabel }) { day ->
+                        ForecastDayCard(day = day, onClick = { selectedDay = day })
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+                selectedDay?.let { day ->
+                    DayDetailBottomSheet(day = day, onDismiss = { selectedDay = null })
+                }
             }
         }
     }
@@ -151,10 +161,11 @@ private fun formatTemp(
 @Composable
 private fun ForecastDayCard(
     day: DayForecast,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(

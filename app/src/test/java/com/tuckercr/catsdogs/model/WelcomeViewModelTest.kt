@@ -21,17 +21,27 @@ class WelcomeViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `initial state reflects stored welcome flag`() =
+    fun `initial state is null before prefs read`() =
         runTest {
             val viewModel = viewModel(
                 hasSeenWelcomeOnce = { true },
+                locationOnboardingDoneOnce = { false },
             )
 
-            assertNull(viewModel.welcomeDone.value)
+            assertNull(viewModel.onboardingState.value)
+        }
+
+    @Test
+    fun `initial state reflects stored flags`() =
+        runTest {
+            val viewModel = viewModel(
+                hasSeenWelcomeOnce = { true },
+                locationOnboardingDoneOnce = { true },
+            )
 
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
-            assertEquals(true, viewModel.welcomeDone.value)
+            assertEquals(OnboardingState(hasSeenWelcome = true, locationOnboardingDone = true), viewModel.onboardingState.value)
         }
 
     @Test
@@ -43,21 +53,43 @@ class WelcomeViewModelTest {
                 setHasSeenWelcome = { persistedValues += it },
             )
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
-            assertEquals(false, viewModel.welcomeDone.value)
+            assertEquals(false, viewModel.onboardingState.value?.hasSeenWelcome)
 
             viewModel.completeWelcome()
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
-            assertEquals(true, viewModel.welcomeDone.value)
+            assertEquals(true, viewModel.onboardingState.value?.hasSeenWelcome)
             assertEquals(listOf(true), persistedValues)
+        }
+
+    @Test
+    fun `complete location onboarding marks state done and persists`() =
+        runTest {
+            val persisted = mutableListOf<Unit>()
+            val viewModel = viewModel(
+                locationOnboardingDoneOnce = { false },
+                setLocationOnboardingDone = { persisted += Unit },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            assertEquals(false, viewModel.onboardingState.value?.locationOnboardingDone)
+
+            viewModel.completeLocationOnboarding()
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(true, viewModel.onboardingState.value?.locationOnboardingDone)
+            assertEquals(1, persisted.size)
         }
 
     private fun viewModel(
         hasSeenWelcomeOnce: suspend () -> Boolean = { false },
+        locationOnboardingDoneOnce: suspend () -> Boolean = { false },
         setHasSeenWelcome: suspend (Boolean) -> Unit = {},
+        setLocationOnboardingDone: suspend () -> Unit = {},
     ) = WelcomeViewModel(
         hasSeenWelcomeOnce = hasSeenWelcomeOnce,
+        locationOnboardingDoneOnce = locationOnboardingDoneOnce,
         setHasSeenWelcome = setHasSeenWelcome,
+        setLocationOnboardingDone = setLocationOnboardingDone,
     )
 
     class MainDispatcherRule(
