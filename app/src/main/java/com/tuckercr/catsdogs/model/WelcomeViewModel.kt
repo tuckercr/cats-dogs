@@ -10,25 +10,40 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class OnboardingState(
+    val hasSeenWelcome: Boolean,
+    val locationOnboardingDone: Boolean,
+)
+
 @HiltViewModel
 class WelcomeViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
-    private val _welcomeDone = MutableStateFlow<Boolean?>(null)
-    val welcomeDone: StateFlow<Boolean?> = _welcomeDone.asStateFlow()
+    /** null while the prefs read is in-flight. */
+    private val _onboardingState = MutableStateFlow<OnboardingState?>(null)
+    val onboardingState: StateFlow<OnboardingState?> = _onboardingState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val seen = preferencesRepository.hasSeenWelcomeOnce()
-            _welcomeDone.value = seen
+            _onboardingState.value = OnboardingState(
+                hasSeenWelcome = preferencesRepository.hasSeenWelcomeOnce(),
+                locationOnboardingDone = preferencesRepository.locationOnboardingDoneOnce(),
+            )
         }
     }
 
     fun completeWelcome() {
         viewModelScope.launch {
-            _welcomeDone.value = true
             preferencesRepository.setHasSeenWelcome(true)
+            _onboardingState.value = _onboardingState.value?.copy(hasSeenWelcome = true)
+        }
+    }
+
+    fun completeLocationOnboarding() {
+        viewModelScope.launch {
+            preferencesRepository.setLocationOnboardingDone()
+            _onboardingState.value = _onboardingState.value?.copy(locationOnboardingDone = true)
         }
     }
 }

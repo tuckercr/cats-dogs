@@ -38,7 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.WeatherUnits
-import com.tuckercr.catsdogs.model.GeoLocationViewModel
+import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
@@ -47,28 +47,21 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 @Composable
 fun ForecastRoute(onNavigateBack: () -> Unit) {
     val activity = LocalActivity.current as ComponentActivity
-    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
-    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
+    val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel =
+        hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
     val state by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
-    val resolvedCity by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
+    val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        weatherForecastViewModel.refreshForecast(
-            resolvedCityName = resolvedCity.orEmpty(),
-            latitude = geoLocationViewModel.pinnedLatitude(),
-            longitude = geoLocationViewModel.pinnedLongitude(),
-        )
+        activeLocation?.let { weatherForecastViewModel.refreshForecast(it) }
     }
 
     ForecastScreen(
         state = state,
         onRetry = {
             weatherForecastViewModel.clearForecastError()
-            weatherForecastViewModel.refreshForecast(
-                resolvedCityName = resolvedCity.orEmpty(),
-                latitude = geoLocationViewModel.pinnedLatitude(),
-                longitude = geoLocationViewModel.pinnedLongitude(),
-            )
+            activeLocation?.let { weatherForecastViewModel.refreshForecast(it) }
         },
         onNavigateBack = onNavigateBack,
     )
@@ -146,7 +139,10 @@ fun ForecastScreen(
 }
 
 @Composable
-private fun formatTemp(value: Double, units: WeatherUnits): String =
+private fun formatTemp(
+    value: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)

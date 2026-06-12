@@ -7,6 +7,7 @@ import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,42 +31,27 @@ class WeatherForecastViewModel @Inject constructor(
     private val _forecast = MutableStateFlow<LoadingState<List<DayForecast>>>(LoadingState.Idle)
     val forecast: StateFlow<LoadingState<List<DayForecast>>> = _forecast.asStateFlow()
 
-    /** City name from the last successful current-weather response (used for forecast navigation). */
-    private val _resolvedCity = MutableStateFlow<String?>(null)
-    val resolvedCity: StateFlow<String?> = _resolvedCity.asStateFlow()
-
     private val currentWeatherFetchGeneration = AtomicInteger(0)
     private val forecastFetchGeneration = AtomicInteger(0)
 
-    fun refreshCurrent(
-        city: String,
-        latitude: Double?,
-        longitude: Double?,
-    ) {
-        val trimmedCity = city.trim()
-        val lat = latitude
-        val lon = longitude
-        if ((lat == null || lon == null) && trimmedCity.isEmpty()) {
-            _currentWeather.value = LoadingState.Error("Please enter a city name.", canRetry = false)
-            return
-        }
+    fun refreshCurrent(location: SavedLocation) {
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _currentWeather.value = LoadingState.Loading
             val units = getApplication<Application>().resolveWeatherUnits()
-            val result = if (lat != null && lon != null) {
+            val result = if (location.latitude != null && location.longitude != null) {
                 weatherRepository.fetchCurrentWeather(
                     units = units,
-                    locationLabel = trimmedCity,
+                    locationLabel = location.label,
                     cityQuery = null,
-                    latitude = lat,
-                    longitude = lon,
+                    latitude = location.latitude,
+                    longitude = location.longitude,
                 )
             } else {
                 weatherRepository.fetchCurrentWeather(
                     units = units,
-                    locationLabel = trimmedCity,
-                    cityQuery = trimmedCity,
+                    locationLabel = location.label,
+                    cityQuery = location.label,
                     latitude = null,
                     longitude = null,
                 )
@@ -73,44 +59,30 @@ class WeatherForecastViewModel @Inject constructor(
             if (fetchId != currentWeatherFetchGeneration.get()) return@launch
             _currentWeather.value = result.fold(
                 onSuccess = { weather ->
-                    _resolvedCity.value = weather.cityName
                     preferencesRepository.setLastCity(weather.cityName)
                     LoadingState.Success(weather)
                 },
-                onFailure = { e ->
-                    LoadingState.Error(resolveUserMessage(e), canRetry = true)
-                },
+                onFailure = { e -> LoadingState.Error(resolveUserMessage(e), canRetry = true) },
             )
         }
     }
 
-    fun refreshForecast(
-        resolvedCityName: String,
-        latitude: Double?,
-        longitude: Double?,
-    ) {
-        val lat = latitude
-        val lon = longitude
-        val name = resolvedCityName.trim()
-        if ((lat == null || lon == null) && name.isEmpty()) {
-            _forecast.value = LoadingState.Error("Load current weather first to pick a location.", canRetry = false)
-            return
-        }
+    fun refreshForecast(location: SavedLocation) {
         val fetchId = forecastFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _forecast.value = LoadingState.Loading
             val units = getApplication<Application>().resolveWeatherUnits()
-            val result = if (lat != null && lon != null) {
+            val result = if (location.latitude != null && location.longitude != null) {
                 weatherRepository.fetchForecast(
                     units = units,
                     cityQuery = null,
-                    latitude = lat,
-                    longitude = lon,
+                    latitude = location.latitude,
+                    longitude = location.longitude,
                 )
             } else {
                 weatherRepository.fetchForecast(
                     units = units,
-                    cityQuery = name,
+                    cityQuery = location.label,
                     latitude = null,
                     longitude = null,
                 )
