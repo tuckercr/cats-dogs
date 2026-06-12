@@ -2,7 +2,10 @@ package com.tuckercr.catsdogs.ui
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,8 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Compress
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
@@ -28,20 +35,30 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -50,6 +67,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -57,7 +75,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
+import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
+import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
@@ -67,130 +87,177 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 @Composable
 fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
     val activity = LocalActivity.current as ComponentActivity
-    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
-    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
-    val city by geoLocationViewModel.cityInput.collectAsStateWithLifecycle()
-    val suggestions by geoLocationViewModel.citySuggestions.collectAsStateWithLifecycle()
-    val suggestLoading by geoLocationViewModel.citySuggestLoading.collectAsStateWithLifecycle()
-    val state by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
-    val resolved by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
+    val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel =
+        hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
+    val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
 
-    LaunchedEffect(Unit) {
-        geoLocationViewModel.restoreSavedCityOnce()?.let { restoredCity ->
-            geoLocationViewModel.dismissSuggestions()
-            weatherForecastViewModel.refreshCurrent(
-                city = restoredCity,
-                latitude = geoLocationViewModel.pinnedLatitude(),
-                longitude = geoLocationViewModel.pinnedLongitude(),
+    val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
+    val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
+    val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
+    val weatherState by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
+    val cityInput by geoViewModel.cityInput.collectAsStateWithLifecycle()
+    val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
+    val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
+    val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
+
+    // Auto-fetch whenever the active location changes
+    LaunchedEffect(activeLocation) {
+        activeLocation?.let { weatherForecastViewModel.refreshCurrent(it) }
+    }
+
+    var showAddSheet by remember { mutableStateOf(false) }
+
+    CurrentWeatherScreen(
+        locations = locations,
+        activeIndex = activeIndex,
+        weatherState = weatherState,
+        onTabSelected = cityListViewModel::setActiveIndex,
+        onRemoveCity = cityListViewModel::removeLocation,
+        onOpenForecast = onOpenForecast,
+        onAddCityClick = { showAddSheet = true },
+        onRetry = { activeLocation?.let { weatherForecastViewModel.refreshCurrent(it) } },
+    )
+
+    if (showAddSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = {
+                geoViewModel.reset()
+                showAddSheet = false
+            },
+            sheetState = sheetState,
+        ) {
+            AddCitySheetContent(
+                savedLocations = locations,
+                cityInput = cityInput,
+                suggestions = suggestions,
+                suggestLoading = suggestLoading,
+                selectedSuggestion = selectedSuggestion,
+                onCityInputChange = geoViewModel::onCityInputChange,
+                onSuggestionChosen = geoViewModel::onCitySuggestionChosen,
+                onAddCity = {
+                    val suggestion = selectedSuggestion
+                    if (suggestion != null) {
+                        cityListViewModel.addLocation(
+                            SavedLocation(
+                                label = suggestion.label,
+                                latitude = suggestion.weatherLat,
+                                longitude = suggestion.weatherLon,
+                            ),
+                        )
+                    } else if (cityInput.isNotBlank()) {
+                        cityListViewModel.addLocation(
+                            SavedLocation(
+                                label = cityInput.trim(),
+                                latitude = null,
+                                longitude = null,
+                            ),
+                        )
+                    }
+                    geoViewModel.reset()
+                    showAddSheet = false
+                },
+                onRemoveSaved = cityListViewModel::removeLocation,
+                onDismiss = {
+                    geoViewModel.reset()
+                    showAddSheet = false
+                },
             )
         }
     }
-
-    CurrentWeatherScreen(
-        city = city,
-        citySuggestions = suggestions,
-        citySuggestLoading = suggestLoading,
-        onCityChange = geoLocationViewModel::onCityInputChange,
-        onCitySuggestionChosen = geoLocationViewModel::onCitySuggestionChosen,
-        onSearch = {
-            geoLocationViewModel.dismissSuggestions()
-            weatherForecastViewModel.refreshCurrent(
-                city = city,
-                latitude = geoLocationViewModel.pinnedLatitude(),
-                longitude = geoLocationViewModel.pinnedLongitude(),
-            )
-        },
-        state = state,
-        onRetry = {
-            weatherForecastViewModel.clearCurrentError()
-            geoLocationViewModel.dismissSuggestions()
-            weatherForecastViewModel.refreshCurrent(
-                city = city,
-                latitude = geoLocationViewModel.pinnedLatitude(),
-                longitude = geoLocationViewModel.pinnedLongitude(),
-            )
-        },
-        onOpenForecast = onOpenForecast,
-        forecastEnabled = resolved != null,
-    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CurrentWeatherScreen(
-    city: String,
-    citySuggestions: List<CitySuggestion>,
-    citySuggestLoading: Boolean,
-    onCityChange: (String) -> Unit,
-    onCitySuggestionChosen: (CitySuggestion) -> Unit,
-    onSearch: () -> Unit,
-    state: LoadingState<CurrentWeather>,
-    onRetry: () -> Unit,
+    locations: List<SavedLocation>,
+    activeIndex: Int,
+    weatherState: LoadingState<CurrentWeather>,
+    onTabSelected: (Int) -> Unit,
+    onRemoveCity: (Int) -> Unit,
     onOpenForecast: () -> Unit,
-    forecastEnabled: Boolean,
+    onAddCityClick: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val keyboardController = LocalSoftwareKeyboardController.current
-
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.screen_current_weather)) })
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = city,
-                    onValueChange = onCityChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.field_city_label)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
-                            keyboardController?.hide()
-                            onSearch()
-                        },
-                    ),
+            Column {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = if (locations.isEmpty()) {
+                                stringResource(R.string.app_name)
+                            } else {
+                                locations.getOrNull(activeIndex)?.label
+                                    ?: stringResource(R.string.app_name)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = onAddCityClick) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = stringResource(R.string.cd_add_city),
+                            )
+                        }
+                    },
                 )
-                if (citySuggestLoading) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-                if (citySuggestions.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                if (locations.size >= 2) {
+                    ScrollableTabRow(
+                        selectedTabIndex = activeIndex,
+                        edgePadding = 16.dp,
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 220.dp),
-                        ) {
-                            citySuggestions.forEach { suggestion ->
-                                TextButton(
-                                    onClick = {
-                                        keyboardController?.hide()
-                                        onCitySuggestionChosen(suggestion)
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
+                        locations.forEachIndexed { index, location ->
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box {
+                                Tab(
+                                    selected = index == activeIndex,
+                                    onClick = { onTabSelected(index) },
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onTabSelected(index) },
+                                        onLongClick = { showMenu = true },
+                                    ),
                                 ) {
-                                    Text(
-                                        text = suggestion.label,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Start,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                    Row(
+                                        modifier = Modifier.padding(
+                                            vertical = 12.dp,
+                                            horizontal = 4.dp,
+                                        ),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        if (location.isCurrentLocation) {
+                                            Icon(
+                                                imageVector = Icons.Default.LocationOn,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                        }
+                                        Text(
+                                            text = location.label,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.action_remove_city)) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Delete, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            showMenu = false
+                                            onRemoveCity(index)
+                                        },
                                     )
                                 }
                             }
@@ -198,149 +265,248 @@ fun CurrentWeatherScreen(
                     }
                 }
             }
-            Button(
-                onClick = {
-                    keyboardController?.hide()
-                    onSearch()
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state !is LoadingState.Loading,
-            ) {
-                Text(stringResource(R.string.action_get_weather))
-            }
-
-            when (state) {
-                LoadingState.Idle -> Text(
-                    text = stringResource(R.string.hint_enter_city),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        },
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            if (locations.isEmpty()) {
+                EmptyLocationsState(
+                    onAddCityClick = onAddCityClick,
+                    modifier = Modifier.align(Alignment.Center),
                 )
-
-                LoadingState.Loading -> Row(
+            } else {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    horizontalArrangement = Arrangement.Center,
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    CircularProgressIndicator()
-                }
-
-                is LoadingState.Error -> Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = state.message,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    if (state.canRetry) {
-                        TextButton(onClick = onRetry) {
-                            Text(stringResource(R.string.action_retry))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    when (weatherState) {
+                        LoadingState.Idle, LoadingState.Loading -> Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
                         }
-                    }
-                }
 
-                is LoadingState.Success -> CurrentWeatherContent(
-                    weather = state.data,
-                    onOpenForecast = onOpenForecast,
-                    forecastEnabled = forecastEnabled,
-                )
+                        is LoadingState.Error -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = weatherState.message,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            if (weatherState.canRetry) {
+                                TextButton(onClick = onRetry) {
+                                    Text(stringResource(R.string.action_retry))
+                                }
+                            }
+                        }
+
+                        is LoadingState.Success -> CurrentWeatherContent(
+                            weather = weatherState.data,
+                            onOpenForecast = onOpenForecast,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-private fun CurrentWeatherScreenIdlePreview() {
-    CatsDogsTheme {
-        CurrentWeatherScreen(
-            city = "",
-            citySuggestions = emptyList(),
-            citySuggestLoading = false,
-            onCityChange = {},
-            onCitySuggestionChosen = {},
-            onSearch = {},
-            state = LoadingState.Idle,
-            onRetry = {},
-            onOpenForecast = {},
-            forecastEnabled = false,
+private fun EmptyLocationsState(
+    onAddCityClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Default.Cloud,
+            contentDescription = null,
+            modifier = Modifier.size(72.dp),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
         )
+        Text(
+            text = stringResource(R.string.empty_cities_title),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.empty_cities_body),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Button(onClick = onAddCityClick) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(stringResource(R.string.action_add_city))
+        }
     }
 }
 
-@Preview(showBackground = true)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CurrentWeatherScreenSuggestionsPreview() {
-    CatsDogsTheme {
-        CurrentWeatherScreen(
-            city = "Lon",
-            citySuggestions = listOf(
-                CitySuggestion("London, GB", 51.5074, -0.1278),
-                CitySuggestion("London, ON, CA", 42.9849, -81.2453),
-            ),
-            citySuggestLoading = false,
-            onCityChange = {},
-            onCitySuggestionChosen = {},
-            onSearch = {},
-            state = LoadingState.Idle,
-            onRetry = {},
-            onOpenForecast = {},
-            forecastEnabled = false,
+fun AddCitySheetContent(
+    savedLocations: List<SavedLocation>,
+    cityInput: String,
+    suggestions: List<CitySuggestion>,
+    suggestLoading: Boolean,
+    selectedSuggestion: CitySuggestion?,
+    onCityInputChange: (String) -> Unit,
+    onSuggestionChosen: (CitySuggestion) -> Unit,
+    onAddCity: () -> Unit,
+    onRemoveSaved: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.add_city_sheet_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(top = 8.dp),
         )
+
+        if (savedLocations.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.saved_cities_section),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            savedLocations.forEachIndexed { index, location ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (location.isCurrentLocation) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(end = 0.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.size(4.dp))
+                    }
+                    Text(
+                        text = location.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    IconButton(onClick = { onRemoveSaved(index) }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.cd_remove_city),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            HorizontalDivider()
+        }
+
+        Text(
+            text = stringResource(R.string.search_city_section),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = cityInput,
+                onValueChange = onCityInputChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.field_city_label)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
+            )
+            if (suggestLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            if (suggestions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp),
+                    ) {
+                        suggestions.forEach { suggestion ->
+                            TextButton(
+                                onClick = {
+                                    keyboardController?.hide()
+                                    onSuggestionChosen(suggestion)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = suggestion.label,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Start,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Button(
+            onClick = {
+                keyboardController?.hide()
+                onAddCity()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = cityInput.isNotBlank() || selectedSuggestion != null,
+        ) {
+            Text(stringResource(R.string.action_add_city))
+        }
+        OutlinedButton(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(R.string.action_cancel))
+        }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-private fun CurrentWeatherScreenSuccessPreview() {
-    CatsDogsTheme {
-        CurrentWeatherScreen(
-            city = "London",
-            citySuggestions = emptyList(),
-            citySuggestLoading = false,
-            onCityChange = {},
-            onCitySuggestionChosen = {},
-            onSearch = {},
-            state = LoadingState.Success(previewWeather),
-            onRetry = {},
-            onOpenForecast = {},
-            forecastEnabled = true,
-        )
-    }
-}
-
-private val previewWeather = CurrentWeather(
-    cityName = "London",
-    conditionMain = "Clouds",
-    description = "Broken clouds",
-    iconCode = "04d",
-    temperature = 15.0,
-    feelsLike = 14.2,
-    tempMin = 12.0,
-    tempMax = 17.5,
-    humidityPercent = 72,
-    pressureHpa = 1012,
-    windSpeed = 4.1,
-    windDeg = 225,
-    visibilityMeters = 9000,
-    cloudPercent = 75,
-    units = WeatherUnits.METRIC,
-)
 
 @Composable
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
     onOpenForecast: () -> Unit,
-    forecastEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Hero card: icon, city, temperature
+        // Hero card
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
@@ -357,17 +523,11 @@ private fun CurrentWeatherContent(
                     sizeDp = 88,
                 )
                 Text(
-                    text = weather.cityName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
                     text = weather.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatTemperature(weather.temperature, weather.units),
                     style = MaterialTheme.typography.displayMedium,
@@ -407,8 +567,9 @@ private fun CurrentWeatherContent(
                 MetricIconRow(
                     icon = Icons.Default.Air,
                     label = stringResource(R.string.label_wind),
-                    value = formatWind(weather.windSpeed, weather.units) +
-                        "  " + windDirection(weather.windDeg),
+                    value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
+                        weather.windDeg,
+                    ),
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 MetricIconRow(
@@ -433,37 +594,37 @@ private fun CurrentWeatherContent(
             }
         }
 
-        if (forecastEnabled) {
-            OutlinedButton(
-                onClick = onOpenForecast,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.TrendingFlat,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .padding(end = 0.dp),
-                )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text(stringResource(R.string.action_view_forecast))
-            }
+        OutlinedButton(
+            onClick = onOpenForecast,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.TrendingFlat,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            Text(stringResource(R.string.action_view_forecast))
         }
     }
 }
 
 @Composable
-private fun formatTemperature(value: Double, units: WeatherUnits): String =
+private fun formatTemperature(
+    value: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
-private fun formatWind(speed: Double, units: WeatherUnits): String =
+private fun formatWind(
+    speed: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
@@ -511,6 +672,89 @@ private fun MetricIconRow(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+// --- Previews ---
+
+@Preview(showBackground = true)
+@Composable
+private fun CurrentWeatherEmptyPreview() {
+    CatsDogsTheme {
+        CurrentWeatherScreen(
+            locations = emptyList(),
+            activeIndex = 0,
+            weatherState = LoadingState.Idle,
+            onTabSelected = {},
+            onRemoveCity = {},
+            onOpenForecast = {},
+            onAddCityClick = {},
+            onRetry = {},
+        )
+    }
+}
+
+private val previewWeather = CurrentWeather(
+    cityName = "London",
+    conditionMain = "Clouds",
+    description = "Broken clouds",
+    iconCode = "04d",
+    temperature = 15.0,
+    feelsLike = 14.2,
+    tempMin = 12.0,
+    tempMax = 17.5,
+    humidityPercent = 72,
+    pressureHpa = 1012,
+    windSpeed = 4.1,
+    windDeg = 225,
+    visibilityMeters = 9000,
+    cloudPercent = 75,
+    units = WeatherUnits.METRIC,
+)
+
+@Preview(showBackground = true)
+@Composable
+private fun CurrentWeatherSuccessPreview() {
+    CatsDogsTheme {
+        CurrentWeatherScreen(
+            locations = listOf(
+                SavedLocation("My Location", 51.5, -0.1, isCurrentLocation = true),
+                SavedLocation("London, GB", 51.5074, -0.1278),
+                SavedLocation("New York, US", 40.7128, -74.0060),
+            ),
+            activeIndex = 1,
+            weatherState = LoadingState.Success(previewWeather),
+            onTabSelected = {},
+            onRemoveCity = {},
+            onOpenForecast = {},
+            onAddCityClick = {},
+            onRetry = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AddCitySheetPreview() {
+    CatsDogsTheme {
+        AddCitySheetContent(
+            savedLocations = listOf(
+                SavedLocation("My Location", 51.5, -0.1, isCurrentLocation = true),
+                SavedLocation("London, GB", 51.5074, -0.1278),
+            ),
+            cityInput = "New Y",
+            suggestions = listOf(
+                CitySuggestion("New York, US", 40.71, -74.0),
+                CitySuggestion("New Haven, US", 41.30, -72.92),
+            ),
+            suggestLoading = false,
+            selectedSuggestion = null,
+            onCityInputChange = {},
+            onSuggestionChosen = {},
+            onAddCity = {},
+            onRemoveSaved = {},
+            onDismiss = {},
         )
     }
 }

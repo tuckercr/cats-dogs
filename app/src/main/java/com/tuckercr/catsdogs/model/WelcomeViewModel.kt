@@ -10,10 +10,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class OnboardingState(
+    val hasSeenWelcome: Boolean,
+    val locationOnboardingDone: Boolean,
+)
+
 @HiltViewModel
 class WelcomeViewModel internal constructor(
     private val hasSeenWelcomeOnce: suspend () -> Boolean,
+    private val locationOnboardingDoneOnce: suspend () -> Boolean,
     private val setHasSeenWelcome: suspend (Boolean) -> Unit,
+    private val setLocationOnboardingDone: suspend () -> Unit,
 ) : ViewModel() {
 
     @Inject
@@ -21,23 +28,35 @@ class WelcomeViewModel internal constructor(
         preferencesRepository: PreferencesRepository,
     ) : this(
         hasSeenWelcomeOnce = preferencesRepository::hasSeenWelcomeOnce,
+        locationOnboardingDoneOnce = preferencesRepository::locationOnboardingDoneOnce,
         setHasSeenWelcome = preferencesRepository::setHasSeenWelcome,
+        setLocationOnboardingDone = preferencesRepository::setLocationOnboardingDone,
     )
 
-    private val _welcomeDone = MutableStateFlow<Boolean?>(null)
-    val welcomeDone: StateFlow<Boolean?> = _welcomeDone.asStateFlow()
+    /** null while the prefs read is in-flight. */
+    private val _onboardingState = MutableStateFlow<OnboardingState?>(null)
+    val onboardingState: StateFlow<OnboardingState?> = _onboardingState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val seen = hasSeenWelcomeOnce()
-            _welcomeDone.value = seen
+            _onboardingState.value = OnboardingState(
+                hasSeenWelcome = hasSeenWelcomeOnce(),
+                locationOnboardingDone = locationOnboardingDoneOnce(),
+            )
         }
     }
 
     fun completeWelcome() {
         viewModelScope.launch {
-            _welcomeDone.value = true
             setHasSeenWelcome(true)
+            _onboardingState.value = _onboardingState.value?.copy(hasSeenWelcome = true)
+        }
+    }
+
+    fun completeLocationOnboarding() {
+        viewModelScope.launch {
+            setLocationOnboardingDone()
+            _onboardingState.value = _onboardingState.value?.copy(locationOnboardingDone = true)
         }
     }
 }

@@ -16,14 +16,17 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
+import com.tuckercr.catsdogs.ui.OnboardingLocationScreen
 import com.tuckercr.catsdogs.ui.WelcomeScreen
 
 object WeatherDestinations {
     const val LOADING = "loading"
     const val WELCOME = "welcome"
+    const val LOCATION_PERMISSION = "location_permission"
     const val CURRENT = "current"
     const val FORECAST = "forecast"
 }
@@ -35,7 +38,8 @@ fun WeatherNavHost(
 ) {
     val activity = LocalActivity.current as ComponentActivity
     val welcomeViewModel = hiltViewModel<WelcomeViewModel>(viewModelStoreOwner = activity)
-    val welcomeDone by welcomeViewModel.welcomeDone.collectAsStateWithLifecycle()
+    val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
+    val onboardingState by welcomeViewModel.onboardingState.collectAsStateWithLifecycle()
 
     NavHost(
         navController = navController,
@@ -43,18 +47,15 @@ fun WeatherNavHost(
         modifier = modifier,
     ) {
         composable(WeatherDestinations.LOADING) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-            LaunchedEffect(welcomeDone) {
-                val isWelcomeDone = welcomeDone ?: return@LaunchedEffect
-                val next = if (isWelcomeDone) {
-                    WeatherDestinations.CURRENT
-                } else {
-                    WeatherDestinations.WELCOME
+            LaunchedEffect(onboardingState) {
+                val state = onboardingState ?: return@LaunchedEffect
+                val next = when {
+                    !state.hasSeenWelcome -> WeatherDestinations.WELCOME
+                    !state.locationOnboardingDone -> WeatherDestinations.LOCATION_PERMISSION
+                    else -> WeatherDestinations.CURRENT
                 }
                 navController.navigate(next) {
                     popUpTo(WeatherDestinations.LOADING) { inclusive = true }
@@ -62,17 +63,39 @@ fun WeatherNavHost(
                 }
             }
         }
+
         composable(WeatherDestinations.WELCOME) {
             WelcomeScreen(
                 onGetStarted = {
                     welcomeViewModel.completeWelcome()
-                    navController.navigate(WeatherDestinations.CURRENT) {
+                    navController.navigate(WeatherDestinations.LOCATION_PERMISSION) {
                         popUpTo(WeatherDestinations.WELCOME) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
             )
         }
+
+        composable(WeatherDestinations.LOCATION_PERMISSION) {
+            OnboardingLocationScreen(
+                onLocationResolved = { location ->
+                    cityListViewModel.addLocation(location)
+                    welcomeViewModel.completeLocationOnboarding()
+                    navController.navigate(WeatherDestinations.CURRENT) {
+                        popUpTo(WeatherDestinations.LOCATION_PERMISSION) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onSkip = {
+                    welcomeViewModel.completeLocationOnboarding()
+                    navController.navigate(WeatherDestinations.CURRENT) {
+                        popUpTo(WeatherDestinations.LOCATION_PERMISSION) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
         composable(WeatherDestinations.CURRENT) {
             CurrentWeatherRoute(
                 onOpenForecast = {
@@ -80,10 +103,9 @@ fun WeatherNavHost(
                 },
             )
         }
+
         composable(WeatherDestinations.FORECAST) {
-            ForecastRoute(
-                onNavigateBack = { navController.popBackStack() },
-            )
+            ForecastRoute(onNavigateBack = { navController.popBackStack() })
         }
     }
 }
