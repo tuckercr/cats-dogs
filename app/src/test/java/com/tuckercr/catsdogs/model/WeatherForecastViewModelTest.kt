@@ -259,9 +259,7 @@ class WeatherForecastViewModelTest {
             units = units,
         )
 
-        fun dayForecast(
-            units: WeatherUnits = WeatherUnits.METRIC,
-        ) = DayForecast(
+        fun dayForecast(units: WeatherUnits = WeatherUnits.METRIC) = DayForecast(
             dateLabel = "Mon, Jan 1",
             conditionMain = "Clouds",
             description = "cloudy",
