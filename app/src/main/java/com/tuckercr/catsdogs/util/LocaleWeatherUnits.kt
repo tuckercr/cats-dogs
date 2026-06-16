@@ -18,12 +18,20 @@ fun Context.resolveWeatherUnits(): WeatherUnits {
     val locale: Locale =
         ConfigurationCompat.getLocales(resources.configuration).get(0) ?: Locale.getDefault()
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        when (LocalePreferences.getTemperatureUnit()) {
-            TemperatureUnit.CELSIUS -> return WeatherUnits.METRIC
-            TemperatureUnit.FAHRENHEIT -> return WeatherUnits.IMPERIAL
-            else -> return WeatherUnits.fromLocale(locale)
-        }
+    val temperatureUnit = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        LocalePreferences.getTemperatureUnit()
+    } else {
+        null
     }
-    return WeatherUnits.fromLocale(locale)
+    return resolveWeatherUnits(locale, temperatureUnit)
 }
+
+internal fun resolveWeatherUnits(
+    locale: Locale,
+    temperatureUnit: String?,
+): WeatherUnits =
+    when (temperatureUnit) {
+        TemperatureUnit.CELSIUS -> WeatherUnits.METRIC
+        TemperatureUnit.FAHRENHEIT -> WeatherUnits.IMPERIAL
+        else -> WeatherUnits.fromLocale(locale)
+    }
