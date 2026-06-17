@@ -6,6 +6,7 @@ import java.util.Locale
 
 class WeatherUnitsTest {
 
+    @Suppress("DEPRECATION")
     @Test
     fun `US and territories use imperial`() {
         assertEquals(WeatherUnits.IMPERIAL, WeatherUnits.fromLocale(Locale.US))

@@ -13,11 +13,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppConfigModule {
 
-    const val OWM_API_KEY: String = "owm_api_key"
-
     @Provides
     @Singleton
-    @Named(OWM_API_KEY)
+    @Named(WeatherNetworkModule.OWM_API_KEY)
     fun provideOwmApiKey(): String = BuildConfig.OWM_API_KEY.trim()
 
     @Provides

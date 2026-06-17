@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.devtoolsKsp)
     alias(libs.plugins.daggerHiltAndroid)
@@ -80,12 +79,13 @@ dependencies {
     // Location services
     implementation(libs.play.services.location)
 
-    // Networking
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.kotlinx.serialization)
-    implementation(libs.okhttp)
+    // Weather API module
+    implementation(project(":weather-api"))
+
+    // Networking (image loading only — HTTP stack lives in :weather-api)
     implementation(libs.coil.compose)
 
+    // Serialization — used by PreferencesRepository to JSON-encode SavedLocation list
     implementation(libs.kotlinx.serialization.json)
 
     // DI

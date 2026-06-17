@@ -1,5 +1,6 @@
 package com.tuckercr.catsdogs.data
 
+import android.annotation.SuppressLint
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.HourlySlot
 import com.tuckercr.catsdogs.domain.WeatherUnits
@@ -20,6 +21,7 @@ object ForecastAggregator {
         DateTimeFormatter.ofPattern("EEE, MMM d")
 
     // "3 PM" / "3 AM" — compact label for horizontal hourly scroll
+    @SuppressLint("ConstantLocale")
     private val timeFormatter: DateTimeFormatter =
         DateTimeFormatter.ofPattern("h a", Locale.getDefault())
 
@@ -63,7 +65,8 @@ object ForecastAggregator {
             val hourlySlots = daySlots
                 .sortedBy { it.epochSeconds }
                 .map { slot ->
-                    val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(slot.epochSeconds), zoneId)
+                    val zdt =
+                        ZonedDateTime.ofInstant(Instant.ofEpochSecond(slot.epochSeconds), zoneId)
                     HourlySlot(
                         timeLabel = zdt.format(timeFormatter),
                         iconCode = slot.iconCode,

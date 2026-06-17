@@ -518,8 +518,16 @@ private fun CurrentWeatherContent(
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val todayForecast = forecastDays.firstOrNull()
-    val upcomingDays = forecastDays.drop(1)
+    val todayLabel = remember {
+        java.time.LocalDate
+            .now()
+            .format(
+                java.time.format.DateTimeFormatter
+                    .ofPattern("EEE, MMM d"),
+            )
+    }
+    val todayForecast = forecastDays.firstOrNull()?.takeIf { it.dateLabel == todayLabel }
+    val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
 
     Column(
@@ -571,8 +579,10 @@ private fun CurrentWeatherContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = stringResource(R.string.label_feels_like) + " " +
-                            formatTemperature(weather.feelsLike, weather.units),
+                    text = stringResource(R.string.label_feels_like) + " " + formatTemperature(
+                        weather.feelsLike,
+                        weather.units,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -604,12 +614,12 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_pressure),
                     value = stringResource(R.string.format_pressure_hpa, weather.pressureHpa),
                 )
-                if (weather.visibilityMeters != null) {
+                weather.visibilityMeters?.let { visibilityMeters ->
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     MetricIconRow(
                         icon = Icons.Default.Visibility,
                         label = stringResource(R.string.label_visibility),
-                        value = formatVisibility(weather.visibilityMeters),
+                        value = formatVisibility(visibilityMeters),
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

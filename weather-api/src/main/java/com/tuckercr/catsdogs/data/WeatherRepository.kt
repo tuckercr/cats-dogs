@@ -2,7 +2,7 @@ package com.tuckercr.catsdogs.data
 
 import com.tuckercr.catsdogs.data.remote.OpenWeatherApi
 import com.tuckercr.catsdogs.data.remote.dto.OpenWeatherErrorResponse
-import com.tuckercr.catsdogs.di.AppConfigModule
+import com.tuckercr.catsdogs.di.WeatherNetworkModule
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.WeatherUnits
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class WeatherRepository @Inject constructor(
     private val api: OpenWeatherApi,
-    @param:Named(AppConfigModule.OWM_API_KEY) private val apiKey: String,
+    @param:Named(WeatherNetworkModule.OWM_API_KEY) private val apiKey: String,
     private val zoneId: ZoneId,
     private val json: Json,
 ) {
