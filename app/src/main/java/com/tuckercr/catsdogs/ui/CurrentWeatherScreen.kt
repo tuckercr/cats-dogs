@@ -47,8 +47,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -222,7 +222,7 @@ fun CurrentWeatherScreen(
                     },
                 )
                 if (locations.size >= 2) {
-                    ScrollableTabRow(
+                    PrimaryScrollableTabRow(
                         selectedTabIndex = activeIndex,
                         edgePadding = 16.dp,
                     ) {
@@ -518,15 +518,24 @@ private fun CurrentWeatherContent(
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val todayForecast = forecastDays.firstOrNull()
+    val upcomingDays = forecastDays.drop(1)
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Hero card
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (todayForecast != null) {
+                        Modifier.clickable { selectedDay = todayForecast }
+                    } else {
+                        Modifier
+                    },
+                ),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Column(
@@ -563,7 +572,7 @@ private fun CurrentWeatherContent(
                 )
                 Text(
                     text = stringResource(R.string.label_feels_like) + " " +
-                        formatTemperature(weather.feelsLike, weather.units),
+                            formatTemperature(weather.feelsLike, weather.units),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -612,15 +621,15 @@ private fun CurrentWeatherContent(
             }
         }
 
-        // Upcoming days section
-        if (forecastDays.isNotEmpty()) {
+        // Upcoming days section (excludes today)
+        if (upcomingDays.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.section_upcoming),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            forecastDays.forEach { day ->
+            upcomingDays.forEach { day ->
                 UpcomingDayRow(day = day, onClick = { selectedDay = day })
             }
         }
