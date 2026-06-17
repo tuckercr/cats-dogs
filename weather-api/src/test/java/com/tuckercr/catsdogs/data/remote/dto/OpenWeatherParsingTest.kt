@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.data.remote.dto
 
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class OpenWeatherParsingTest {
@@ -29,7 +30,50 @@ class OpenWeatherParsingTest {
         assertEquals(21.3, parsed.main.temp, 0.0001)
         assertEquals(20.1, parsed.main.feelsLike, 0.0001)
         assertEquals(55, parsed.main.humidity)
+        assertEquals(0.0, parsed.main.tempMin, 0.0001)
+        assertEquals(0.0, parsed.main.tempMax, 0.0001)
+        assertEquals(0, parsed.main.pressure)
         assertEquals(4.2, parsed.wind.speed, 0.0001)
+        assertEquals(0, parsed.wind.deg)
+        assertNull(parsed.wind.gust)
+        assertNull(parsed.visibility)
+        assertNull(parsed.clouds)
+    }
+
+    @Test
+    fun `parses current weather detail fields`() {
+        val jsonStr =
+            """
+            {
+              "name": "Portland",
+              "weather": [
+                { "main": "Rain", "description": "light rain", "icon": "10d" }
+              ],
+              "main": {
+                "temp": 14.0,
+                "feels_like": 12.5,
+                "temp_min": 10.0,
+                "temp_max": 17.0,
+                "humidity": 88,
+                "pressure": 1005
+              },
+              "wind": { "speed": 3.6, "deg": 200, "gust": 6.1 },
+              "visibility": 8000,
+              "clouds": { "all": 90 }
+            }
+            """.trimIndent()
+
+        val parsed = json.decodeFromString<CurrentWeatherResponse>(jsonStr)
+
+        assertEquals("Portland", parsed.name)
+        assertEquals(10.0, parsed.main.tempMin, 0.0001)
+        assertEquals(17.0, parsed.main.tempMax, 0.0001)
+        assertEquals(1005, parsed.main.pressure)
+        assertEquals(3.6, parsed.wind.speed, 0.0001)
+        assertEquals(200, parsed.wind.deg)
+        assertEquals(6.1, parsed.wind.gust ?: 0.0, 0.0001)
+        assertEquals(8000, parsed.visibility)
+        assertEquals(90, parsed.clouds?.all)
     }
 
     @Test
@@ -52,14 +96,16 @@ class OpenWeatherParsingTest {
         val parsed = json.decodeFromString<ForecastResponse>(jsonStr)
 
         assertEquals(1, parsed.list.size)
-        assertEquals(1700000000L, parsed.list.single().dt)
+        val item = parsed.list.single()
+        assertEquals(1700000000L, item.dt)
+        assertEquals(0.0, item.main.tempMin, 0.0001)
+        assertEquals(0.0, item.main.tempMax, 0.0001)
+        assertEquals(0, item.main.pressure)
+        assertEquals(0, item.wind.deg)
+        assertNull(item.wind.gust)
         assertEquals(
             "Rain",
-            parsed.list
-                .single()
-                .weather
-                .single()
-                .main,
+            item.weather.single().main,
         )
         assertEquals("Denver", parsed.city?.name)
     }
