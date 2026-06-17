@@ -2,7 +2,7 @@ package com.tuckercr.catsdogs.data
 
 import com.tuckercr.catsdogs.data.remote.GeocodingApi
 import com.tuckercr.catsdogs.data.remote.dto.GeocodingDirectDto
-import com.tuckercr.catsdogs.di.AppConfigModule
+import com.tuckercr.catsdogs.di.WeatherNetworkModule
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import javax.inject.Inject
 import javax.inject.Named
@@ -11,7 +11,7 @@ import javax.inject.Singleton
 @Singleton
 class GeocodingRepository @Inject constructor(
     private val api: GeocodingApi,
-    @param:Named(AppConfigModule.OWM_API_KEY) private val apiKey: String,
+    @param:Named(WeatherNetworkModule.OWM_API_KEY) private val apiKey: String,
 ) {
 
     suspend fun searchCities(query: String): Result<List<CitySuggestion>> {

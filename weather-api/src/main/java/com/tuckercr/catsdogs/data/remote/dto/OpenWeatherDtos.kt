@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.serialization.InternalSerializationApi::class)
+
 package com.tuckercr.catsdogs.data.remote.dto
 
 import kotlinx.serialization.SerialName

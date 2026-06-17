@@ -16,7 +16,10 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppNetworkModule {
+object WeatherNetworkModule {
+
+    /** Qualifier name for the OpenWeatherMap API key string binding. */
+    const val OWM_API_KEY = "owm_api_key"
 
     private const val BASE_URL = "https://api.openweathermap.org/"
 

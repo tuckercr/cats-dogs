@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Cats & Dogs"
 include(":app")
+include(":weather-api")
  
