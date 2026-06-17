@@ -222,21 +222,30 @@ private fun HourlySlotRow(
 }
 
 @Composable
-private fun formatDayDetailTemp(value: Double, units: WeatherUnits): String =
+private fun formatDayDetailTemp(
+    value: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
-private fun formatHourlyTemp(value: Double, units: WeatherUnits): String =
+private fun formatHourlyTemp(
+    value: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
-private fun formatHourlyWind(speed: Double, units: WeatherUnits): String =
+private fun formatHourlyWind(
+    speed: Double,
+    units: WeatherUnits,
+): String =
     when (units) {
         WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
         WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
@@ -247,12 +256,34 @@ private fun formatHourlyWind(speed: Double, units: WeatherUnits): String =
 private val previewSlots = listOf(
     HourlySlot("12 AM", "01n", "Clear sky", 14.0, 13.0, 3.2, 180, 55, 1013, WeatherUnits.METRIC),
     HourlySlot("3 AM", "02n", "Few clouds", 13.5, 12.5, 2.8, 200, 60, 1013, WeatherUnits.METRIC),
-    HourlySlot("6 AM", "03d", "Scattered clouds", 14.0, 13.2, 3.0, 190, 62, 1014, WeatherUnits.METRIC),
+    HourlySlot(
+        "6 AM",
+        "03d",
+        "Scattered clouds",
+        14.0,
+        13.2,
+        3.0,
+        190,
+        62,
+        1014,
+        WeatherUnits.METRIC,
+    ),
     HourlySlot("9 AM", "04d", "Overcast", 16.5, 15.8, 4.1, 210, 65, 1012, WeatherUnits.METRIC),
     HourlySlot("12 PM", "10d", "Light rain", 17.0, 16.2, 5.0, 220, 80, 1010, WeatherUnits.METRIC),
     HourlySlot("3 PM", "10d", "Light rain", 18.0, 17.0, 5.5, 215, 78, 1009, WeatherUnits.METRIC),
     HourlySlot("6 PM", "04d", "Overcast", 17.5, 16.8, 4.8, 205, 72, 1010, WeatherUnits.METRIC),
-    HourlySlot("9 PM", "03n", "Scattered clouds", 16.0, 15.5, 3.5, 195, 68, 1011, WeatherUnits.METRIC),
+    HourlySlot(
+        "9 PM",
+        "03n",
+        "Scattered clouds",
+        16.0,
+        15.5,
+        3.5,
+        195,
+        68,
+        1011,
+        WeatherUnits.METRIC,
+    ),
 )
 
 @Preview(showBackground = true)
