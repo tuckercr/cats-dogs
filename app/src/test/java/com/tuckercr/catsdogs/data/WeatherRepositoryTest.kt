@@ -1,6 +1,7 @@
 package com.tuckercr.catsdogs.data
 
 import com.tuckercr.catsdogs.data.remote.OpenWeatherApi
+import com.tuckercr.catsdogs.data.remote.dto.CloudsDto
 import com.tuckercr.catsdogs.data.remote.dto.CurrentWeatherResponse
 import com.tuckercr.catsdogs.data.remote.dto.ForecastListItemDto
 import com.tuckercr.catsdogs.data.remote.dto.ForecastResponse
@@ -306,6 +307,128 @@ class WeatherRepositoryTest {
 
             val error = result.exceptionOrNull()
             assertEquals("invalid_payload", error?.message)
+        }
+
+    @Test
+    fun `fetchCurrentWeather maps all extended fields correctly`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                currentResponse = CurrentWeatherResponse(
+                    name = "Portland",
+                    weather = listOf(
+                        WeatherDescDto(
+                            main = "Rain",
+                            description = "light rain",
+                            icon = "10d",
+                        ),
+                    ),
+                    main = MainDto(
+                        temp = 14.0,
+                        feelsLike = 12.5,
+                        tempMin = 10.0,
+                        tempMax = 17.0,
+                        humidity = 88,
+                        pressure = 1005,
+                    ),
+                    wind = WindDto(speed = 3.6, deg = 200),
+                    visibility = 8000,
+                    clouds = CloudsDto(all = 90),
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val weather = repository
+                .fetchCurrentWeather(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "Portland",
+                ).getOrThrow()
+
+            assertEquals(88, weather.humidityPercent)
+            assertEquals(1005, weather.pressureHpa)
+            assertEquals(3.6, weather.windSpeed, 0.001)
+            assertEquals(200, weather.windDeg)
+            assertEquals(8000, weather.visibilityMeters)
+            assertEquals(90, weather.cloudPercent)
+            assertEquals(10.0, weather.tempMin, 0.001)
+            assertEquals(17.0, weather.tempMax, 0.001)
+            assertEquals("Light rain", weather.description)
+        }
+
+    @Test
+    fun `fetchCurrentWeather maps null visibility and clouds to safe defaults`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                currentResponse = CurrentWeatherResponse(
+                    name = "Fog City",
+                    weather = listOf(
+                        WeatherDescDto(
+                            main = "Fog",
+                            description = "dense fog",
+                            icon = "50d",
+                        ),
+                    ),
+                    main = MainDto(temp = 10.0, feelsLike = 9.0, humidity = 95),
+                    wind = WindDto(speed = 0.5),
+                    visibility = null,
+                    clouds = null,
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val weather = repository
+                .fetchCurrentWeather(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "Fog City",
+                ).getOrThrow()
+
+            assertEquals(null, weather.visibilityMeters)
+            assertEquals(0, weather.cloudPercent)
+        }
+
+    @Test
+    fun `fetchForecast hourly slots carry wind, humidity, and pressure`() =
+        runBlocking {
+            val epochSeconds = 1_704_067_200L + 12 * 3600 // 2024-01-01T12:00:00Z
+            val api = FakeOpenWeatherApi(
+                forecastResponse = ForecastResponse(
+                    list = listOf(
+                        ForecastListItemDto(
+                            dt = epochSeconds,
+                            main = MainDto(
+                                temp = 18.0,
+                                feelsLike = 17.0,
+                                humidity = 72,
+                                pressure = 1012,
+                            ),
+                            weather = listOf(
+                                WeatherDescDto(
+                                    main = "Clouds",
+                                    description = "broken clouds",
+                                    icon = "04d",
+                                ),
+                            ),
+                            wind = WindDto(speed = 4.5, deg = 135),
+                        ),
+                    ),
+                    city = null,
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val day = repository
+                .fetchForecast(
+                    units = WeatherUnits.METRIC,
+                    cityQuery = "Portland",
+                ).getOrThrow()
+                .single()
+
+            val slot = day.hourlySlots.single()
+            assertEquals(4.5, slot.windSpeed, 0.001)
+            assertEquals(135, slot.windDeg)
+            assertEquals(72, slot.humidity)
+            assertEquals(1012, slot.pressure)
+            assertEquals("04d", slot.iconCode)
+            assertEquals("Broken clouds", slot.description)
         }
 
     private class FakeOpenWeatherApi(
