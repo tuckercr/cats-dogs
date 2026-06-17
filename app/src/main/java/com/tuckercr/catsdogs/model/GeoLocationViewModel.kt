@@ -3,33 +3,20 @@ package com.tuckercr.catsdogs.model
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuckercr.catsdogs.data.GeocodingRepository
-import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class GeoLocationViewModel internal constructor(
-    private val lastCity: Flow<String?>,
-    private val searchCities: suspend (String) -> Result<List<CitySuggestion>>,
+class GeoLocationViewModel @Inject constructor(
+    private val geocodingRepository: GeocodingRepository,
 ) : ViewModel() {
-
-    @Inject
-    constructor(
-        preferencesRepository: PreferencesRepository,
-        geocodingRepository: GeocodingRepository,
-    ) : this(
-        lastCity = preferencesRepository.lastCity,
-        searchCities = geocodingRepository::searchCities,
-    )
 
     private val _cityInput = MutableStateFlow("")
     val cityInput: StateFlow<String> = _cityInput.asStateFlow()
@@ -40,23 +27,15 @@ class GeoLocationViewModel internal constructor(
     private val _citySuggestLoading = MutableStateFlow(false)
     val citySuggestLoading: StateFlow<Boolean> = _citySuggestLoading.asStateFlow()
 
-    /** When set (after picking autocomplete), weather + forecast use lat/lon instead of free-text. */
-    private var pinnedWeatherLat: Double? = null
-    private var pinnedWeatherLon: Double? = null
+    /** Set after user picks a geocoder suggestion; cleared when the input field changes. */
+    private val _selectedSuggestion = MutableStateFlow<CitySuggestion?>(null)
+    val selectedSuggestion: StateFlow<CitySuggestion?> = _selectedSuggestion.asStateFlow()
 
     private var suggestJob: Job? = null
 
-    /** Guard so we only read [PreferencesRepository.lastCity] once per ViewModel. */
-    private var savedCityRestoreDone = false
-
-    fun pinnedLatitude(): Double? = pinnedWeatherLat
-
-    fun pinnedLongitude(): Double? = pinnedWeatherLon
-
     fun onCityInputChange(value: String) {
         _cityInput.value = value
-        pinnedWeatherLat = null
-        pinnedWeatherLon = null
+        _selectedSuggestion.value = null
         suggestJob?.cancel()
         val trimmed = value.trim()
         if (trimmed.length < 2) {
@@ -71,7 +50,7 @@ class GeoLocationViewModel internal constructor(
                 _citySuggestLoading.value = false
                 return@launch
             }
-            val result = searchCities(trimmed)
+            val result = geocodingRepository.searchCities(trimmed)
             if (_cityInput.value.trim() != trimmed) {
                 _citySuggestLoading.value = false
                 return@launch
@@ -85,8 +64,7 @@ class GeoLocationViewModel internal constructor(
         suggestJob?.cancel()
         _citySuggestions.value = emptyList()
         _citySuggestLoading.value = false
-        pinnedWeatherLat = suggestion.weatherLat
-        pinnedWeatherLon = suggestion.weatherLon
+        _selectedSuggestion.value = suggestion
         _cityInput.value = suggestion.label
     }
 
@@ -96,18 +74,11 @@ class GeoLocationViewModel internal constructor(
         _citySuggestLoading.value = false
     }
 
-    /**
-     * If the user has a previously saved city, copies it into the search field once.
-     * Returns the city name for loading weather, or null if nothing to restore.
-     */
-    suspend fun restoreSavedCityOnce(): String? {
-        if (savedCityRestoreDone) return null
-        savedCityRestoreDone = true
-        val last = lastCity.first()
-        if (!last.isNullOrBlank()) {
-            _cityInput.value = last
-            return last
-        }
-        return null
+    fun reset() {
+        suggestJob?.cancel()
+        _cityInput.value = ""
+        _citySuggestions.value = emptyList()
+        _citySuggestLoading.value = false
+        _selectedSuggestion.value = null
     }
 }

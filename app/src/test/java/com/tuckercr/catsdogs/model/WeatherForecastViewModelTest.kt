@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.model
 
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,7 @@ class WeatherForecastViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `current weather with coordinates ignores city query and saves resolved city`() =
+    fun `current weather with coordinates passes lat-lon and null city query`() =
         runTest {
             var request: CurrentRequest? = null
             val savedCities = mutableListOf<String>()
@@ -45,9 +46,7 @@ class WeatherForecastViewModelTest {
             )
 
             viewModel.refreshCurrent(
-                city = " Austin, TX, US ",
-                latitude = 30.2672,
-                longitude = -97.7431,
+                SavedLocation(label = "Austin, TX, US", latitude = 30.2672, longitude = -97.7431),
             )
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
@@ -61,7 +60,6 @@ class WeatherForecastViewModelTest {
                 ),
                 request,
             )
-            assertEquals("Austin, TX, US", viewModel.resolvedCity.value)
             assertEquals(listOf("Austin, TX, US"), savedCities)
             assertEquals(
                 LoadingState.Success(currentWeather(cityName = "Austin, TX, US", units = WeatherUnits.IMPERIAL)),
@@ -70,28 +68,55 @@ class WeatherForecastViewModelTest {
         }
 
     @Test
+    fun `current weather without coordinates uses label as city query`() =
+        runTest {
+            var request: CurrentRequest? = null
+            val viewModel = viewModel(
+                fetchCurrentWeather = { units, locationLabel, cityQuery, latitude, longitude ->
+                    request = CurrentRequest(units, locationLabel, cityQuery, latitude, longitude)
+                    Result.success(currentWeather(cityName = "Denver"))
+                },
+            )
+
+            viewModel.refreshCurrent(
+                SavedLocation(label = "Denver", latitude = null, longitude = null),
+            )
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(
+                CurrentRequest(
+                    units = WeatherUnits.METRIC,
+                    locationLabel = "Denver",
+                    cityQuery = "Denver",
+                    latitude = null,
+                    longitude = null,
+                ),
+                request,
+            )
+        }
+
+    @Test
     fun `latest current weather request wins when an earlier request finishes last`() =
         runTest {
             val firstRequest = CompletableDeferred<Result<CurrentWeather>>()
             val secondRequest = CompletableDeferred<Result<CurrentWeather>>()
-            val requestedCities = mutableListOf<String>()
+            val requestedLabels = mutableListOf<String>()
             val savedCities = mutableListOf<String>()
             val viewModel = viewModel(
-                fetchCurrentWeather = { units, _, cityQuery, _, _ ->
-                    val city = cityQuery ?: error("Expected city query")
-                    requestedCities += city
-                    when (city) {
+                fetchCurrentWeather = { units, locationLabel, _, _, _ ->
+                    requestedLabels += locationLabel
+                    when (locationLabel) {
                         "Austin" -> firstRequest.await()
                         "Denver" -> secondRequest.await()
-                        else -> error("Unexpected city $city")
+                        else -> error("Unexpected location $locationLabel")
                     }.map { it.copy(units = units) }
                 },
                 setLastCity = { savedCities += it },
             )
 
-            viewModel.refreshCurrent("Austin", latitude = null, longitude = null)
+            viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
-            viewModel.refreshCurrent("Denver", latitude = null, longitude = null)
+            viewModel.refreshCurrent(SavedLocation(label = "Denver", latitude = null, longitude = null))
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
             secondRequest.complete(Result.success(currentWeather(cityName = "Denver")))
@@ -99,38 +124,35 @@ class WeatherForecastViewModelTest {
             firstRequest.complete(Result.success(currentWeather(cityName = "Austin")))
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
-            assertEquals(listOf("Austin", "Denver"), requestedCities)
+            assertEquals(listOf("Austin", "Denver"), requestedLabels)
             assertEquals(LoadingState.Success(currentWeather(cityName = "Denver")), viewModel.currentWeather.value)
-            assertEquals("Denver", viewModel.resolvedCity.value)
             assertEquals(listOf("Denver"), savedCities)
         }
 
     @Test
-    fun `blank current weather request fails without fetching and can be cleared`() =
+    fun `current weather network failure maps to retryable user message and can be cleared`() =
         runTest {
-            var fetchCount = 0
             val viewModel = viewModel(
-                fetchCurrentWeather = { _, _, _, _, _ ->
-                    fetchCount += 1
-                    Result.success(currentWeather(cityName = "Austin"))
-                },
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(IOException("network")) },
             )
 
-            viewModel.refreshCurrent("   ", latitude = null, longitude = null)
+            viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
-            assertEquals(0, fetchCount)
             assertEquals(
-                LoadingState.Error("Please enter a city name.", canRetry = false),
+                LoadingState.Error(
+                    "We could not reach the weather service. Check your connection and try again.",
+                    canRetry = true,
+                ),
                 viewModel.currentWeather.value,
             )
 
             viewModel.clearCurrentError()
-
             assertEquals(LoadingState.Idle, viewModel.currentWeather.value)
         }
 
     @Test
-    fun `forecast with coordinates ignores resolved city query`() =
+    fun `forecast with coordinates passes lat-lon and null city query`() =
         runTest {
             var request: ForecastRequest? = null
             val expectedForecast = listOf(dayForecast(units = WeatherUnits.IMPERIAL))
@@ -148,9 +170,7 @@ class WeatherForecastViewModelTest {
             )
 
             viewModel.refreshForecast(
-                resolvedCityName = " Austin, TX, US ",
-                latitude = 30.2672,
-                longitude = -97.7431,
+                SavedLocation(label = "Austin, TX, US", latitude = 30.2672, longitude = -97.7431),
             )
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
@@ -173,7 +193,7 @@ class WeatherForecastViewModelTest {
                 fetchForecast = { _, _, _, _ -> Result.failure(IOException("network")) },
             )
 
-            viewModel.refreshForecast("Austin", latitude = null, longitude = null)
+            viewModel.refreshForecast(SavedLocation(label = "Austin", latitude = null, longitude = null))
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
             assertEquals(
@@ -185,7 +205,6 @@ class WeatherForecastViewModelTest {
             )
 
             viewModel.clearForecastError()
-
             assertEquals(LoadingState.Idle, viewModel.forecast.value)
         }
 
@@ -254,8 +273,14 @@ class WeatherForecastViewModelTest {
             iconCode = "01d",
             temperature = 72.5,
             feelsLike = 70.0,
+            tempMin = 68.0,
+            tempMax = 76.0,
             humidityPercent = 42,
+            pressureHpa = 1013,
             windSpeed = 5.5,
+            windDeg = 180,
+            visibilityMeters = 10000,
+            cloudPercent = 10,
             units = units,
         )
 
@@ -267,6 +292,8 @@ class WeatherForecastViewModelTest {
                 iconCode = "02d",
                 temperature = 68.0,
                 feelsLike = 67.0,
+                tempMin = 60.0,
+                tempMax = 72.0,
                 units = units,
             )
     }

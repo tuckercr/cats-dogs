@@ -11,15 +11,48 @@
     <string name="label_temperature">Temperature</string>
     <string name="label_feels_like">Feels like</string>
     <string name="label_humidity">Humidity</string>
-    <string name="label_wind">Wind speed</string>
+    <string name="label_wind">Wind</string>
+    <string name="label_pressure">Pressure</string>
+    <string name="label_visibility">Visibility</string>
+    <string name="label_cloud_cover">Cloud cover</string>
+    <string name="label_temp_range">%1$s / %2$s</string>
+    <string name="action_view_forecast">View 5-day forecast</string>
     <string name="format_temperature_c">%.1f °C</string>
     <string name="format_temperature_f">%.1f °F</string>
     <string name="format_percent">%d%%</string>
     <string name="format_wind_ms">%.1f m/s</string>
     <string name="format_wind_mph">%.1f mph</string>
-    <string name="format_temp_feels">%.1f °C (feels like %.1f °C)</string>
-    <string name="format_temp_feels_imperial">%.1f °F (feels like %.1f °F)</string>
-    <string name="welcome">Welcome</string>
+    <string name="format_pressure_hpa">%d hPa</string>
+    <string name="format_visibility_km">%.1f km</string>
+    <string name="format_visibility_m">%d m</string>
     <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
     <string name="get_started">Get started</string>
+
+    <!-- Location onboarding -->
+    <string name="location_onboarding_title">Use your location?</string>
+    <string name="location_onboarding_body">Allow Cats &amp; Dogs to use your device location to show local weather automatically.</string>
+    <string name="location_allow_button">Use my location</string>
+    <string name="location_skip_button">Enter a city manually</string>
+    <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>
+    <string name="location_fetch_failed">Could not determine your location. You can still add cities manually.</string>
+
+    <!-- Multi-city -->
+    <string name="cd_add_city">Add a city</string>
+    <string name="cd_remove_city">Remove city</string>
+    <string name="action_add_city">Add city</string>
+    <string name="action_remove_city">Remove</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="add_city_sheet_title">Manage cities</string>
+    <string name="saved_cities_section">SAVED CITIES</string>
+    <string name="search_city_section">ADD A NEW CITY</string>
+    <string name="empty_cities_title">No cities added yet</string>
+    <string name="empty_cities_body">Tap the + button to add your first city and get started.</string>
+
+    <!-- Day detail / upcoming forecast -->
+    <string name="section_upcoming">UPCOMING</string>
+    <string name="detail_no_hourly_data">Hourly data not available for this day.</string>
+    <string name="detail_time_label">TIME</string>
+    <string name="detail_temp_label">TEMP</string>
+    <string name="detail_wind_label">WIND</string>
+    <string name="detail_humidity_label">HUM</string>
 </resources>

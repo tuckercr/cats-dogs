@@ -110,9 +110,15 @@ class WeatherRepository @Inject constructor(
                 epochSeconds = item.dt,
                 temperature = item.main.temp,
                 feelsLike = item.main.feelsLike,
+                tempMin = item.main.tempMin,
+                tempMax = item.main.tempMax,
                 conditionMain = w.main,
                 description = w.description,
                 iconCode = w.icon,
+                windSpeed = item.wind.speed,
+                windDeg = item.wind.deg,
+                humidity = item.main.humidity,
+                pressure = item.main.pressure,
             )
         }
         return ForecastAggregator.aggregate(slots, zoneId, units)
@@ -134,8 +140,14 @@ class WeatherRepository @Inject constructor(
             iconCode = w.icon,
             temperature = response.main.temp,
             feelsLike = response.main.feelsLike,
+            tempMin = response.main.tempMin,
+            tempMax = response.main.tempMax,
             humidityPercent = response.main.humidity,
+            pressureHpa = response.main.pressure,
             windSpeed = response.wind.speed,
+            windDeg = response.wind.deg,
+            visibilityMeters = response.visibility,
+            cloudPercent = response.clouds?.all ?: 0,
             units = units,
         )
     }

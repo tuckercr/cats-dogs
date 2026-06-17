@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.ui
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,7 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.WeatherUnits
-import com.tuckercr.catsdogs.model.GeoLocationViewModel
+import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
@@ -47,28 +51,21 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 @Composable
 fun ForecastRoute(onNavigateBack: () -> Unit) {
     val activity = LocalActivity.current as ComponentActivity
-    val geoLocationViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
-    val weatherForecastViewModel = hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
+    val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
+    val weatherForecastViewModel =
+        hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
     val state by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
-    val resolvedCity by weatherForecastViewModel.resolvedCity.collectAsStateWithLifecycle()
+    val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        weatherForecastViewModel.refreshForecast(
-            resolvedCityName = resolvedCity.orEmpty(),
-            latitude = geoLocationViewModel.pinnedLatitude(),
-            longitude = geoLocationViewModel.pinnedLongitude(),
-        )
+        activeLocation?.let { weatherForecastViewModel.refreshForecast(it) }
     }
 
     ForecastScreen(
         state = state,
         onRetry = {
             weatherForecastViewModel.clearForecastError()
-            weatherForecastViewModel.refreshForecast(
-                resolvedCityName = resolvedCity.orEmpty(),
-                latitude = geoLocationViewModel.pinnedLatitude(),
-                longitude = geoLocationViewModel.pinnedLongitude(),
-            )
+            activeLocation?.let { weatherForecastViewModel.refreshForecast(it) }
         },
         onNavigateBack = onNavigateBack,
     )
@@ -128,43 +125,47 @@ fun ForecastScreen(
                 }
             }
 
-            is LoadingState.Success -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item { Spacer(modifier = Modifier.height(4.dp)) }
-                items(state.data, key = { it.dateLabel }) { day ->
-                    ForecastDayCard(day = day)
+            is LoadingState.Success -> {
+                var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { Spacer(modifier = Modifier.height(4.dp)) }
+                    items(state.data, key = { it.dateLabel }) { day ->
+                        ForecastDayCard(day = day, onClick = { selectedDay = day })
+                    }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+                selectedDay?.let { day ->
+                    DayDetailBottomSheet(day = day, onDismiss = { selectedDay = null })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun formatTempFeels(day: DayForecast): String =
-    when (day.units) {
-        WeatherUnits.METRIC -> stringResource(
-            R.string.format_temp_feels,
-            day.temperature,
-            day.feelsLike,
-        )
-
-        WeatherUnits.IMPERIAL ->
-            stringResource(R.string.format_temp_feels_imperial, day.temperature, day.feelsLike)
+private fun formatTemp(
+    value: Double,
+    units: WeatherUnits,
+): String =
+    when (units) {
+        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
+        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
     }
 
 @Composable
 private fun ForecastDayCard(
     day: DayForecast,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(
@@ -177,18 +178,30 @@ private fun ForecastDayCard(
             WeatherIcon(
                 iconCode = day.iconCode,
                 contentDescription = day.description,
-                sizeDp = 64,
+                sizeDp = 56,
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = day.dateLabel, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = day.dateLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                )
                 Text(
                     text = day.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = formatTempFeels(day),
+                    text = formatTemp(day.tempMax, day.units),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                )
+                Text(
+                    text = formatTemp(day.tempMin, day.units),
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -226,28 +239,34 @@ private fun ForecastScreenSuccessPreview() {
         DayForecast(
             dateLabel = "Today",
             conditionMain = "Clouds",
-            description = "overcast clouds",
+            description = "Overcast clouds",
             iconCode = "04d",
             temperature = 22.0,
             feelsLike = 21.5,
+            tempMin = 18.0,
+            tempMax = 24.0,
             units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Tomorrow",
             conditionMain = "Rain",
-            description = "light rain",
+            description = "Light rain",
             iconCode = "10d",
             temperature = 18.0,
             feelsLike = 17.5,
+            tempMin = 15.0,
+            tempMax = 20.0,
             units = WeatherUnits.METRIC,
         ),
         DayForecast(
             dateLabel = "Wednesday",
             conditionMain = "Clear",
-            description = "clear sky",
+            description = "Clear sky",
             iconCode = "01d",
             temperature = 25.0,
             feelsLike = 24.5,
+            tempMin = 20.0,
+            tempMax = 27.0,
             units = WeatherUnits.METRIC,
         ),
     )

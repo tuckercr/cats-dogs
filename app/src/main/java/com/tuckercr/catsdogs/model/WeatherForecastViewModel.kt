@@ -7,6 +7,7 @@ import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,90 +56,39 @@ class WeatherForecastViewModel internal constructor(
     private val _forecast = MutableStateFlow<LoadingState<List<DayForecast>>>(LoadingState.Idle)
     val forecast: StateFlow<LoadingState<List<DayForecast>>> = _forecast.asStateFlow()
 
-    /** City name from the last successful current-weather response (used for forecast navigation). */
-    private val _resolvedCity = MutableStateFlow<String?>(null)
-    val resolvedCity: StateFlow<String?> = _resolvedCity.asStateFlow()
-
     private val currentWeatherFetchGeneration = AtomicInteger(0)
     private val forecastFetchGeneration = AtomicInteger(0)
 
-    fun refreshCurrent(
-        city: String,
-        latitude: Double?,
-        longitude: Double?,
-    ) {
-        val trimmedCity = city.trim()
-        val lat = latitude
-        val lon = longitude
-        if ((lat == null || lon == null) && trimmedCity.isEmpty()) {
-            _currentWeather.value = LoadingState.Error("Please enter a city name.", canRetry = false)
-            return
-        }
+    fun refreshCurrent(location: SavedLocation) {
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _currentWeather.value = LoadingState.Loading
             val units = resolveWeatherUnits()
-            val result = if (lat != null && lon != null) {
-                fetchCurrentWeather(
-                    units,
-                    trimmedCity,
-                    null,
-                    lat,
-                    lon,
-                )
+            val result = if (location.latitude != null && location.longitude != null) {
+                fetchCurrentWeather(units, location.label, null, location.latitude, location.longitude)
             } else {
-                fetchCurrentWeather(
-                    units,
-                    trimmedCity,
-                    trimmedCity,
-                    null,
-                    null,
-                )
+                fetchCurrentWeather(units, location.label, location.label, null, null)
             }
             if (fetchId != currentWeatherFetchGeneration.get()) return@launch
             _currentWeather.value = result.fold(
                 onSuccess = { weather ->
-                    _resolvedCity.value = weather.cityName
                     setLastCity(weather.cityName)
                     LoadingState.Success(weather)
                 },
-                onFailure = { e ->
-                    LoadingState.Error(resolveUserMessage(e), canRetry = true)
-                },
+                onFailure = { e -> LoadingState.Error(resolveUserMessage(e), canRetry = true) },
             )
         }
     }
 
-    fun refreshForecast(
-        resolvedCityName: String,
-        latitude: Double?,
-        longitude: Double?,
-    ) {
-        val lat = latitude
-        val lon = longitude
-        val name = resolvedCityName.trim()
-        if ((lat == null || lon == null) && name.isEmpty()) {
-            _forecast.value = LoadingState.Error("Load current weather first to pick a location.", canRetry = false)
-            return
-        }
+    fun refreshForecast(location: SavedLocation) {
         val fetchId = forecastFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _forecast.value = LoadingState.Loading
             val units = resolveWeatherUnits()
-            val result = if (lat != null && lon != null) {
-                fetchForecast(
-                    units,
-                    null,
-                    lat,
-                    lon,
-                )
+            val result = if (location.latitude != null && location.longitude != null) {
+                fetchForecast(units, null, location.latitude, location.longitude)
             } else {
-                fetchForecast(
-                    units,
-                    name,
-                    null,
-                    null,
-                )
+                fetchForecast(units, location.label, null, null)
             }
             if (fetchId != forecastFetchGeneration.get()) return@launch
             _forecast.value = result.fold(
