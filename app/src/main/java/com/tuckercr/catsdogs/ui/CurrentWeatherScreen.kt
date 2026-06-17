@@ -125,13 +125,12 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
         onRemoveCity = cityListViewModel::removeLocation,
         onOpenForecast = onOpenForecast,
         onAddCityClick = { showAddSheet = true },
-        onRetry = {
-            activeLocation?.let {
-                weatherForecastViewModel.refreshCurrent(it)
-                weatherForecastViewModel.refreshForecast(it)
-            }
-        },
-    )
+    ) {
+        activeLocation?.let {
+            weatherForecastViewModel.refreshCurrent(it)
+            weatherForecastViewModel.refreshForecast(it)
+        }
+    }
 
     if (showAddSheet) {
         val sheetState = rememberModalBottomSheetState()
@@ -185,6 +184,7 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CurrentWeatherScreen(
+    modifier: Modifier = Modifier,
     locations: List<SavedLocation>,
     activeIndex: Int,
     weatherState: LoadingState<CurrentWeather>,
@@ -194,7 +194,6 @@ fun CurrentWeatherScreen(
     onOpenForecast: () -> Unit,
     onAddCityClick: () -> Unit,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -695,11 +694,27 @@ private fun UpcomingDayRow(
     ) {
         WeatherIcon(iconCode = day.iconCode, contentDescription = day.description, sizeDp = 36)
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = day.dateLabel, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-            Text(text = day.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = day.dateLabel,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = day.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Text(text = formatTemperature(day.tempMax, day.units), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-        Text(text = formatTemperature(day.tempMin, day.units), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = formatTemperature(day.tempMax, day.units),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = formatTemperature(day.tempMin, day.units),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 }
@@ -751,8 +766,7 @@ private fun CurrentWeatherEmptyPreview() {
             onRemoveCity = {},
             onOpenForecast = {},
             onAddCityClick = {},
-            onRetry = {},
-        )
+        ) {}
     }
 }
 
@@ -790,8 +804,7 @@ private fun CurrentWeatherSuccessPreview() {
             onRemoveCity = {},
             onOpenForecast = {},
             onAddCityClick = {},
-            onRetry = {},
-        )
+        ) {}
     }
 }
 
