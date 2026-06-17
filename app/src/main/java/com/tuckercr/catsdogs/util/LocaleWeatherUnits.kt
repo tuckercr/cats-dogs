@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.core.os.ConfigurationCompat
 import androidx.core.text.util.LocalePreferences
 import androidx.core.text.util.LocalePreferences.TemperatureUnit
+import com.tuckercr.catsdogs.domain.UnitOverride
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import java.util.Locale
 
@@ -24,6 +25,12 @@ fun Context.resolveWeatherUnits(): WeatherUnits {
         null
     }
     return resolveWeatherUnits(locale, temperatureUnit)
+}
+
+fun Context.resolveWeatherUnits(override: UnitOverride): WeatherUnits = when (override) {
+    UnitOverride.METRIC -> WeatherUnits.METRIC
+    UnitOverride.IMPERIAL -> WeatherUnits.IMPERIAL
+    UnitOverride.SYSTEM -> resolveWeatherUnits()
 }
 
 internal fun resolveWeatherUnits(

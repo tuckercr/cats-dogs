@@ -14,14 +14,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 @HiltViewModel
 class WeatherForecastViewModel internal constructor(
-    private val resolveWeatherUnits: () -> WeatherUnits,
+    private val resolveWeatherUnits: suspend () -> WeatherUnits,
     private val fetchCurrentWeather: suspend (
         units: WeatherUnits,
         locationLabel: String,
@@ -36,6 +38,11 @@ class WeatherForecastViewModel internal constructor(
         longitude: Double?,
     ) -> Result<List<DayForecast>>,
     private val setLastCity: suspend (String) -> Unit,
+    private val getCachedCurrentWeather: suspend () -> CurrentWeather?,
+    private val getCachedForecast: suspend () -> List<DayForecast>?,
+    private val setCachedCurrentWeather: suspend (String) -> Unit,
+    private val setCachedForecast: suspend (String) -> Unit,
+    private val json: Json,
 ) : ViewModel() {
 
     @Inject
@@ -43,11 +50,26 @@ class WeatherForecastViewModel internal constructor(
         application: Application,
         preferencesRepository: PreferencesRepository,
         weatherRepository: WeatherRepository,
+        injectedJson: Json,
     ) : this(
-        resolveWeatherUnits = { application.resolveWeatherUnits() },
+        resolveWeatherUnits = {
+            val override = preferencesRepository.unitOverride.first()
+            application.resolveWeatherUnits(override)
+        },
         fetchCurrentWeather = weatherRepository::fetchCurrentWeather,
         fetchForecast = weatherRepository::fetchForecast,
         setLastCity = preferencesRepository::setLastCity,
+        getCachedCurrentWeather = {
+            val raw = preferencesRepository.cachedCurrentWeatherJson.first()
+            if (raw != null) try { injectedJson.decodeFromString<CurrentWeather>(raw) } catch (_: Exception) { null } else null
+        },
+        getCachedForecast = {
+            val raw = preferencesRepository.cachedForecastJson.first()
+            if (raw != null) try { injectedJson.decodeFromString<List<DayForecast>>(raw) } catch (_: Exception) { null } else null
+        },
+        setCachedCurrentWeather = preferencesRepository::setCachedCurrentWeather,
+        setCachedForecast = preferencesRepository::setCachedForecast,
+        json = injectedJson,
     )
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
@@ -58,8 +80,65 @@ class WeatherForecastViewModel internal constructor(
 
     private val currentWeatherFetchGeneration = AtomicInteger(0)
     private val forecastFetchGeneration = AtomicInteger(0)
+    private val _lastRefreshedLocation = MutableStateFlow<SavedLocation?>(null)
+
+    init {
+        // Pre-populate UI from last background fetch so the user sees data immediately on open.
+        viewModelScope.launch {
+            getCachedCurrentWeather()?.let { cached ->
+                _currentWeather.compareAndSet(LoadingState.Idle, LoadingState.Success(cached))
+            }
+        }
+        viewModelScope.launch {
+            getCachedForecast()?.let { cached ->
+                _forecast.compareAndSet(LoadingState.Idle, LoadingState.Success(cached))
+            }
+        }
+    }
+
+    fun backgroundRefreshCurrent(location: SavedLocation) {
+        _lastRefreshedLocation.value = location
+        viewModelScope.launch {
+            val units = resolveWeatherUnits()
+            val result = if (location.latitude != null && location.longitude != null) {
+                fetchCurrentWeather(units, location.label, null, location.latitude, location.longitude)
+            } else {
+                fetchCurrentWeather(units, location.label, location.label, null, null)
+            }
+            result.onSuccess { weather ->
+                _currentWeather.value = LoadingState.Success(weather)
+                setLastCity(weather.cityName)
+                viewModelScope.launch {
+                    setCachedCurrentWeather(json.encodeToString(CurrentWeather.serializer(), weather))
+                }
+            }
+        }
+    }
+
+    fun backgroundRefreshForecast(location: SavedLocation) {
+        viewModelScope.launch {
+            val units = resolveWeatherUnits()
+            val result = if (location.latitude != null && location.longitude != null) {
+                fetchForecast(units, null, location.latitude, location.longitude)
+            } else {
+                fetchForecast(units, location.label, null, null)
+            }
+            result.onSuccess { forecast ->
+                _forecast.value = LoadingState.Success(forecast)
+                viewModelScope.launch {
+                    setCachedForecast(
+                        json.encodeToString(
+                            kotlinx.serialization.builtins.ListSerializer(DayForecast.serializer()),
+                            forecast,
+                        ),
+                    )
+                }
+            }
+        }
+    }
 
     fun refreshCurrent(location: SavedLocation) {
+        _lastRefreshedLocation.value = location
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         viewModelScope.launch {
             _currentWeather.value = LoadingState.Loading
@@ -73,6 +152,9 @@ class WeatherForecastViewModel internal constructor(
             _currentWeather.value = result.fold(
                 onSuccess = { weather ->
                     setLastCity(weather.cityName)
+                    viewModelScope.launch {
+                        setCachedCurrentWeather(json.encodeToString(CurrentWeather.serializer(), weather))
+                    }
                     LoadingState.Success(weather)
                 },
                 onFailure = { e -> LoadingState.Error(resolveUserMessage(e), canRetry = true) },
@@ -92,7 +174,17 @@ class WeatherForecastViewModel internal constructor(
             }
             if (fetchId != forecastFetchGeneration.get()) return@launch
             _forecast.value = result.fold(
-                onSuccess = { LoadingState.Success(it) },
+                onSuccess = { forecast ->
+                    viewModelScope.launch {
+                        setCachedForecast(
+                            json.encodeToString(
+                                kotlinx.serialization.builtins.ListSerializer(DayForecast.serializer()),
+                                forecast,
+                            ),
+                        )
+                    }
+                    LoadingState.Success(forecast)
+                },
                 onFailure = { e -> LoadingState.Error(resolveUserMessage(e), canRetry = true) },
             )
         }

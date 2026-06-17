@@ -149,6 +149,8 @@ class WeatherRepository @Inject constructor(
             visibilityMeters = response.visibility,
             cloudPercent = response.clouds?.all ?: 0,
             units = units,
+            sunriseEpoch = response.sys?.sunrise?.takeIf { it > 0L },
+            sunsetEpoch = response.sys?.sunset?.takeIf { it > 0L },
         )
     }
 

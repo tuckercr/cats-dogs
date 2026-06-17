@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.tuckercr.catsdogs.domain.SavedLocation
+import com.tuckercr.catsdogs.domain.UnitOverride
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -68,6 +69,41 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_ACTIVE_LOCATION_INDEX] = index }
     }
 
+    val cachedCurrentWeatherJson: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_CACHED_CURRENT_WEATHER]
+    }
+
+    val cachedForecastJson: Flow<String?> = dataStore.data.map { prefs ->
+        prefs[KEY_CACHED_FORECAST]
+    }
+
+    suspend fun setCachedCurrentWeather(json: String) {
+        dataStore.edit { it[KEY_CACHED_CURRENT_WEATHER] = json }
+    }
+
+    suspend fun setCachedForecast(json: String) {
+        dataStore.edit { it[KEY_CACHED_FORECAST] = json }
+    }
+
+    val unitOverride: Flow<UnitOverride> = dataStore.data.map { prefs ->
+        when (prefs[KEY_UNIT_OVERRIDE]) {
+            UnitOverride.METRIC.name -> UnitOverride.METRIC
+            UnitOverride.IMPERIAL.name -> UnitOverride.IMPERIAL
+            else -> UnitOverride.SYSTEM
+        }
+    }
+
+    suspend fun setUnitOverride(override: UnitOverride) {
+        dataStore.edit { it[KEY_UNIT_OVERRIDE] = override.name }
+    }
+
+    suspend fun clearCache() {
+        dataStore.edit {
+            it.remove(KEY_CACHED_CURRENT_WEATHER)
+            it.remove(KEY_CACHED_FORECAST)
+        }
+    }
+
     suspend fun hasSeenWelcomeOnce(): Boolean = hasSeenWelcome.first()
 
     suspend fun locationOnboardingDoneOnce(): Boolean = locationOnboardingDone.first()
@@ -78,5 +114,8 @@ class PreferencesRepository @Inject constructor(
         private val KEY_LAST_CITY = stringPreferencesKey("last_city")
         private val KEY_SAVED_LOCATIONS = stringPreferencesKey("saved_locations")
         private val KEY_ACTIVE_LOCATION_INDEX = intPreferencesKey("active_location_index")
+        private val KEY_CACHED_CURRENT_WEATHER = stringPreferencesKey("cached_current_weather")
+        private val KEY_CACHED_FORECAST = stringPreferencesKey("cached_forecast")
+        private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
     }
 }

@@ -1,7 +1,12 @@
+@file:OptIn(kotlinx.serialization.InternalSerializationApi::class)
+
 package com.tuckercr.catsdogs.domain
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class CurrentWeather(
-    /** Shown in the UI: matches what the user searched (when provided), not necessarily OpenWeather’s `name`. */
+    /** Shown in the UI: matches what the user searched (when provided), not necessarily OpenWeather's `name`. */
     val cityName: String,
     val conditionMain: String,
     val description: String,
@@ -17,9 +22,12 @@ data class CurrentWeather(
     val visibilityMeters: Int?,
     val cloudPercent: Int,
     val units: WeatherUnits,
+    val sunriseEpoch: Long? = null,
+    val sunsetEpoch: Long? = null,
 )
 
 /** A single 3-hour forecast slot used in the day-detail hourly breakdown. */
+@Serializable
 data class HourlySlot(
     val timeLabel: String,
     val iconCode: String,
@@ -33,6 +41,7 @@ data class HourlySlot(
     val units: WeatherUnits,
 )
 
+@Serializable
 data class DayForecast(
     val dateLabel: String,
     val conditionMain: String,

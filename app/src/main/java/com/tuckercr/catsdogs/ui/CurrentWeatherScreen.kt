@@ -28,9 +28,12 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -59,7 +62,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,7 +94,10 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
+fun CurrentWeatherRoute(
+    onOpenForecast: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
     val activity = LocalActivity.current as ComponentActivity
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val weatherForecastViewModel =
@@ -104,12 +114,28 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
     val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
 
-    // Auto-fetch whenever the active location changes
+    // Full refresh whenever the active location changes
     LaunchedEffect(activeLocation) {
         activeLocation?.let {
             weatherForecastViewModel.refreshCurrent(it)
             weatherForecastViewModel.refreshForecast(it)
         }
+    }
+
+    // Silent background refresh on every foreground resume (picks up new units or stale data)
+    val currentActiveLocation by rememberUpdatedState(activeLocation)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentActiveLocation?.let {
+                    weatherForecastViewModel.backgroundRefreshCurrent(it)
+                    weatherForecastViewModel.backgroundRefreshForecast(it)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -121,10 +147,18 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
         activeIndex = activeIndex,
         weatherState = weatherState,
         forecastDays = forecastDays,
+        isRefreshing = weatherState is com.tuckercr.catsdogs.model.LoadingState.Loading,
         onTabSelected = cityListViewModel::setActiveIndex,
         onRemoveCity = cityListViewModel::removeLocation,
         onOpenForecast = onOpenForecast,
+        onOpenSettings = onOpenSettings,
         onAddCityClick = { showAddSheet = true },
+        onRefresh = {
+            activeLocation?.let {
+                weatherForecastViewModel.refreshCurrent(it)
+                weatherForecastViewModel.refreshForecast(it)
+            }
+        },
     ) {
         activeLocation?.let {
             weatherForecastViewModel.refreshCurrent(it)
@@ -189,10 +223,13 @@ fun CurrentWeatherScreen(
     activeIndex: Int,
     weatherState: LoadingState<CurrentWeather>,
     forecastDays: List<DayForecast> = emptyList(),
+    isRefreshing: Boolean = false,
     onTabSelected: (Int) -> Unit,
     onRemoveCity: (Int) -> Unit,
     onOpenForecast: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
+    onRefresh: () -> Unit = {},
     onRetry: () -> Unit,
 ) {
     Scaffold(
@@ -217,6 +254,12 @@ fun CurrentWeatherScreen(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(R.string.cd_add_city),
+                            )
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.cd_open_settings),
                             )
                         }
                     },
@@ -281,17 +324,23 @@ fun CurrentWeatherScreen(
             }
         },
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            if (locations.isEmpty()) {
-                EmptyLocationsState(
-                    onAddCityClick = onAddCityClick,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
+        if (locations.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                EmptyLocationsState(onAddCityClick = onAddCityClick)
+            }
+        } else {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -628,6 +677,22 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_cloud_cover),
                     value = stringResource(R.string.format_percent, weather.cloudPercent),
                 )
+                weather.sunriseEpoch?.let { epoch ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WbSunny,
+                        label = stringResource(R.string.label_sunrise),
+                        value = formatEpochTime(epoch),
+                    )
+                }
+                weather.sunsetEpoch?.let { epoch ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WbSunny,
+                        label = stringResource(R.string.label_sunset),
+                        value = formatEpochTime(epoch),
+                    )
+                }
             }
         }
 
@@ -691,6 +756,13 @@ private fun formatVisibility(meters: Int): String =
     } else {
         stringResource(R.string.format_visibility_m, meters)
     }
+
+private fun formatEpochTime(epochSeconds: Long): String {
+    val localTime = java.time.Instant.ofEpochSecond(epochSeconds)
+        .atZone(java.time.ZoneId.systemDefault())
+        .toLocalTime()
+    return localTime.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
+}
 
 private fun windDirection(deg: Int): String {
     val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")

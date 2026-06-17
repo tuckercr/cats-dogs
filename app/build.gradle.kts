@@ -88,6 +88,16 @@ dependencies {
     // Serialization — used by PreferencesRepository to JSON-encode SavedLocation list
     implementation(libs.kotlinx.serialization.json)
 
+    // Background updates
+    implementation(libs.androidx.work.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.hilt.ext.compiler)
+
+    // Firebase Remote Config — add google-services.json + plugin to enable server-side values;
+    // without it the app falls back to the local defaults in res/xml/remote_config_defaults.xml.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.config.ktx)
+
     // DI
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)

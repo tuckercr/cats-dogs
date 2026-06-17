@@ -209,7 +209,7 @@ class WeatherForecastViewModelTest {
         }
 
     private fun viewModel(
-        resolveWeatherUnits: () -> WeatherUnits = { WeatherUnits.METRIC },
+        resolveWeatherUnits: suspend () -> WeatherUnits = { WeatherUnits.METRIC },
         fetchCurrentWeather: suspend (
             units: WeatherUnits,
             locationLabel: String,
@@ -228,11 +228,20 @@ class WeatherForecastViewModelTest {
             Result.success(listOf(dayForecast(units = units)))
         },
         setLastCity: suspend (String) -> Unit = {},
+        getCachedCurrentWeather: suspend () -> CurrentWeather? = { null },
+        getCachedForecast: suspend () -> List<DayForecast>? = { null },
+        setCachedCurrentWeather: suspend (String) -> Unit = {},
+        setCachedForecast: suspend (String) -> Unit = {},
     ) = WeatherForecastViewModel(
         resolveWeatherUnits = resolveWeatherUnits,
         fetchCurrentWeather = fetchCurrentWeather,
         fetchForecast = fetchForecast,
         setLastCity = setLastCity,
+        getCachedCurrentWeather = getCachedCurrentWeather,
+        getCachedForecast = getCachedForecast,
+        setCachedCurrentWeather = setCachedCurrentWeather,
+        setCachedForecast = setCachedForecast,
+        json = kotlinx.serialization.json.Json,
     )
 
     class MainDispatcherRule(
