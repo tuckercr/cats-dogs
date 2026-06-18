@@ -133,17 +133,14 @@ class WeatherForecastViewModelTest {
     fun `current weather network failure maps to retryable user message and can be cleared`() =
         runTest {
             val viewModel = viewModel(
-                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(IOException("network")) },
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(IOException("offline")) },
             )
 
             viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
             assertEquals(
-                LoadingState.Error(
-                    "We could not reach the weather service. Check your connection and try again.",
-                    canRetry = true,
-                ),
+                LoadingState.Error("offline", canRetry = true),
                 viewModel.currentWeather.value,
             )
 
@@ -190,17 +187,14 @@ class WeatherForecastViewModelTest {
     fun `forecast maps network failure to retryable user message`() =
         runTest {
             val viewModel = viewModel(
-                fetchForecast = { _, _, _, _ -> Result.failure(IOException("network")) },
+                fetchForecast = { _, _, _, _ -> Result.failure(IOException("offline")) },
             )
 
             viewModel.refreshForecast(SavedLocation(label = "Austin", latitude = null, longitude = null))
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
             assertEquals(
-                LoadingState.Error(
-                    "We could not reach the weather service. Check your connection and try again.",
-                    canRetry = true,
-                ),
+                LoadingState.Error("offline", canRetry = true),
                 viewModel.forecast.value,
             )
 
@@ -228,10 +222,10 @@ class WeatherForecastViewModelTest {
             Result.success(listOf(dayForecast(units = units)))
         },
         setLastCity: suspend (String) -> Unit = {},
-        getCachedCurrentWeather: suspend () -> CurrentWeather? = { null },
-        getCachedForecast: suspend () -> List<DayForecast>? = { null },
-        setCachedCurrentWeather: suspend (String) -> Unit = {},
-        setCachedForecast: suspend (String) -> Unit = {},
+        getCachedCurrentWeather: suspend (String) -> CurrentWeather? = { null },
+        getCachedForecast: suspend (String) -> List<DayForecast>? = { null },
+        setCachedCurrentWeather: suspend (String, String) -> Unit = { _, _ -> },
+        setCachedForecast: suspend (String, String) -> Unit = { _, _ -> },
     ) = WeatherForecastViewModel(
         resolveWeatherUnits = resolveWeatherUnits,
         fetchCurrentWeather = fetchCurrentWeather,

@@ -27,11 +27,12 @@ fun Context.resolveWeatherUnits(): WeatherUnits {
     return resolveWeatherUnits(locale, temperatureUnit)
 }
 
-fun Context.resolveWeatherUnits(override: UnitOverride): WeatherUnits = when (override) {
-    UnitOverride.METRIC -> WeatherUnits.METRIC
-    UnitOverride.IMPERIAL -> WeatherUnits.IMPERIAL
-    UnitOverride.SYSTEM -> resolveWeatherUnits()
-}
+fun Context.resolveWeatherUnits(override: UnitOverride): WeatherUnits =
+    when (override) {
+        UnitOverride.METRIC -> WeatherUnits.METRIC
+        UnitOverride.IMPERIAL -> WeatherUnits.IMPERIAL
+        UnitOverride.SYSTEM -> resolveWeatherUnits()
+    }
 
 internal fun resolveWeatherUnits(
     locale: Locale,

@@ -69,20 +69,43 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_ACTIVE_LOCATION_INDEX] = index }
     }
 
-    val cachedCurrentWeatherJson: Flow<String?> = dataStore.data.map { prefs ->
-        prefs[KEY_CACHED_CURRENT_WEATHER]
+    suspend fun getCachedWeatherFor(locationKey: String): String? {
+        val raw = dataStore.data.map { it[KEY_WEATHER_CACHE] }.first() ?: return null
+        return runCatching { json.decodeFromString<Map<String, String>>(raw) }
+            .getOrNull()
+            ?.get(locationKey)
     }
 
-    val cachedForecastJson: Flow<String?> = dataStore.data.map { prefs ->
-        prefs[KEY_CACHED_FORECAST]
+    suspend fun setCachedWeatherFor(
+        locationKey: String,
+        weatherJson: String,
+    ) {
+        dataStore.edit { prefs ->
+            val existing = prefs[KEY_WEATHER_CACHE]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?: emptyMap()
+            prefs[KEY_WEATHER_CACHE] = json.encodeToString(existing + (locationKey to weatherJson))
+        }
     }
 
-    suspend fun setCachedCurrentWeather(json: String) {
-        dataStore.edit { it[KEY_CACHED_CURRENT_WEATHER] = json }
+    suspend fun getCachedForecastFor(locationKey: String): String? {
+        val raw = dataStore.data.map { it[KEY_FORECAST_CACHE] }.first() ?: return null
+        return runCatching { json.decodeFromString<Map<String, String>>(raw) }
+            .getOrNull()
+            ?.get(locationKey)
     }
 
-    suspend fun setCachedForecast(json: String) {
-        dataStore.edit { it[KEY_CACHED_FORECAST] = json }
+    suspend fun setCachedForecastFor(
+        locationKey: String,
+        forecastJson: String,
+    ) {
+        dataStore.edit { prefs ->
+            val existing = prefs[KEY_FORECAST_CACHE]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?: emptyMap()
+            prefs[KEY_FORECAST_CACHE] =
+                json.encodeToString(existing + (locationKey to forecastJson))
+        }
     }
 
     val unitOverride: Flow<UnitOverride> = dataStore.data.map { prefs ->
@@ -99,8 +122,8 @@ class PreferencesRepository @Inject constructor(
 
     suspend fun clearCache() {
         dataStore.edit {
-            it.remove(KEY_CACHED_CURRENT_WEATHER)
-            it.remove(KEY_CACHED_FORECAST)
+            it.remove(KEY_WEATHER_CACHE)
+            it.remove(KEY_FORECAST_CACHE)
         }
     }
 
@@ -114,8 +137,8 @@ class PreferencesRepository @Inject constructor(
         private val KEY_LAST_CITY = stringPreferencesKey("last_city")
         private val KEY_SAVED_LOCATIONS = stringPreferencesKey("saved_locations")
         private val KEY_ACTIVE_LOCATION_INDEX = intPreferencesKey("active_location_index")
-        private val KEY_CACHED_CURRENT_WEATHER = stringPreferencesKey("cached_current_weather")
-        private val KEY_CACHED_FORECAST = stringPreferencesKey("cached_forecast")
+        private val KEY_WEATHER_CACHE = stringPreferencesKey("weather_cache")
+        private val KEY_FORECAST_CACHE = stringPreferencesKey("forecast_cache")
         private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
     }
 }

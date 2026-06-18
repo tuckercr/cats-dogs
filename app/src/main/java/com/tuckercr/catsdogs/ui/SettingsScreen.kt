@@ -2,7 +2,6 @@ package com.tuckercr.catsdogs.ui
 
 import android.Manifest
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
@@ -38,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
@@ -143,7 +143,7 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
                 label = stringResource(R.string.settings_attribution),
                 onClick = {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(openWeatherUrl)),
+                        Intent(Intent.ACTION_VIEW, openWeatherUrl.toUri()),
                     )
                 },
             )
@@ -153,7 +153,7 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
                 label = stringResource(R.string.settings_privacy_policy),
                 onClick = {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl)),
+                        Intent(Intent.ACTION_VIEW, privacyUrl.toUri()),
                     )
                 },
             )

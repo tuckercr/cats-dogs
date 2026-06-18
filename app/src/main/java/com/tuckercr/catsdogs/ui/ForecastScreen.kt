@@ -114,7 +114,7 @@ fun ForecastScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = state.message,
+                    text = weatherErrorMessage(state.errorKey),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -141,7 +141,7 @@ fun ForecastScreen(
                     item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
                 selectedDay?.let { day ->
-                    DayDetailBottomSheet(day = day, onDismiss = { selectedDay = null })
+                    DayDetailBottomSheet(day = day) { selectedDay = null }
                 }
             }
         }

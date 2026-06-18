@@ -18,18 +18,19 @@ class WorkManagerScheduler @Inject constructor(
     private val remoteConfigRepository: RemoteConfigRepository,
 ) {
     fun schedule() {
-        val intervalMinutes = remoteConfigRepository.refreshIntervalMinutes()
+        val intervalMinutes = remoteConfigRepository
+            .refreshIntervalMinutes()
             .coerceAtLeast(MIN_INTERVAL_MINUTES)
 
         val request = PeriodicWorkRequestBuilder<WeatherUpdateWorker>(
-            intervalMinutes, TimeUnit.MINUTES,
-        )
-            .setConstraints(
-                Constraints.Builder()
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build(),
-            )
-            .build()
+            intervalMinutes,
+            TimeUnit.MINUTES,
+        ).setConstraints(
+            Constraints
+                .Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build(),
+        ).build()
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,

@@ -13,7 +13,7 @@ sealed interface LoadingState<out T> {
     ) : LoadingState<T>
 
     data class Error(
-        val message: String,
+        val errorKey: String,
         val canRetry: Boolean = true,
     ) : LoadingState<Nothing>
 }

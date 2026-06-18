@@ -56,6 +56,14 @@
     <string name="detail_wind_label">WIND</string>
     <string name="detail_humidity_label">HUM</string>
 
+    <!-- Error messages -->
+    <string name="error_offline">No internet connection. Check your network and try again.</string>
+    <string name="error_city_not_found">City not found. Try a different name or check the spelling.</string>
+    <string name="error_bad_api_key">Invalid API key. Rebuild the app with a valid OWM_API_KEY.</string>
+    <string name="error_rate_limited">Too many requests — please wait a moment and try again.</string>
+    <string name="error_server">OpenWeather\'s servers are having issues. Please try again later.</string>
+    <string name="error_generic">Weather data is not available right now. Please try again later.</string>
+
     <!-- Sunrise / sunset -->
     <string name="label_sunrise">Sunrise</string>
     <string name="label_sunset">Sunset</string>

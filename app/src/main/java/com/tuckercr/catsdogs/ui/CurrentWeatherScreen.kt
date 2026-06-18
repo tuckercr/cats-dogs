@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
 import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,6 +55,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,9 +64,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -79,6 +76,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
@@ -109,6 +109,7 @@ fun CurrentWeatherRoute(
     val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
     val weatherState by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
     val forecastState by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
+    val isRefreshing by weatherForecastViewModel.isRefreshing.collectAsStateWithLifecycle()
     val cityInput by geoViewModel.cityInput.collectAsStateWithLifecycle()
     val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
@@ -147,7 +148,7 @@ fun CurrentWeatherRoute(
         activeIndex = activeIndex,
         weatherState = weatherState,
         forecastDays = forecastDays,
-        isRefreshing = weatherState is com.tuckercr.catsdogs.model.LoadingState.Loading,
+        isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
         onRemoveCity = cityListViewModel::removeLocation,
         onOpenForecast = onOpenForecast,
@@ -361,7 +362,7 @@ fun CurrentWeatherScreen(
 
                         is LoadingState.Error -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = weatherState.message,
+                                text = weatherErrorMessage(weatherState.errorKey),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -730,6 +731,17 @@ private fun CurrentWeatherContent(
 }
 
 @Composable
+internal fun weatherErrorMessage(errorKey: String): String =
+    when (errorKey) {
+        "offline" -> stringResource(R.string.error_offline)
+        "city_not_found" -> stringResource(R.string.error_city_not_found)
+        "missing_api_key", "bad_api_key" -> stringResource(R.string.error_bad_api_key)
+        "rate_limited" -> stringResource(R.string.error_rate_limited)
+        "server_error" -> stringResource(R.string.error_server)
+        else -> stringResource(R.string.error_generic)
+    }
+
+@Composable
 private fun formatTemperature(
     value: Double,
     units: WeatherUnits,
@@ -758,10 +770,14 @@ private fun formatVisibility(meters: Int): String =
     }
 
 private fun formatEpochTime(epochSeconds: Long): String {
-    val localTime = java.time.Instant.ofEpochSecond(epochSeconds)
+    val localTime = java.time.Instant
+        .ofEpochSecond(epochSeconds)
         .atZone(java.time.ZoneId.systemDefault())
         .toLocalTime()
-    return localTime.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
+    return localTime.format(
+        java.time.format.DateTimeFormatter
+            .ofPattern("h:mm a"),
+    )
 }
 
 private fun windDirection(deg: Int): String {

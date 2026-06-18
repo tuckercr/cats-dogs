@@ -28,8 +28,7 @@ class RemoteConfigRepository @Inject constructor(
         }
     }.getOrNull()
 
-    fun refreshIntervalMinutes(): Long =
-        remoteConfig?.getLong(KEY_REFRESH_INTERVAL) ?: DEFAULT_REFRESH_INTERVAL_MINUTES
+    fun refreshIntervalMinutes(): Long = remoteConfig?.getLong(KEY_REFRESH_INTERVAL) ?: DEFAULT_REFRESH_INTERVAL_MINUTES
 
     companion object {
         const val KEY_REFRESH_INTERVAL = "weather_refresh_interval_minutes"

@@ -196,7 +196,7 @@ class WeatherRepositoryTest {
             )
 
             val error = result.exceptionOrNull()
-            assertEquals("network", error?.message)
+            assertEquals("offline", error?.message)
             assertEquals(1, api.forecastCallCount)
         }
 
@@ -217,7 +217,7 @@ class WeatherRepositoryTest {
             )
 
             val error = result.exceptionOrNull()
-            assertEquals("city not found", error?.message)
+            assertEquals("city_not_found", error?.message)
             assertEquals(1, api.forecastCallCount)
         }
 
@@ -260,7 +260,7 @@ class WeatherRepositoryTest {
             )
 
             val error = result.exceptionOrNull()
-            assertEquals("network", error?.message)
+            assertEquals("offline", error?.message)
         }
 
     @Test
@@ -280,7 +280,7 @@ class WeatherRepositoryTest {
             )
 
             val error = result.exceptionOrNull()
-            assertEquals("city not found", error?.message)
+            assertEquals("city_not_found", error?.message)
         }
 
     @Test

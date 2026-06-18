@@ -13,4 +13,10 @@ data class SavedLocation(
     val latitude: Double?,
     val longitude: Double?,
     val isCurrentLocation: Boolean = false,
-)
+) {
+    val cacheKey: String get() = if (latitude != null && longitude != null) {
+        String.format(java.util.Locale.ROOT, "%.4f,%.4f", latitude, longitude)
+    } else {
+        label.trim().lowercase(java.util.Locale.ROOT)
+    }
+}

@@ -12,7 +12,6 @@ import com.tuckercr.catsdogs.util.resolveWeatherUnits
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @HiltWorker
@@ -56,13 +55,23 @@ class WeatherUpdateWorker @AssistedInject constructor(
             weatherRepository.fetchForecast(units = units, cityQuery = location.label)
         }
 
-        val weatherOk = currentResult.onSuccess { weather ->
-            preferencesRepository.setCachedCurrentWeather(json.encodeToString<CurrentWeather>(weather))
-        }.isSuccess
+        val cacheKey = location.cacheKey
 
-        val forecastOk = forecastResult.onSuccess { forecast ->
-            preferencesRepository.setCachedForecast(json.encodeToString<List<DayForecast>>(forecast))
-        }.isSuccess
+        val weatherOk = currentResult
+            .onSuccess { weather ->
+                preferencesRepository.setCachedWeatherFor(
+                    cacheKey,
+                    json.encodeToString<CurrentWeather>(weather),
+                )
+            }.isSuccess
+
+        val forecastOk = forecastResult
+            .onSuccess { forecast ->
+                preferencesRepository.setCachedForecastFor(
+                    cacheKey,
+                    json.encodeToString<List<DayForecast>>(forecast),
+                )
+            }.isSuccess
 
         return if (weatherOk || forecastOk) Result.success() else Result.retry()
     }

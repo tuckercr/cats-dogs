@@ -8,13 +8,19 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class WeatherApplication : Application(), Configuration.Provider {
+class WeatherApplication :
+    Application(),
+    Configuration.Provider {
 
-    @Inject lateinit var workerFactory: HiltWorkerFactory
-    @Inject lateinit var workManagerScheduler: WorkManagerScheduler
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var workManagerScheduler: WorkManagerScheduler
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
+        get() = Configuration
+            .Builder()
             .setWorkerFactory(workerFactory)
             .build()
 
