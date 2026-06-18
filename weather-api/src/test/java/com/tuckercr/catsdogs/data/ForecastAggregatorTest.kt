@@ -4,6 +4,8 @@ import com.tuckercr.catsdogs.domain.WeatherUnits
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 class ForecastAggregatorTest {
@@ -74,6 +76,45 @@ class ForecastAggregatorTest {
 
         assertEquals(2, days.size)
         assertEquals("B", days.last().conditionMain)
+    }
+
+    @Test
+    fun `aggregate groups slots by local calendar day instead of utc day`() {
+        val newYork = ZoneId.of("America/New_York")
+        val slots = listOf(
+            slot(
+                epochSeconds = utcEpochSeconds(2024, 1, 1, 23),
+                conditionMain = "Late UTC",
+            ),
+            slot(
+                epochSeconds = utcEpochSeconds(2024, 1, 2, 1),
+                conditionMain = "Next UTC Day",
+            ),
+        )
+
+        val days = ForecastAggregator.aggregate(slots, newYork, WeatherUnits.METRIC)
+
+        assertEquals(1, days.size)
+        assertEquals(2, days.single().hourlySlots.size)
+    }
+
+    @Test
+    fun `aggregate picks representative closest to local noon`() {
+        val newYork = ZoneId.of("America/New_York")
+        val slots = listOf(
+            slot(
+                epochSeconds = utcEpochSeconds(2024, 1, 1, 12),
+                conditionMain = "UTC Noon",
+            ),
+            slot(
+                epochSeconds = utcEpochSeconds(2024, 1, 1, 17),
+                conditionMain = "Local Noon",
+            ),
+        )
+
+        val day = ForecastAggregator.aggregate(slots, newYork, WeatherUnits.METRIC).single()
+
+        assertEquals("Local Noon", day.conditionMain)
     }
 
     @Test
@@ -226,4 +267,11 @@ class ForecastAggregatorTest {
         humidity = humidity,
         pressure = pressure,
     )
+
+    private fun utcEpochSeconds(
+        year: Int,
+        month: Int,
+        day: Int,
+        hour: Int,
+    ): Long = LocalDateTime.of(year, month, day, hour, 0).toEpochSecond(ZoneOffset.UTC)
 }

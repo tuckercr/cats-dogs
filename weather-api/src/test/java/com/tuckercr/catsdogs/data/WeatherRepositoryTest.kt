@@ -222,6 +222,27 @@ class WeatherRepositoryTest {
         }
 
     @Test
+    fun `fetchForecast falls back to http status when OpenWeather error body is unreadable`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(
+                forecastThrowable = httpException(
+                    code = 500,
+                    body = """{"cod":"500","message":""}""",
+                ),
+            )
+            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(
+                units = WeatherUnits.METRIC,
+                cityQuery = "Austin",
+            )
+
+            val error = result.exceptionOrNull()
+            assertEquals("http_500", error?.message)
+            assertEquals(1, api.forecastCallCount)
+        }
+
+    @Test
     fun `fetchForecast maps missing weather entry to invalid payload`() =
         runBlocking {
             val api = FakeOpenWeatherApi(
