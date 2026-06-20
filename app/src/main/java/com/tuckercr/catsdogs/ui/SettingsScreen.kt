@@ -62,9 +62,11 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val cacheClearedMessage = stringResource(R.string.settings_cache_cleared)
 
-    fun isLocationGranted() = ContextCompat.checkSelfPermission(
-        context, Manifest.permission.ACCESS_COARSE_LOCATION,
-    ) == PackageManager.PERMISSION_GRANTED
+    fun isLocationGranted() =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED
 
     var locationGranted by remember { mutableStateOf(isLocationGranted()) }
 
