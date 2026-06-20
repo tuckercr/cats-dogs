@@ -3,6 +3,8 @@ package com.tuckercr.catsdogs
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.google.firebase.crashlytics.ktx.crashlytics
+import com.google.firebase.ktx.Firebase
 import com.tuckercr.catsdogs.worker.WorkManagerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -27,5 +29,8 @@ class WeatherApplication :
     override fun onCreate() {
         super.onCreate()
         workManagerScheduler.schedule()
+        runCatching {
+            Firebase.crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
+        }
     }
 }

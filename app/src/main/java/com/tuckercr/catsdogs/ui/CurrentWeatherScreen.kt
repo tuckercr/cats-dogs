@@ -151,8 +151,14 @@ fun CurrentWeatherRoute(
         isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
         onRemoveCity = cityListViewModel::removeLocation,
-        onOpenForecast = onOpenForecast,
-        onOpenSettings = onOpenSettings,
+        onOpenForecast = {
+            weatherForecastViewModel.logForecastOpened()
+            onOpenForecast()
+        },
+        onOpenSettings = {
+            weatherForecastViewModel.logSettingsOpened()
+            onOpenSettings()
+        },
         onAddCityClick = { showAddSheet = true },
         onRefresh = {
             activeLocation?.let {

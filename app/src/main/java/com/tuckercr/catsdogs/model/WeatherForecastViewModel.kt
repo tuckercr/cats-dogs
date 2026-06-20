@@ -3,6 +3,7 @@ package com.tuckercr.catsdogs.model
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuckercr.catsdogs.analytics.AnalyticsRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
@@ -47,6 +48,9 @@ class WeatherForecastViewModel internal constructor(
     private val setCachedCurrentWeather: suspend (locationKey: String, json: String) -> Unit,
     private val setCachedForecast: suspend (locationKey: String, json: String) -> Unit,
     private val json: Json,
+    private val onError: (errorKey: String) -> Unit = {},
+    private val onForecastOpened: () -> Unit = {},
+    private val onSettingsOpened: () -> Unit = {},
 ) : ViewModel() {
 
     @Inject
@@ -55,6 +59,7 @@ class WeatherForecastViewModel internal constructor(
         preferencesRepository: PreferencesRepository,
         weatherRepository: WeatherRepository,
         injectedJson: Json,
+        analyticsRepository: AnalyticsRepository,
     ) : this(
         resolveWeatherUnits = {
             val override = preferencesRepository.unitOverride.first()
@@ -100,6 +105,9 @@ class WeatherForecastViewModel internal constructor(
             )
         },
         json = injectedJson,
+        onError = { key -> analyticsRepository.logWeatherError(key) },
+        onForecastOpened = { analyticsRepository.logForecastOpened() },
+        onSettingsOpened = { analyticsRepository.logSettingsOpened() },
     )
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
@@ -185,14 +193,18 @@ class WeatherForecastViewModel internal constructor(
                     _currentWeather.value = LoadingState.Success(weather)
                 },
                 onFailure = { e ->
+                    val key = resolveErrorKey(e)
+                    onError(key)
                     // Keep cached data visible if available; only surface error when there's nothing to show.
                     if (cached == null) {
-                        _currentWeather.value =
-                            LoadingState.Error(resolveErrorKey(e), canRetry = resolveCanRetry(e))
+                        _currentWeather.value = LoadingState.Error(key, canRetry = resolveCanRetry(e))
                     }
                 },
             )
-            currentRefreshing.value = false
+            // Only clear the indicator if no newer request has since taken over.
+            if (fetchId == currentWeatherFetchGeneration.get()) {
+                currentRefreshing.value = false
+            }
         }
     }
 
@@ -217,15 +229,22 @@ class WeatherForecastViewModel internal constructor(
                     _forecast.value = LoadingState.Success(forecast)
                 },
                 onFailure = { e ->
+                    val key = resolveErrorKey(e)
+                    onError(key)
                     if (cached == null) {
-                        _forecast.value =
-                            LoadingState.Error(resolveErrorKey(e), canRetry = resolveCanRetry(e))
+                        _forecast.value = LoadingState.Error(key, canRetry = resolveCanRetry(e))
                     }
                 },
             )
-            forecastRefreshing.value = false
+            if (fetchId == forecastFetchGeneration.get()) {
+                forecastRefreshing.value = false
+            }
         }
     }
+
+    fun logForecastOpened() = onForecastOpened()
+
+    fun logSettingsOpened() = onSettingsOpened()
 
     fun clearCurrentError() {
         _currentWeather.update { if (it is LoadingState.Error) LoadingState.Idle else it }

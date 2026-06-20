@@ -10,6 +10,13 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
+// Apply Firebase plugins only when google-services.json is present.
+// Without it the build succeeds and Firebase gracefully becomes a no-op at runtime.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -97,6 +104,8 @@ dependencies {
     // without it the app falls back to the local defaults in res/xml/remote_config_defaults.xml.
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.config.ktx)
+    implementation(libs.firebase.analytics.ktx)
+    implementation(libs.firebase.crashlytics.ktx)
 
     // DI
     implementation(libs.hilt.android)

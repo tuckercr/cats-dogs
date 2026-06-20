@@ -137,6 +137,34 @@ class CityListViewModelTest {
             assertEquals(true, persisted.isEmpty()) // no persistence on dedup
         }
 
+    @Test
+    fun `addLocation fires onCityAdded for new cities`() =
+        runTest {
+            var callCount = 0
+            val viewModel = viewModel(
+                savedLocations = listOf(austin),
+                onCityAdded = { callCount++ },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.addLocation(denver)
+            assertEquals(1, callCount)
+        }
+
+    @Test
+    fun `addLocation does not fire onCityAdded for duplicates`() =
+        runTest {
+            var callCount = 0
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, denver),
+                onCityAdded = { callCount++ },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.addLocation(austin)
+            assertEquals(0, callCount)
+        }
+
     // --- removeLocation ---
 
     @Test
@@ -236,6 +264,7 @@ class CityListViewModelTest {
         lastCity: String? = null,
         onSetSavedLocations: (List<SavedLocation>) -> Unit = {},
         onSetActiveIndex: (Int) -> Unit = {},
+        onCityAdded: () -> Unit = {},
     ): CityListViewModel {
         val repo = mockk<PreferencesRepository>(relaxed = true)
         every { repo.savedLocations } returns flowOf(savedLocations)
@@ -247,7 +276,7 @@ class CityListViewModelTest {
         coEvery { repo.setActiveLocationIndex(any()) } answers {
             onSetActiveIndex(firstArg())
         }
-        return CityListViewModel(repo)
+        return CityListViewModel(repo, onCityAdded = onCityAdded)
     }
 
     class MainDispatcherRule(
