@@ -76,7 +76,8 @@
     <string name="settings_unit_metric">Celsius (°C)</string>
     <string name="settings_unit_imperial">Fahrenheit (°F)</string>
     <string name="settings_section_location">LOCATION</string>
-    <string name="settings_request_location">Re-request location permission</string>
+    <string name="settings_location_granted">Location Permission Granted</string>
+    <string name="settings_location_required">Location Permission Required</string>
     <string name="settings_section_cache">CACHE</string>
     <string name="settings_clear_cache">Clear cached data</string>
     <string name="settings_cache_cleared">Cache cleared</string>

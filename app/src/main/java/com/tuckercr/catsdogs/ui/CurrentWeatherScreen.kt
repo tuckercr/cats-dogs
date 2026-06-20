@@ -383,6 +383,7 @@ fun CurrentWeatherScreen(
                             weather = weatherState.data,
                             forecastDays = forecastDays,
                             onOpenForecast = onOpenForecast,
+                            showLocationSubtitle = locations.getOrNull(activeIndex)?.isCurrentLocation == true,
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -573,6 +574,7 @@ private fun CurrentWeatherContent(
     forecastDays: List<DayForecast>,
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
+    showLocationSubtitle: Boolean = false,
 ) {
     val todayLabel = remember {
         java.time.LocalDate
@@ -618,6 +620,25 @@ private fun CurrentWeatherContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (showLocationSubtitle) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = weather.cityName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatTemperature(weather.temperature, weather.units),

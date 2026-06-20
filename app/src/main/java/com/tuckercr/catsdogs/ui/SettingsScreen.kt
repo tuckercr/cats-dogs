@@ -2,8 +2,8 @@ package com.tuckercr.catsdogs.ui
 
 import android.Manifest
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.content.pm.PackageManager
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,16 +29,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.UnitOverride
@@ -55,9 +62,21 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
     val context = LocalContext.current
     val cacheClearedMessage = stringResource(R.string.settings_cache_cleared)
 
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { /* result handled by system; permission state updates automatically */ }
+    fun isLocationGranted() = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.ACCESS_COARSE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED
+
+    var locationGranted by remember { mutableStateOf(isLocationGranted()) }
+
+    // Re-check each time the screen returns to foreground (user may have toggled in App Settings).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) locationGranted = isLocationGranted()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     Scaffold(
         topBar = {
@@ -98,22 +117,25 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_location))
 
-            TextButton(
-                onClick = {
-                    locationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            ) {
+            if (locationGranted) {
                 Text(
-                    text = stringResource(R.string.settings_request_location),
-                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.settings_location_granted),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            } else {
+                SettingsLinkRow(
+                    label = stringResource(R.string.settings_location_required),
+                    onClick = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = "package:${context.packageName}".toUri()
+                            },
+                        )
+                    },
                 )
             }
 
