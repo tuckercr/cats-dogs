@@ -36,25 +36,23 @@ sealed class LocationFetchState {
 }
 
 @HiltViewModel
-class LocationPermissionViewModel @Inject constructor(
+class LocationPermissionViewModel internal constructor(
     application: Application,
+    private val hasLocationPermissionProvider: () -> Boolean,
+    private val locationFetcher: LocationFetcher,
 ) : AndroidViewModel(application) {
 
-    private val fusedClient = LocationServices.getFusedLocationProviderClient(application)
+    @Inject
+    constructor(application: Application) : this(
+        application = application,
+        hasLocationPermissionProvider = { application.hasAnyLocationPermission() },
+        locationFetcher = PlayServicesLocationFetcher(application),
+    )
 
     private val _state = MutableStateFlow<LocationFetchState>(LocationFetchState.Idle)
     val state: StateFlow<LocationFetchState> = _state.asStateFlow()
 
-    fun hasLocationPermission(): Boolean {
-        val app = getApplication<Application>()
-        return ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                app,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-            ) ==
-            PackageManager.PERMISSION_GRANTED
-    }
+    fun hasLocationPermission(): Boolean = hasLocationPermissionProvider()
 
     fun onPermissionDenied() {
         _state.value = LocationFetchState.PermissionDenied
@@ -68,7 +66,8 @@ class LocationPermissionViewModel @Inject constructor(
         _state.value = LocationFetchState.Locating
         viewModelScope.launch {
             try {
-                val location = tryLastLocation() ?: tryCurrentLocation()
+                val location = locationFetcher.tryLastLocation()
+                    ?: locationFetcher.tryCurrentLocation()
                 if (location != null) {
                     _state.value = LocationFetchState.Located(
                         SavedLocation(
@@ -87,18 +86,36 @@ class LocationPermissionViewModel @Inject constructor(
             }
         }
     }
+}
+
+internal data class DeviceLocation(
+    val latitude: Double,
+    val longitude: Double,
+)
+
+internal interface LocationFetcher {
+    suspend fun tryLastLocation(): DeviceLocation?
+
+    suspend fun tryCurrentLocation(): DeviceLocation?
+}
+
+private class PlayServicesLocationFetcher(
+    application: Application,
+) : LocationFetcher {
+
+    private val fusedClient = LocationServices.getFusedLocationProviderClient(application)
 
     @Suppress("MissingPermission")
-    private suspend fun tryLastLocation(): android.location.Location? =
+    override suspend fun tryLastLocation(): DeviceLocation? =
         suspendCancellableCoroutine { cont ->
             fusedClient.lastLocation
                 .addOnSuccessListener { loc -> if (cont.isActive) cont.resume(loc) }
                 .addOnFailureListener { e -> if (cont.isActive) cont.resumeWithException(e) }
                 .addOnCanceledListener { cont.cancel() }
-        }
+        }?.toDeviceLocation()
 
     @Suppress("MissingPermission")
-    private suspend fun tryCurrentLocation(): android.location.Location? =
+    override suspend fun tryCurrentLocation(): DeviceLocation? =
         suspendCancellableCoroutine { cont ->
             val request = CurrentLocationRequest
                 .Builder()
@@ -110,5 +127,20 @@ class LocationPermissionViewModel @Inject constructor(
                 .addOnSuccessListener { loc -> if (cont.isActive) cont.resume(loc) }
                 .addOnFailureListener { e -> if (cont.isActive) cont.resumeWithException(e) }
                 .addOnCanceledListener { cont.cancel() }
-        }
+        }?.toDeviceLocation()
 }
+
+private fun Application.hasAnyLocationPermission(): Boolean =
+    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+        PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        ) ==
+        PackageManager.PERMISSION_GRANTED
+
+private fun android.location.Location.toDeviceLocation() =
+    DeviceLocation(
+        latitude = latitude,
+        longitude = longitude,
+    )
