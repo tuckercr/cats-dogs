@@ -115,6 +115,16 @@ fun CurrentWeatherRoute(
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
     val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
 
+    // Navigate to forecast when the "See forecast" notification action is tapped.
+    val pendingForecastNavigation by weatherForecastViewModel.pendingForecastNavigation.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingForecastNavigation) {
+        if (pendingForecastNavigation) {
+            weatherForecastViewModel.consumeForecastNavigation()
+            weatherForecastViewModel.logForecastOpened()
+            onOpenForecast()
+        }
+    }
+
     // Full refresh whenever the active location changes
     LaunchedEffect(activeLocation) {
         activeLocation?.let {

@@ -86,4 +86,7 @@
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/privacy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
+    <string name="notif_channel_name">Weather Updates</string>
+    <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
+    <string name="notif_see_forecast">See forecast</string>
 </resources>
