@@ -10,6 +10,13 @@ plugins {
     alias(libs.plugins.ktlint)
 }
 
+// Apply Firebase plugins only when google-services.json is present.
+// Without it the build succeeds and Firebase gracefully becomes a no-op at runtime.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -49,6 +56,20 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/*.kotlin_module",
+                "META-INF/INDEX.LIST",
+                "META-INF/io.netty.versions.properties",
+            )
+        }
+    }
 }
 
 kotlin {
@@ -87,6 +108,18 @@ dependencies {
 
     // Serialization — used by PreferencesRepository to JSON-encode SavedLocation list
     implementation(libs.kotlinx.serialization.json)
+
+    // Background updates
+    implementation(libs.androidx.work.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.hilt.ext.compiler)
+
+    // Firebase Remote Config — add google-services.json + plugin to enable server-side values;
+    // without it the app falls back to the local defaults in res/xml/remote_config_defaults.xml.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.config.ktx)
+    implementation(libs.firebase.analytics.ktx)
+    implementation(libs.firebase.crashlytics.ktx)
 
     // DI
     implementation(libs.hilt.android)

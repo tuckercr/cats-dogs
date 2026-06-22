@@ -13,6 +13,13 @@ data class CurrentWeatherResponse(
     @SerialName("wind") val wind: WindDto,
     @SerialName("visibility") val visibility: Int? = null,
     @SerialName("clouds") val clouds: CloudsDto? = null,
+    @SerialName("sys") val sys: SysDto? = null,
+)
+
+@Serializable
+data class SysDto(
+    @SerialName("sunrise") val sunrise: Long = 0L,
+    @SerialName("sunset") val sunset: Long = 0L,
 )
 
 @Serializable

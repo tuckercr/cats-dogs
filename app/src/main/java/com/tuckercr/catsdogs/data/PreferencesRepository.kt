@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.tuckercr.catsdogs.domain.SavedLocation
+import com.tuckercr.catsdogs.domain.UnitOverride
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -68,6 +69,64 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_ACTIVE_LOCATION_INDEX] = index }
     }
 
+    suspend fun getCachedWeatherFor(locationKey: String): String? {
+        val raw = dataStore.data.map { it[KEY_WEATHER_CACHE] }.first() ?: return null
+        return runCatching { json.decodeFromString<Map<String, String>>(raw) }
+            .getOrNull()
+            ?.get(locationKey)
+    }
+
+    suspend fun setCachedWeatherFor(
+        locationKey: String,
+        weatherJson: String,
+    ) {
+        dataStore.edit { prefs ->
+            val existing = prefs[KEY_WEATHER_CACHE]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?: emptyMap()
+            prefs[KEY_WEATHER_CACHE] = json.encodeToString(existing + (locationKey to weatherJson))
+        }
+    }
+
+    suspend fun getCachedForecastFor(locationKey: String): String? {
+        val raw = dataStore.data.map { it[KEY_FORECAST_CACHE] }.first() ?: return null
+        return runCatching { json.decodeFromString<Map<String, String>>(raw) }
+            .getOrNull()
+            ?.get(locationKey)
+    }
+
+    suspend fun setCachedForecastFor(
+        locationKey: String,
+        forecastJson: String,
+    ) {
+        dataStore.edit { prefs ->
+            val existing = prefs[KEY_FORECAST_CACHE]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?: emptyMap()
+            prefs[KEY_FORECAST_CACHE] =
+                json.encodeToString(existing + (locationKey to forecastJson))
+        }
+    }
+
+    val unitOverride: Flow<UnitOverride> = dataStore.data.map { prefs ->
+        when (prefs[KEY_UNIT_OVERRIDE]) {
+            UnitOverride.METRIC.name -> UnitOverride.METRIC
+            UnitOverride.IMPERIAL.name -> UnitOverride.IMPERIAL
+            else -> UnitOverride.SYSTEM
+        }
+    }
+
+    suspend fun setUnitOverride(override: UnitOverride) {
+        dataStore.edit { it[KEY_UNIT_OVERRIDE] = override.name }
+    }
+
+    suspend fun clearCache() {
+        dataStore.edit {
+            it.remove(KEY_WEATHER_CACHE)
+            it.remove(KEY_FORECAST_CACHE)
+        }
+    }
+
     suspend fun hasSeenWelcomeOnce(): Boolean = hasSeenWelcome.first()
 
     suspend fun locationOnboardingDoneOnce(): Boolean = locationOnboardingDone.first()
@@ -78,5 +137,8 @@ class PreferencesRepository @Inject constructor(
         private val KEY_LAST_CITY = stringPreferencesKey("last_city")
         private val KEY_SAVED_LOCATIONS = stringPreferencesKey("saved_locations")
         private val KEY_ACTIVE_LOCATION_INDEX = intPreferencesKey("active_location_index")
+        private val KEY_WEATHER_CACHE = stringPreferencesKey("weather_cache")
+        private val KEY_FORECAST_CACHE = stringPreferencesKey("forecast_cache")
+        private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
     }
 }

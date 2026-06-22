@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <!-- How often the background weather update job runs, in minutes. WorkManager minimum is 15. -->
+    <entry>
+        <key>weather_refresh_interval_minutes</key>
+        <value>30</value>
+    </entry>
+</defaultsMap>

@@ -149,6 +149,8 @@ class WeatherRepository @Inject constructor(
             visibilityMeters = response.visibility,
             cloudPercent = response.clouds?.all ?: 0,
             units = units,
+            sunriseEpoch = response.sys?.sunrise?.takeIf { it > 0L },
+            sunsetEpoch = response.sys?.sunset?.takeIf { it > 0L },
         )
     }
 
@@ -162,17 +164,26 @@ class WeatherRepository @Inject constructor(
 
     private fun mapThrowable(throwable: Throwable): Throwable =
         when (throwable) {
-            is IOException -> IOException("network", throwable)
+            is IOException -> IOException("offline", throwable)
             is HttpException -> {
-                val body = throwable
-                    .response()
-                    ?.errorBody()
-                    ?.string()
-                    .orEmpty()
-                val parsed = runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }
-                    .getOrNull()
-                val message = parsed?.message?.takeIf { it.isNotBlank() } ?: "http_${throwable.code()}"
-                IllegalStateException(message, throwable)
+                when (throwable.code()) {
+                    401, 403 -> IllegalStateException("bad_api_key", throwable)
+                    404 -> IllegalStateException("city_not_found", throwable)
+                    429 -> IllegalStateException("rate_limited", throwable)
+                    in 500..599 -> IllegalStateException("server_error", throwable)
+                    else -> {
+                        val body = throwable
+                            .response()
+                            ?.errorBody()
+                            ?.string()
+                            .orEmpty()
+                        val parsed =
+                            runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }.getOrNull()
+                        val message = parsed?.message?.takeIf { it.isNotBlank() }
+                            ?: "http_${throwable.code()}"
+                        IllegalStateException(message, throwable)
+                    }
+                }
             }
 
             else -> throwable

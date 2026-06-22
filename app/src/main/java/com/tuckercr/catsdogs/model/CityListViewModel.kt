@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuckercr.catsdogs.analytics.AnalyticsRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.domain.SavedLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,9 +17,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CityListViewModel @Inject constructor(
+class CityListViewModel internal constructor(
     private val preferencesRepository: PreferencesRepository,
+    private val onCityAdded: () -> Unit,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        preferencesRepository: PreferencesRepository,
+        analyticsRepository: AnalyticsRepository,
+    ) : this(
+        preferencesRepository = preferencesRepository,
+        onCityAdded = analyticsRepository::logCityAdded,
+    )
 
     private val _locations = MutableStateFlow<List<SavedLocation>>(emptyList())
     val locations: StateFlow<List<SavedLocation>> = _locations.asStateFlow()
@@ -60,6 +71,7 @@ class CityListViewModel @Inject constructor(
         val newIdx = updated.size - 1
         _locations.value = updated
         _activeIndex.value = newIdx
+        onCityAdded()
         viewModelScope.launch {
             preferencesRepository.setSavedLocations(updated)
             preferencesRepository.setActiveLocationIndex(newIdx)

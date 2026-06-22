@@ -21,6 +21,7 @@ import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
 import com.tuckercr.catsdogs.ui.OnboardingLocationScreen
+import com.tuckercr.catsdogs.ui.SettingsRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
 
 object WeatherDestinations {
@@ -29,6 +30,7 @@ object WeatherDestinations {
     const val LOCATION_PERMISSION = "location_permission"
     const val CURRENT = "current"
     const val FORECAST = "forecast"
+    const val SETTINGS = "settings"
 }
 
 @Composable
@@ -101,11 +103,18 @@ fun WeatherNavHost(
                 onOpenForecast = {
                     navController.navigate(WeatherDestinations.FORECAST)
                 },
+                onOpenSettings = {
+                    navController.navigate(WeatherDestinations.SETTINGS)
+                },
             )
         }
 
         composable(WeatherDestinations.FORECAST) {
             ForecastRoute(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable(WeatherDestinations.SETTINGS) {
+            SettingsRoute(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

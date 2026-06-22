@@ -28,9 +28,11 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,12 +55,14 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +76,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
@@ -87,7 +94,10 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
+fun CurrentWeatherRoute(
+    onOpenForecast: () -> Unit,
+    onOpenSettings: () -> Unit = {},
+) {
     val activity = LocalActivity.current as ComponentActivity
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val weatherForecastViewModel =
@@ -99,17 +109,34 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
     val activeLocation by cityListViewModel.activeLocation.collectAsStateWithLifecycle()
     val weatherState by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
     val forecastState by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
+    val isRefreshing by weatherForecastViewModel.isRefreshing.collectAsStateWithLifecycle()
     val cityInput by geoViewModel.cityInput.collectAsStateWithLifecycle()
     val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
     val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
 
-    // Auto-fetch whenever the active location changes
+    // Full refresh whenever the active location changes
     LaunchedEffect(activeLocation) {
         activeLocation?.let {
             weatherForecastViewModel.refreshCurrent(it)
             weatherForecastViewModel.refreshForecast(it)
         }
+    }
+
+    // Silent background refresh on every foreground resume (picks up new units or stale data)
+    val currentActiveLocation by rememberUpdatedState(activeLocation)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                currentActiveLocation?.let {
+                    weatherForecastViewModel.backgroundRefreshCurrent(it)
+                    weatherForecastViewModel.backgroundRefreshForecast(it)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -121,10 +148,24 @@ fun CurrentWeatherRoute(onOpenForecast: () -> Unit) {
         activeIndex = activeIndex,
         weatherState = weatherState,
         forecastDays = forecastDays,
+        isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
         onRemoveCity = cityListViewModel::removeLocation,
-        onOpenForecast = onOpenForecast,
+        onOpenForecast = {
+            weatherForecastViewModel.logForecastOpened()
+            onOpenForecast()
+        },
+        onOpenSettings = {
+            weatherForecastViewModel.logSettingsOpened()
+            onOpenSettings()
+        },
         onAddCityClick = { showAddSheet = true },
+        onRefresh = {
+            activeLocation?.let {
+                weatherForecastViewModel.refreshCurrent(it)
+                weatherForecastViewModel.refreshForecast(it)
+            }
+        },
     ) {
         activeLocation?.let {
             weatherForecastViewModel.refreshCurrent(it)
@@ -189,10 +230,13 @@ fun CurrentWeatherScreen(
     activeIndex: Int,
     weatherState: LoadingState<CurrentWeather>,
     forecastDays: List<DayForecast> = emptyList(),
+    isRefreshing: Boolean = false,
     onTabSelected: (Int) -> Unit,
     onRemoveCity: (Int) -> Unit,
     onOpenForecast: () -> Unit,
+    onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
+    onRefresh: () -> Unit = {},
     onRetry: () -> Unit,
 ) {
     Scaffold(
@@ -217,6 +261,12 @@ fun CurrentWeatherScreen(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = stringResource(R.string.cd_add_city),
+                            )
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.cd_open_settings),
                             )
                         }
                     },
@@ -281,17 +331,23 @@ fun CurrentWeatherScreen(
             }
         },
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            if (locations.isEmpty()) {
-                EmptyLocationsState(
-                    onAddCityClick = onAddCityClick,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            } else {
+        if (locations.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center,
+            ) {
+                EmptyLocationsState(onAddCityClick = onAddCityClick)
+            }
+        } else {
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -312,7 +368,7 @@ fun CurrentWeatherScreen(
 
                         is LoadingState.Error -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = weatherState.message,
+                                text = weatherErrorMessage(weatherState.errorKey),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -327,6 +383,7 @@ fun CurrentWeatherScreen(
                             weather = weatherState.data,
                             forecastDays = forecastDays,
                             onOpenForecast = onOpenForecast,
+                            showLocationSubtitle = locations.getOrNull(activeIndex)?.isCurrentLocation == true,
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -517,6 +574,7 @@ private fun CurrentWeatherContent(
     forecastDays: List<DayForecast>,
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
+    showLocationSubtitle: Boolean = false,
 ) {
     val todayLabel = remember {
         java.time.LocalDate
@@ -562,6 +620,25 @@ private fun CurrentWeatherContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (showLocationSubtitle) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = weather.cityName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatTemperature(weather.temperature, weather.units),
@@ -628,6 +705,22 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_cloud_cover),
                     value = stringResource(R.string.format_percent, weather.cloudPercent),
                 )
+                weather.sunriseEpoch?.let { epoch ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WbSunny,
+                        label = stringResource(R.string.label_sunrise),
+                        value = formatEpochTime(epoch),
+                    )
+                }
+                weather.sunsetEpoch?.let { epoch ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WbSunny,
+                        label = stringResource(R.string.label_sunset),
+                        value = formatEpochTime(epoch),
+                    )
+                }
             }
         }
 
@@ -665,6 +758,17 @@ private fun CurrentWeatherContent(
 }
 
 @Composable
+internal fun weatherErrorMessage(errorKey: String): String =
+    when (errorKey) {
+        "offline" -> stringResource(R.string.error_offline)
+        "city_not_found" -> stringResource(R.string.error_city_not_found)
+        "missing_api_key", "bad_api_key" -> stringResource(R.string.error_bad_api_key)
+        "rate_limited" -> stringResource(R.string.error_rate_limited)
+        "server_error" -> stringResource(R.string.error_server)
+        else -> stringResource(R.string.error_generic)
+    }
+
+@Composable
 private fun formatTemperature(
     value: Double,
     units: WeatherUnits,
@@ -691,6 +795,17 @@ private fun formatVisibility(meters: Int): String =
     } else {
         stringResource(R.string.format_visibility_m, meters)
     }
+
+private fun formatEpochTime(epochSeconds: Long): String {
+    val localTime = java.time.Instant
+        .ofEpochSecond(epochSeconds)
+        .atZone(java.time.ZoneId.systemDefault())
+        .toLocalTime()
+    return localTime.format(
+        java.time.format.DateTimeFormatter
+            .ofPattern("h:mm a"),
+    )
+}
 
 private fun windDirection(deg: Int): String {
     val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")

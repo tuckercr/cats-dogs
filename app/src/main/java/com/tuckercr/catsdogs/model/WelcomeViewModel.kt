@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.model
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuckercr.catsdogs.analytics.AnalyticsRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,16 +22,19 @@ class WelcomeViewModel internal constructor(
     private val locationOnboardingDoneOnce: suspend () -> Boolean,
     private val setHasSeenWelcome: suspend (Boolean) -> Unit,
     private val setLocationOnboardingDone: suspend () -> Unit,
+    private val onOnboardingComplete: () -> Unit = {},
 ) : ViewModel() {
 
     @Inject
     constructor(
         preferencesRepository: PreferencesRepository,
+        analyticsRepository: AnalyticsRepository,
     ) : this(
         hasSeenWelcomeOnce = preferencesRepository::hasSeenWelcomeOnce,
         locationOnboardingDoneOnce = preferencesRepository::locationOnboardingDoneOnce,
         setHasSeenWelcome = preferencesRepository::setHasSeenWelcome,
         setLocationOnboardingDone = preferencesRepository::setLocationOnboardingDone,
+        onOnboardingComplete = analyticsRepository::logOnboardingComplete,
     )
 
     /** null while the prefs read is in-flight. */
@@ -57,6 +61,7 @@ class WelcomeViewModel internal constructor(
         viewModelScope.launch {
             setLocationOnboardingDone()
             _onboardingState.value = _onboardingState.value?.copy(locationOnboardingDone = true)
+            onOnboardingComplete()
         }
     }
 }
