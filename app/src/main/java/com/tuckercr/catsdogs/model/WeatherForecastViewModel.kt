@@ -246,6 +246,19 @@ class WeatherForecastViewModel internal constructor(
 
     fun logSettingsOpened() = onSettingsOpened()
 
+    // Set to true by MainActivity when the "See forecast" notification action is tapped.
+    // Consumed (reset to false) by CurrentWeatherRoute after navigating.
+    private val _pendingForecastNavigation = MutableStateFlow(false)
+    val pendingForecastNavigation: StateFlow<Boolean> = _pendingForecastNavigation.asStateFlow()
+
+    fun requestForecastNavigation() {
+        _pendingForecastNavigation.value = true
+    }
+
+    fun consumeForecastNavigation() {
+        _pendingForecastNavigation.value = false
+    }
+
     fun clearCurrentError() {
         _currentWeather.update { if (it is LoadingState.Error) LoadingState.Idle else it }
     }

@@ -1,10 +1,13 @@
 package com.tuckercr.catsdogs
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.worker.WorkManagerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -32,5 +35,21 @@ class WeatherApplication :
         runCatching {
             Firebase.crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         }
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            NOTIF_CHANNEL_ID,
+            getString(R.string.notif_channel_name),
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = getString(R.string.notif_channel_description)
+        }
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+    }
+
+    companion object {
+        const val NOTIF_CHANNEL_ID = "weather_daily"
     }
 }

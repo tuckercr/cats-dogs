@@ -1,14 +1,9 @@
 <resources>
     <string name="app_name">Cats &amp; Dogs</string>
-    <string name="screen_current_weather">Current weather</string>
-    <string name="screen_forecast">Forecast</string>
-    <string name="field_city_label">City</string>
-    <string name="action_get_weather">Get weather</string>
     <string name="action_retry">Retry</string>
-    <string name="hint_enter_city">Enter a city and tap Get weather.</string>
-    <string name="cd_open_forecast">Open forecast</string>
+    <string name="screen_forecast">Forecast</string>
     <string name="cd_navigate_back">Back</string>
-    <string name="label_temperature">Temperature</string>
+    <string name="field_city_label">City</string>
     <string name="label_feels_like">Feels like</string>
     <string name="label_humidity">Humidity</string>
     <string name="label_wind">Wind</string>
@@ -86,4 +81,7 @@
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/privacy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
+    <string name="notif_channel_name">Weather Updates</string>
+    <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
+    <string name="notif_see_forecast">See forecast</string>
 </resources>
