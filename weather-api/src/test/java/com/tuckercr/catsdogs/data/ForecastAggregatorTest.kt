@@ -4,6 +4,7 @@ import com.tuckercr.catsdogs.domain.WeatherUnits
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.ZoneId
 import java.time.ZoneOffset
 
 class ForecastAggregatorTest {
@@ -74,6 +75,28 @@ class ForecastAggregatorTest {
 
         assertEquals(2, days.size)
         assertEquals("B", days.last().conditionMain)
+    }
+
+    @Test
+    fun `aggregate groups slots by provided local time zone instead of UTC`() {
+        val losAngeles = ZoneId.of("America/Los_Angeles")
+        val slots = listOf(
+            // Both timestamps are Jan 2 in UTC, but the first is Jan 1 at 11 PM locally.
+            slot(
+                epochSeconds = 1_704_177_600L, // 2024-01-02T07:00:00Z
+                conditionMain = "LateNight",
+            ),
+            slot(
+                epochSeconds = 1_704_224_000L, // 2024-01-02T20:00:00Z
+                conditionMain = "Noon",
+            ),
+        )
+
+        val days = ForecastAggregator.aggregate(slots, losAngeles, WeatherUnits.METRIC)
+
+        assertEquals(2, days.size)
+        assertEquals("LateNight", days[0].conditionMain)
+        assertEquals("Noon", days[1].conditionMain)
     }
 
     @Test
