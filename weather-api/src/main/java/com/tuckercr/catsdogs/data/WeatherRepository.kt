@@ -166,24 +166,26 @@ class WeatherRepository @Inject constructor(
         when (throwable) {
             is IOException -> IOException("offline", throwable)
             is HttpException -> {
-                when (throwable.code()) {
-                    401, 403 -> IllegalStateException("bad_api_key", throwable)
-                    404 -> IllegalStateException("city_not_found", throwable)
-                    429 -> IllegalStateException("rate_limited", throwable)
-                    in 500..599 -> IllegalStateException("server_error", throwable)
-                    else -> {
-                        val body = throwable
-                            .response()
-                            ?.errorBody()
-                            ?.string()
-                            .orEmpty()
-                        val parsed =
-                            runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }.getOrNull()
-                        val message = parsed?.message?.takeIf { it.isNotBlank() }
-                            ?: "http_${throwable.code()}"
-                        IllegalStateException(message, throwable)
+                val code = throwable.code()
+                val body = throwable
+                    .response()
+                    ?.errorBody()
+                    ?.string()
+                    .orEmpty()
+                val parsed =
+                    runCatching { json.decodeFromString<OpenWeatherErrorResponse>(body) }.getOrNull()
+                val message = if (parsed?.message?.isNotBlank() == true) {
+                    when (code) {
+                        401, 403 -> "bad_api_key"
+                        404 -> "city_not_found"
+                        429 -> "rate_limited"
+                        in 500..599 -> "server_error"
+                        else -> parsed.message
                     }
+                } else {
+                    "http_$code"
                 }
+                IllegalStateException(message, throwable)
             }
 
             else -> throwable
