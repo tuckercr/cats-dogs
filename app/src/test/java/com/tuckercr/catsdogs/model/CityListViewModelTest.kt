@@ -1,5 +1,6 @@
 package com.tuckercr.catsdogs.model
 
+import com.tuckercr.catsdogs.data.GeocodingRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.domain.SavedLocation
 import io.mockk.coEvery
@@ -28,12 +29,6 @@ class CityListViewModelTest {
 
     private val austin = SavedLocation(label = "Austin, TX", latitude = 30.27, longitude = -97.74)
     private val denver = SavedLocation(label = "Denver, CO", latitude = 39.74, longitude = -104.98)
-    private val gps = SavedLocation(
-        label = "My Location",
-        latitude = 37.0,
-        longitude = -122.0,
-        isCurrentLocation = true,
-    )
 
     // --- init ---
 
@@ -148,6 +143,7 @@ class CityListViewModelTest {
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
             viewModel.addLocation(denver)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
             assertEquals(1, callCount)
         }
 
@@ -276,7 +272,9 @@ class CityListViewModelTest {
         coEvery { repo.setActiveLocationIndex(any()) } answers {
             onSetActiveIndex(firstArg())
         }
-        return CityListViewModel(repo, onCityAdded = onCityAdded)
+        val geocodingRepo = mockk<GeocodingRepository>(relaxed = true)
+        coEvery { geocodingRepo.searchCities(any()) } returns Result.success(emptyList())
+        return CityListViewModel(repo, geocodingRepo, onCityAdded = onCityAdded)
     }
 
     class MainDispatcherRule(

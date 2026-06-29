@@ -131,9 +131,10 @@ class WeatherForecastViewModel internal constructor(
         lastRefreshedLocation.value = location
         viewModelScope.launch {
             val units = resolveWeatherUnits()
+            val label = if (location.isCurrentLocation) "" else location.label
             val result = fetchForLocation(location) { lat, lon ->
-                fetchCurrentWeather(units, location.label, null, lat, lon)
-            } ?: fetchCurrentWeather(units, location.label, location.label, null, null)
+                fetchCurrentWeather(units, label, null, lat, lon)
+            } ?: fetchCurrentWeather(units, label, location.label, null, null)
             result.onSuccess { weather ->
                 _currentWeather.value = LoadingState.Success(weather)
                 setLastCity(weather.cityName)
@@ -176,9 +177,10 @@ class WeatherForecastViewModel internal constructor(
             _currentWeather.value = cached?.let { LoadingState.Success(it) } ?: LoadingState.Loading
 
             val units = resolveWeatherUnits()
+            val label = if (location.isCurrentLocation) "" else location.label
             val result = fetchForLocation(location) { lat, lon ->
-                fetchCurrentWeather(units, location.label, null, lat, lon)
-            } ?: fetchCurrentWeather(units, location.label, location.label, null, null)
+                fetchCurrentWeather(units, label, null, lat, lon)
+            } ?: fetchCurrentWeather(units, label, location.label, null, null)
 
             if (fetchId != currentWeatherFetchGeneration.get()) return@launch
             result.fold(

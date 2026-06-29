@@ -54,7 +54,10 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsRoute(onNavigateBack: () -> Unit) {
+fun SettingsRoute(
+    onNavigateBack: () -> Unit,
+    onOpenLocations: () -> Unit = {},
+) {
     val viewModel = hiltViewModel<SettingsViewModel>()
     val unitOverride by viewModel.unitOverride.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -140,6 +143,14 @@ fun SettingsRoute(onNavigateBack: () -> Unit) {
                     },
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsSectionHeader("Locations")
+
+            SettingsLinkRow(
+                label = "Manage Locations",
+                onClick = onOpenLocations,
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_cache))
