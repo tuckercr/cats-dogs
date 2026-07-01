@@ -1,10 +1,10 @@
 package com.tuckercr.catsdogs.ui
 
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,8 +38,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -98,6 +96,12 @@ fun CurrentWeatherRoute(
     onOpenForecast: () -> Unit,
     onOpenSettings: () -> Unit = {},
 ) {
+    Log.d("CurrentWeatherScreen", "CurrentWeatherRoute rendering")
+
+    LaunchedEffect(Unit) {
+        Log.d("CurrentWeatherScreen", "CurrentWeatherRoute LaunchedEffect fired")
+    }
+
     val activity = LocalActivity.current as ComponentActivity
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val weatherForecastViewModel =
@@ -160,7 +164,6 @@ fun CurrentWeatherRoute(
         forecastDays = forecastDays,
         isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
-        onRemoveCity = cityListViewModel::removeLocation,
         onOpenForecast = {
             weatherForecastViewModel.logForecastOpened()
             onOpenForecast()
@@ -242,7 +245,6 @@ fun CurrentWeatherScreen(
     forecastDays: List<DayForecast> = emptyList(),
     isRefreshing: Boolean = false,
     onTabSelected: (Int) -> Unit,
-    onRemoveCity: (Int) -> Unit,
     onOpenForecast: () -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
@@ -287,51 +289,29 @@ fun CurrentWeatherScreen(
                         edgePadding = 16.dp,
                     ) {
                         locations.forEachIndexed { index, location ->
-                            var showMenu by remember { mutableStateOf(false) }
-                            Box {
-                                Tab(
-                                    selected = index == activeIndex,
-                                    onClick = { onTabSelected(index) },
-                                    modifier = Modifier.combinedClickable(
-                                        onClick = { onTabSelected(index) },
-                                        onLongClick = { showMenu = true },
+                            Tab(
+                                selected = index == activeIndex,
+                                onClick = { onTabSelected(index) },
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(
+                                        vertical = 12.dp,
+                                        horizontal = 4.dp,
                                     ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(
-                                            vertical = 12.dp,
-                                            horizontal = 4.dp,
-                                        ),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        if (location.isCurrentLocation) {
-                                            Icon(
-                                                imageVector = Icons.Default.LocationOn,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(14.dp),
-                                            )
-                                        }
-                                        Text(
-                                            text = location.label,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
+                                    if (location.isCurrentLocation) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocationOn,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
                                         )
                                     }
-                                }
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false },
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.action_remove_city)) },
-                                        leadingIcon = {
-                                            Icon(Icons.Default.Delete, contentDescription = null)
-                                        },
-                                        onClick = {
-                                            showMenu = false
-                                            onRemoveCity(index)
-                                        },
+                                    Text(
+                                        text = location.label,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -394,6 +374,7 @@ fun CurrentWeatherScreen(
                             forecastDays = forecastDays,
                             onOpenForecast = onOpenForecast,
                             showLocationSubtitle = locations.getOrNull(activeIndex)?.isCurrentLocation == true,
+                            location = locations.getOrNull(activeIndex),
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -585,6 +566,7 @@ private fun CurrentWeatherContent(
     onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
     showLocationSubtitle: Boolean = false,
+    location: SavedLocation? = null,
 ) {
     val todayLabel = remember {
         java.time.LocalDate
@@ -630,7 +612,7 @@ private fun CurrentWeatherContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (showLocationSubtitle) {
+                if (showLocationSubtitle && location != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -733,6 +715,9 @@ private fun CurrentWeatherContent(
                 }
             }
         }
+
+        // Weather radar
+        RadarCard(location = location)
 
         // Upcoming days section (excludes today)
         if (upcomingDays.isNotEmpty()) {
@@ -907,7 +892,6 @@ private fun CurrentWeatherEmptyPreview() {
             activeIndex = 0,
             weatherState = LoadingState.Idle,
             onTabSelected = {},
-            onRemoveCity = {},
             onOpenForecast = {},
             onAddCityClick = {},
         ) {}
@@ -945,7 +929,6 @@ private fun CurrentWeatherSuccessPreview() {
             activeIndex = 1,
             weatherState = LoadingState.Success(previewWeather),
             onTabSelected = {},
-            onRemoveCity = {},
             onOpenForecast = {},
             onAddCityClick = {},
         ) {}

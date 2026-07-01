@@ -20,6 +20,7 @@ import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.ForecastRoute
+import com.tuckercr.catsdogs.ui.LocationsRoute
 import com.tuckercr.catsdogs.ui.OnboardingLocationScreen
 import com.tuckercr.catsdogs.ui.SettingsRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
@@ -31,6 +32,7 @@ object WeatherDestinations {
     const val CURRENT = "current"
     const val FORECAST = "forecast"
     const val SETTINGS = "settings"
+    const val LOCATIONS = "locations"
 }
 
 @Composable
@@ -114,7 +116,28 @@ fun WeatherNavHost(
         }
 
         composable(WeatherDestinations.SETTINGS) {
-            SettingsRoute(onNavigateBack = { navController.popBackStack() })
+            SettingsRoute(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenLocations = {
+                    navController.navigate(WeatherDestinations.LOCATIONS)
+                },
+            )
+        }
+
+        composable(WeatherDestinations.LOCATIONS) {
+            val geoViewModel = hiltViewModel<com.tuckercr.catsdogs.model.GeoLocationViewModel>(
+                viewModelStoreOwner = activity,
+            )
+            LocationsRoute(
+                locations = cityListViewModel.locations.collectAsStateWithLifecycle().value,
+                activeIndex = cityListViewModel.activeIndex.collectAsStateWithLifecycle().value,
+                onReorder = cityListViewModel::reorderLocations,
+                onRemove = cityListViewModel::removeLocation,
+                onSetActive = cityListViewModel::setActiveIndex,
+                onNavigateBack = { navController.popBackStack() },
+                geoViewModel = geoViewModel,
+                cityListViewModel = cityListViewModel,
+            )
         }
     }
 }

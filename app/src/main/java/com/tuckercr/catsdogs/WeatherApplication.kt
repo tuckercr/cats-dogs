@@ -5,9 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import coil.ImageLoader
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
-import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.worker.WorkManagerScheduler
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -23,6 +23,9 @@ class WeatherApplication :
     @Inject
     lateinit var workManagerScheduler: WorkManagerScheduler
 
+    @Inject
+    lateinit var coilImageLoader: ImageLoader
+
     override val workManagerConfiguration: Configuration
         get() = Configuration
             .Builder()
@@ -31,6 +34,7 @@ class WeatherApplication :
 
     override fun onCreate() {
         super.onCreate()
+        coil.Coil.setImageLoader(coilImageLoader)
         workManagerScheduler.schedule()
         runCatching {
             Firebase.crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)

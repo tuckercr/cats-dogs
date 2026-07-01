@@ -3,6 +3,7 @@ package com.tuckercr.catsdogs.model
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuckercr.catsdogs.analytics.AnalyticsRepository
+import com.tuckercr.catsdogs.data.GeocodingRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.domain.SavedLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,15 +20,18 @@ import javax.inject.Inject
 @HiltViewModel
 class CityListViewModel internal constructor(
     private val preferencesRepository: PreferencesRepository,
+    private val geocodingRepository: GeocodingRepository,
     private val onCityAdded: () -> Unit,
 ) : ViewModel() {
 
     @Inject
     constructor(
         preferencesRepository: PreferencesRepository,
+        geocodingRepository: GeocodingRepository,
         analyticsRepository: AnalyticsRepository,
     ) : this(
         preferencesRepository = preferencesRepository,
+        geocodingRepository = geocodingRepository,
         onCityAdded = analyticsRepository::logCityAdded,
     )
 
@@ -67,12 +71,28 @@ class CityListViewModel internal constructor(
             setActiveIndex(existingIdx)
             return
         }
-        val updated = _locations.value + location
-        val newIdx = updated.size - 1
-        _locations.value = updated
-        _activeIndex.value = newIdx
-        onCityAdded()
         viewModelScope.launch {
+            val locationToAdd = if (location.latitude == null || location.longitude == null) {
+                // Geocode location by name to get coordinates
+                geocodingRepository
+                    .searchCities(location.label)
+                    .getOrNull()
+                    ?.firstOrNull()
+                    ?.let { suggestion ->
+                        location.copy(
+                            latitude = suggestion.weatherLat,
+                            longitude = suggestion.weatherLon,
+                        )
+                    } ?: location
+            } else {
+                location
+            }
+
+            val updated = _locations.value + locationToAdd
+            val newIdx = updated.size - 1
+            _locations.value = updated
+            _activeIndex.value = newIdx
+            onCityAdded()
             preferencesRepository.setSavedLocations(updated)
             preferencesRepository.setActiveLocationIndex(newIdx)
         }
@@ -94,6 +114,30 @@ class CityListViewModel internal constructor(
         _activeIndex.value = index
         viewModelScope.launch {
             preferencesRepository.setActiveLocationIndex(index)
+        }
+    }
+
+    fun reorderLocations(
+        fromIndex: Int,
+        toIndex: Int,
+    ) {
+        val updated = _locations.value.toMutableList()
+        val item = updated.removeAt(fromIndex)
+        updated.add(toIndex, item)
+
+        // Update active index if needed
+        val newActiveIndex = when {
+            _activeIndex.value == fromIndex -> toIndex
+            fromIndex < _activeIndex.value && toIndex >= _activeIndex.value -> _activeIndex.value - 1
+            fromIndex > _activeIndex.value && toIndex <= _activeIndex.value -> _activeIndex.value + 1
+            else -> _activeIndex.value
+        }
+
+        _locations.value = updated
+        _activeIndex.value = newActiveIndex
+        viewModelScope.launch {
+            preferencesRepository.setSavedLocations(updated)
+            preferencesRepository.setActiveLocationIndex(newActiveIndex)
         }
     }
 }

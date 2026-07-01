@@ -17,12 +17,14 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.firebase.crashlytics")
 }
 
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
+val localProps = Properties().also { props ->
+    rootProject
+        .file("local.properties")
+        .takeIf { it.exists() }
+        ?.inputStream()
+        ?.use { props.load(it) }
 }
-val owmApiKey: String = localProperties.getProperty("OWM_API_KEY") ?: ""
+val owmApiKey: String = localProps.getProperty("OWM_API_KEY") ?: ""
 
 android {
     namespace = "com.tuckercr.catsdogs"
@@ -39,6 +41,17 @@ android {
         buildConfigField("String", "OWM_API_KEY", "\"${owmApiKey.replace("\"", "\\\"")}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            val path = localProps["KEYSTORE_PATH"] as String?
+            if (path != null) {
+                storeFile = file(path)
+                storePassword = localProps["KEYSTORE_PASSWORD"] as String? ?: ""
+                keyAlias = localProps["KEY_ALIAS"] as String? ?: ""
+                keyPassword = localProps["KEY_PASSWORD"] as String? ?: ""
+            }
+        }
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -46,6 +59,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            val releaseConfig = signingConfigs.getByName("release")
+            if (releaseConfig.storeFile != null) signingConfig = releaseConfig
         }
     }
     compileOptions {

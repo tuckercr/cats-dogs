@@ -23,15 +23,33 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build with Gradle
+    - name: Write local.properties
       env:
         OWM_API_KEY: ${{ secrets.OWM_API_KEY }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         echo "OWM_API_KEY=$OWM_API_KEY" >> local.properties
-        ./gradlew lint test build
+        if [ -n "$KEYSTORE_PASSWORD" ]; then
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/catsanddogs-release.jks
+          echo "KEYSTORE_PATH=${{ github.workspace }}/catsanddogs-release.jks" >> local.properties
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> local.properties
+          echo "KEY_ALIAS=$KEY_ALIAS" >> local.properties
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
+        fi
+
+    - name: Build with Gradle
+      run: ./gradlew lint test build
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/*.apk
+
+    - name: Upload release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: app/build/outputs/apk/release/*.apk
