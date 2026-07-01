@@ -2,7 +2,6 @@ package com.tuckercr.catsdogs.ui
 
 import android.Manifest
 import android.os.Build
-import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
+import timber.log.Timber
 
 @Composable
 fun OnboardingNotificationScreen(

@@ -1,7 +1,6 @@
 package com.tuckercr.catsdogs.ui
 
 import android.Manifest
-import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -39,6 +38,7 @@ import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.model.LocationFetchState
 import com.tuckercr.catsdogs.model.LocationPermissionViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
+import timber.log.Timber
 
 @Composable
 fun OnboardingLocationScreen(

@@ -3,7 +3,6 @@ package com.tuckercr.catsdogs.model
 import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
-import timber.log.Timber
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import timber.log.Timber
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -94,7 +94,6 @@ class LocationPermissionViewModel internal constructor(
             }
         }
     }
-
 }
 
 internal data class DeviceLocation(
@@ -141,8 +140,10 @@ private class PlayServicesLocationFetcher(
 }
 
 private fun Application.hasAnyLocationPermission(): Boolean =
-    ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
-        PackageManager.PERMISSION_GRANTED ||
+    ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    ) == PackageManager.PERMISSION_GRANTED ||
         ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.ACCESS_COARSE_LOCATION,

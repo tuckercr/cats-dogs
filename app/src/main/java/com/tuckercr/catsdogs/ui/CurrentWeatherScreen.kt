@@ -89,9 +89,7 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(
-    onOpenSettings: () -> Unit = {},
-) {
+fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val activity = LocalActivity.current as ComponentActivity
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val weatherForecastViewModel =
@@ -704,7 +702,6 @@ private fun CurrentWeatherContent(
                 UpcomingDayRow(day = day, onClick = { selectedDay = day })
             }
         }
-
     }
 
     selectedDay?.let { day ->
