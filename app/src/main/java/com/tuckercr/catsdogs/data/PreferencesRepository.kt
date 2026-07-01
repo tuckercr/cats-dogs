@@ -36,6 +36,10 @@ class PreferencesRepository @Inject constructor(
         prefs[KEY_LOCATION_ONBOARDING_DONE] == true
     }
 
+    val notificationOnboardingDone: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_NOTIFICATION_ONBOARDING_DONE] == true
+    }
+
     val lastCity: Flow<String?> = dataStore.data.map { prefs ->
         prefs[KEY_LAST_CITY]?.takeIf { it.isNotBlank() }
     }
@@ -55,6 +59,10 @@ class PreferencesRepository @Inject constructor(
 
     suspend fun setLocationOnboardingDone() {
         dataStore.edit { it[KEY_LOCATION_ONBOARDING_DONE] = true }
+    }
+
+    suspend fun setNotificationOnboardingDone() {
+        dataStore.edit { it[KEY_NOTIFICATION_ONBOARDING_DONE] = true }
     }
 
     suspend fun setLastCity(cityName: String) {
@@ -131,9 +139,12 @@ class PreferencesRepository @Inject constructor(
 
     suspend fun locationOnboardingDoneOnce(): Boolean = locationOnboardingDone.first()
 
+    suspend fun notificationOnboardingDoneOnce(): Boolean = notificationOnboardingDone.first()
+
     companion object {
         private val KEY_HAS_SEEN_WELCOME = booleanPreferencesKey("has_seen_welcome")
         private val KEY_LOCATION_ONBOARDING_DONE = booleanPreferencesKey("location_onboarding_done")
+        private val KEY_NOTIFICATION_ONBOARDING_DONE = booleanPreferencesKey("notification_onboarding_done")
         private val KEY_LAST_CITY = stringPreferencesKey("last_city")
         private val KEY_SAVED_LOCATIONS = stringPreferencesKey("saved_locations")
         private val KEY_ACTIVE_LOCATION_INDEX = intPreferencesKey("active_location_index")

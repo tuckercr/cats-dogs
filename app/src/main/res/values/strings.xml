@@ -84,4 +84,17 @@
     <string name="notif_channel_name">Weather Updates</string>
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
     <string name="notif_see_forecast">See forecast</string>
+
+    <!-- Notification onboarding -->
+    <string name="notif_onboarding_title">Stay up to date</string>
+    <string name="notif_onboarding_body">Allow Cats &amp; Dogs to send you daily weather updates and severe weather alerts for your saved locations.</string>
+    <string name="notif_allow_button">Allow notifications</string>
+    <string name="notif_not_now_button">Not now</string>
+
+    <!-- Settings — notifications section -->
+    <string name="settings_section_notifications">NOTIFICATIONS</string>
+    <string name="settings_notifications_enabled">Notifications are enabled</string>
+    <string name="settings_notifications_disabled">Notifications are disabled — tap to open Settings</string>
+    <string name="settings_section_locations">LOCATIONS</string>
+    <string name="settings_manage_locations">Manage Locations</string>
 </resources>

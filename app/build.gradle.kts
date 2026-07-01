@@ -115,6 +115,9 @@ dependencies {
     // Location services
     implementation(libs.play.services.location)
 
+    // Logging
+    implementation(libs.timber)
+
     // Weather API module
     implementation(project(":weather-api"))
 

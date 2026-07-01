@@ -1,6 +1,7 @@
 package com.tuckercr.catsdogs.ui
 
 import android.Manifest
+import timber.log.Timber
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -48,18 +49,26 @@ fun OnboardingLocationScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { permissions ->
-        val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
-            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        if (granted) viewModel.fetchLocation() else viewModel.onPermissionDenied()
+    LaunchedEffect(Unit) {
+        Timber.d("screen shown")
     }
 
     LaunchedEffect(state) {
+        Timber.d("state changed: $state")
         if (state is LocationFetchState.Located) {
-            onLocationResolved((state as LocationFetchState.Located).location)
+            val location = (state as LocationFetchState.Located).location
+            Timber.d("location resolved: lat=${location.latitude} lon=${location.longitude}")
+            onLocationResolved(location)
         }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) { permissions ->
+        val fine = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarse = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        Timber.d("permission result: fine=$fine coarse=$coarse")
+        if (fine || coarse) viewModel.fetchLocation() else viewModel.onPermissionDenied()
     }
 
     Column(
@@ -113,8 +122,10 @@ fun OnboardingLocationScreen(
             Button(
                 onClick = {
                     if (viewModel.hasLocationPermission()) {
+                        Timber.d("permission already granted, fetching location")
                         viewModel.fetchLocation()
                     } else {
+                        Timber.d("launching permission dialog")
                         permissionLauncher.launch(
                             arrayOf(
                                 Manifest.permission.ACCESS_FINE_LOCATION,
@@ -129,7 +140,10 @@ fun OnboardingLocationScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedButton(
-                onClick = onSkip,
+                onClick = {
+                    Timber.d("user tapped Skip")
+                    onSkip()
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.location_skip_button))

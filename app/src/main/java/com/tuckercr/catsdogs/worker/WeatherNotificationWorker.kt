@@ -83,16 +83,6 @@ class WeatherNotificationWorker @AssistedInject constructor(
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val forecastIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(EXTRA_OPEN_FORECAST, true)
-        }
-        val forecastPendingIntent = PendingIntent.getActivity(
-            context,
-            RC_FORECAST_ACTION,
-            forecastIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
         val notification = NotificationCompat
             .Builder(context, NOTIF_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_weather)
@@ -100,19 +90,13 @@ class WeatherNotificationWorker @AssistedInject constructor(
             .setContentText(body)
             .setContentIntent(tapPendingIntent)
             .setAutoCancel(true)
-            .addAction(
-                R.drawable.ic_notification_weather,
-                context.getString(R.string.notif_see_forecast),
-                forecastPendingIntent,
-            ).build()
+            .build()
         NotificationManagerCompat.from(context).notify(NOTIF_ID, notification)
     }
 
     companion object {
         const val EXTRA_LOCATION_INDEX = "extra_location_index"
-        const val EXTRA_OPEN_FORECAST = "extra_open_forecast"
         private const val NOTIF_ID = 1000
         private const val RC_TAP = 0
-        private const val RC_FORECAST_ACTION = 1
     }
 }

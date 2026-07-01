@@ -3,7 +3,7 @@ package com.tuckercr.catsdogs.model
 import android.Manifest
 import android.app.Application
 import android.content.pm.PackageManager
-import android.util.Log
+import timber.log.Timber
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -60,15 +60,22 @@ class LocationPermissionViewModel internal constructor(
 
     fun fetchLocation() {
         if (!hasLocationPermission()) {
+            Timber.w("fetchLocation called but permission not granted")
             _state.value = LocationFetchState.PermissionDenied
             return
         }
+        Timber.d("fetchLocation: starting")
         _state.value = LocationFetchState.Locating
         viewModelScope.launch {
             try {
-                val location = locationFetcher.tryLastLocation()
-                    ?: locationFetcher.tryCurrentLocation()
+                Timber.d("fetchLocation: trying last known location")
+                val location = locationFetcher.tryLastLocation().also {
+                    Timber.d("fetchLocation: lastLocation = $it")
+                } ?: locationFetcher.tryCurrentLocation().also {
+                    Timber.d("fetchLocation: currentLocation = $it")
+                }
                 if (location != null) {
+                    Timber.d("fetchLocation: success lat=${location.latitude} lon=${location.longitude}")
                     _state.value = LocationFetchState.Located(
                         SavedLocation(
                             label = "My Location",
@@ -78,14 +85,16 @@ class LocationPermissionViewModel internal constructor(
                         ),
                     )
                 } else {
+                    Timber.w("fetchLocation: both last and current location returned null")
                     _state.value = LocationFetchState.Failed
                 }
             } catch (e: Exception) {
-                Log.e("LocationPermissionVM", "Error fetching location", e)
+                Timber.e(e, "fetchLocation: exception")
                 _state.value = LocationFetchState.Failed
             }
         }
     }
+
 }
 
 internal data class DeviceLocation(
@@ -121,6 +130,7 @@ private class PlayServicesLocationFetcher(
                 .Builder()
                 .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
                 .setMaxUpdateAgeMillis(30_000)
+                .setDurationMillis(10_000)
                 .build()
             fusedClient
                 .getCurrentLocation(request, null)

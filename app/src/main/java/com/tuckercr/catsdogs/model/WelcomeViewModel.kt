@@ -13,14 +13,17 @@ import javax.inject.Inject
 
 data class OnboardingState(
     val hasSeenWelcome: Boolean,
+    val notificationOnboardingDone: Boolean,
     val locationOnboardingDone: Boolean,
 )
 
 @HiltViewModel
 class WelcomeViewModel internal constructor(
     private val hasSeenWelcomeOnce: suspend () -> Boolean,
+    private val notificationOnboardingDoneOnce: suspend () -> Boolean,
     private val locationOnboardingDoneOnce: suspend () -> Boolean,
     private val setHasSeenWelcome: suspend (Boolean) -> Unit,
+    private val setNotificationOnboardingDone: suspend () -> Unit,
     private val setLocationOnboardingDone: suspend () -> Unit,
     private val onOnboardingComplete: () -> Unit = {},
 ) : ViewModel() {
@@ -31,8 +34,10 @@ class WelcomeViewModel internal constructor(
         analyticsRepository: AnalyticsRepository,
     ) : this(
         hasSeenWelcomeOnce = preferencesRepository::hasSeenWelcomeOnce,
+        notificationOnboardingDoneOnce = preferencesRepository::notificationOnboardingDoneOnce,
         locationOnboardingDoneOnce = preferencesRepository::locationOnboardingDoneOnce,
         setHasSeenWelcome = preferencesRepository::setHasSeenWelcome,
+        setNotificationOnboardingDone = preferencesRepository::setNotificationOnboardingDone,
         setLocationOnboardingDone = preferencesRepository::setLocationOnboardingDone,
         onOnboardingComplete = analyticsRepository::logOnboardingComplete,
     )
@@ -45,6 +50,7 @@ class WelcomeViewModel internal constructor(
         viewModelScope.launch {
             _onboardingState.value = OnboardingState(
                 hasSeenWelcome = hasSeenWelcomeOnce(),
+                notificationOnboardingDone = notificationOnboardingDoneOnce(),
                 locationOnboardingDone = locationOnboardingDoneOnce(),
             )
         }
@@ -54,6 +60,13 @@ class WelcomeViewModel internal constructor(
         viewModelScope.launch {
             setHasSeenWelcome(true)
             _onboardingState.value = _onboardingState.value?.copy(hasSeenWelcome = true)
+        }
+    }
+
+    fun completeNotificationOnboarding() {
+        viewModelScope.launch {
+            setNotificationOnboardingDone()
+            _onboardingState.value = _onboardingState.value?.copy(notificationOnboardingDone = true)
         }
     }
 
