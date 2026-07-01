@@ -252,6 +252,78 @@ class CityListViewModelTest {
             assertEquals(true, persistedIndices.isEmpty())
         }
 
+    // --- reorderLocations ---
+
+    private val chicago = SavedLocation(label = "Chicago, IL", latitude = 41.88, longitude = -87.63)
+
+    @Test
+    fun `reorderLocations moves item and persists new order`() =
+        runTest {
+            val persisted = mutableListOf<List<SavedLocation>>()
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, denver, chicago),
+                activeIndex = 0,
+                onSetSavedLocations = { persisted += it },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.reorderLocations(fromIndex = 0, toIndex = 2)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(listOf(denver, chicago, austin), viewModel.locations.value)
+            assertEquals(listOf(denver, chicago, austin), persisted.last())
+        }
+
+    @Test
+    fun `reorderLocations tracks active location when it moves`() =
+        runTest {
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, denver, chicago),
+                activeIndex = 0,
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.reorderLocations(fromIndex = 0, toIndex = 2)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(2, viewModel.activeIndex.value)
+            assertEquals(austin, viewModel.activeLocation.value)
+        }
+
+    @Test
+    fun `reorderLocations adjusts active index when item moves over it from below`() =
+        runTest {
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, denver, chicago),
+                activeIndex = 1,
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.reorderLocations(fromIndex = 2, toIndex = 0)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(listOf(chicago, austin, denver), viewModel.locations.value)
+            assertEquals(2, viewModel.activeIndex.value)
+            assertEquals(denver, viewModel.activeLocation.value)
+        }
+
+    @Test
+    fun `reorderLocations adjusts active index when item moves over it from above`() =
+        runTest {
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, denver, chicago),
+                activeIndex = 1,
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.reorderLocations(fromIndex = 0, toIndex = 2)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(listOf(denver, chicago, austin), viewModel.locations.value)
+            assertEquals(0, viewModel.activeIndex.value)
+            assertEquals(denver, viewModel.activeLocation.value)
+        }
+
     // --- helpers ---
 
     private fun viewModel(

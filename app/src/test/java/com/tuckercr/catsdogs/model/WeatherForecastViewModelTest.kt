@@ -202,6 +202,133 @@ class WeatherForecastViewModelTest {
             assertEquals(LoadingState.Idle, viewModel.forecast.value)
         }
 
+    @Test
+    fun `background refresh current updates state on success without showing loading`() =
+        runTest {
+            val location = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+            val fresh = currentWeather(cityName = "Austin")
+            val viewModel = viewModel(
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.success(fresh) },
+            )
+
+            viewModel.backgroundRefreshCurrent(location)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Success(fresh), viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `background refresh current silently ignores network failures`() =
+        runTest {
+            val location = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+            val viewModel = viewModel(
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(Exception("offline")) },
+            )
+
+            viewModel.backgroundRefreshCurrent(location)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Idle, viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `background refresh forecast updates state on success without showing loading`() =
+        runTest {
+            val location = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+            val fresh = listOf(dayForecast())
+            val viewModel = viewModel(
+                fetchForecast = { _, _, _, _ -> Result.success(fresh) },
+            )
+
+            viewModel.backgroundRefreshForecast(location)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Success(fresh), viewModel.forecast.value)
+        }
+
+    @Test
+    fun `background refresh forecast silently ignores network failures`() =
+        runTest {
+            val location = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+            val viewModel = viewModel(
+                fetchForecast = { _, _, _, _ -> Result.failure(Exception("offline")) },
+            )
+
+            viewModel.backgroundRefreshForecast(location)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Idle, viewModel.forecast.value)
+        }
+
+    @Test
+    fun `cached current weather is shown immediately while fetch is in flight`() =
+        runTest {
+            val cached = currentWeather(cityName = "Cached Austin")
+            val fetchGate = CompletableDeferred<Result<CurrentWeather>>()
+            val viewModel = viewModel(
+                getCachedCurrentWeather = { cached },
+                fetchCurrentWeather = { _, _, _, _, _ -> fetchGate.await() },
+            )
+
+            viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(LoadingState.Success(cached), viewModel.currentWeather.value)
+
+            fetchGate.complete(Result.success(currentWeather(cityName = "Fresh Austin")))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(LoadingState.Success(currentWeather(cityName = "Fresh Austin")), viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `network error is suppressed when cached current weather is available`() =
+        runTest {
+            val cached = currentWeather(cityName = "Austin")
+            val viewModel = viewModel(
+                getCachedCurrentWeather = { cached },
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(Exception("offline")) },
+            )
+
+            viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Success(cached), viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `network error is suppressed when cached forecast is available`() =
+        runTest {
+            val cached = listOf(dayForecast())
+            val viewModel = viewModel(
+                getCachedForecast = { cached },
+                fetchForecast = { _, _, _, _ -> Result.failure(Exception("offline")) },
+            )
+
+            viewModel.refreshForecast(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Success(cached), viewModel.forecast.value)
+        }
+
+    @Test
+    fun `current weather label is empty string for current location`() =
+        runTest {
+            var capturedLabel: String? = null
+            val viewModel = viewModel(
+                fetchCurrentWeather = { _, locationLabel, _, _, _ ->
+                    capturedLabel = locationLabel
+                    Result.success(currentWeather(cityName = "Detected City"))
+                },
+            )
+
+            viewModel.refreshCurrent(
+                SavedLocation(label = "My Location", latitude = 37.77, longitude = -122.42, isCurrentLocation = true),
+            )
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals("", capturedLabel)
+        }
+
     private fun viewModel(
         resolveWeatherUnits: suspend () -> WeatherUnits = { WeatherUnits.METRIC },
         fetchCurrentWeather: suspend (
