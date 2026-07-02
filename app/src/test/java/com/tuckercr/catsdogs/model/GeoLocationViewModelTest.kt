@@ -106,6 +106,37 @@ class GeoLocationViewModelTest {
             assertNull(viewModel.selectedSuggestion.value)
         }
 
+    @Test
+    fun `dismissSuggestions clears suggestions and loading but preserves input and selection`() =
+        runTest {
+            val viewModel = GeoLocationViewModel(geocodingRepository)
+            viewModel.onCitySuggestionChosen(austinSuggestion)
+
+            coEvery { geocodingRepository.searchCities(any()) } returns Result.success(listOf(austinSuggestion))
+            viewModel.onCityInputChange("Austin")
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.dismissSuggestions()
+
+            assertEquals("Austin", viewModel.cityInput.value)
+            assertTrue(viewModel.citySuggestions.value.isEmpty())
+            assertFalse(viewModel.citySuggestLoading.value)
+        }
+
+    @Test
+    fun `reset clears all state`() =
+        runTest {
+            val viewModel = GeoLocationViewModel(geocodingRepository)
+            viewModel.onCitySuggestionChosen(austinSuggestion)
+
+            viewModel.reset()
+
+            assertEquals("", viewModel.cityInput.value)
+            assertTrue(viewModel.citySuggestions.value.isEmpty())
+            assertFalse(viewModel.citySuggestLoading.value)
+            assertNull(viewModel.selectedSuggestion.value)
+        }
+
     class MainDispatcherRule(
         val testDispatcher: TestDispatcher = StandardTestDispatcher(),
     ) : TestWatcher() {

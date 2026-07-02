@@ -41,7 +41,14 @@ class WelcomeViewModelTest {
 
             mainDispatcherRule.testDispatcher.scheduler.runCurrent()
 
-            assertEquals(OnboardingState(hasSeenWelcome = true, locationOnboardingDone = true), viewModel.onboardingState.value)
+            assertEquals(
+                OnboardingState(
+                    hasSeenWelcome = true,
+                    notificationOnboardingDone = false,
+                    locationOnboardingDone = true,
+                ),
+                viewModel.onboardingState.value,
+            )
         }
 
     @Test
@@ -60,6 +67,24 @@ class WelcomeViewModelTest {
 
             assertEquals(true, viewModel.onboardingState.value?.hasSeenWelcome)
             assertEquals(listOf(true), persistedValues)
+        }
+
+    @Test
+    fun `complete notification onboarding marks state done and persists`() =
+        runTest {
+            val persisted = mutableListOf<Unit>()
+            val viewModel = viewModel(
+                notificationOnboardingDoneOnce = { false },
+                setNotificationOnboardingDone = { persisted += Unit },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            assertEquals(false, viewModel.onboardingState.value?.notificationOnboardingDone)
+
+            viewModel.completeNotificationOnboarding()
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(true, viewModel.onboardingState.value?.notificationOnboardingDone)
+            assertEquals(1, persisted.size)
         }
 
     @Test
@@ -82,13 +107,17 @@ class WelcomeViewModelTest {
 
     private fun viewModel(
         hasSeenWelcomeOnce: suspend () -> Boolean = { false },
+        notificationOnboardingDoneOnce: suspend () -> Boolean = { false },
         locationOnboardingDoneOnce: suspend () -> Boolean = { false },
         setHasSeenWelcome: suspend (Boolean) -> Unit = {},
+        setNotificationOnboardingDone: suspend () -> Unit = {},
         setLocationOnboardingDone: suspend () -> Unit = {},
     ) = WelcomeViewModel(
         hasSeenWelcomeOnce = hasSeenWelcomeOnce,
+        notificationOnboardingDoneOnce = notificationOnboardingDoneOnce,
         locationOnboardingDoneOnce = locationOnboardingDoneOnce,
         setHasSeenWelcome = setHasSeenWelcome,
+        setNotificationOnboardingDone = setNotificationOnboardingDone,
         setLocationOnboardingDone = setLocationOnboardingDone,
     )
 

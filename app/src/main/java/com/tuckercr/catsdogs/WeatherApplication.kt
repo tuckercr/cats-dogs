@@ -10,6 +10,7 @@ import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
 import com.tuckercr.catsdogs.worker.WorkManagerScheduler
 import dagger.hilt.android.HiltAndroidApp
+import timber.log.Timber
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -34,6 +35,7 @@ class WeatherApplication :
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) Timber.plant(Timber.DebugTree())
         coil.Coil.setImageLoader(coilImageLoader)
         workManagerScheduler.schedule()
         runCatching {

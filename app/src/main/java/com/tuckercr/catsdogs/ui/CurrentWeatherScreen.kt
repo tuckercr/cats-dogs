@@ -1,6 +1,5 @@
 package com.tuckercr.catsdogs.ui
 
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -21,7 +20,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
@@ -34,7 +32,6 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -92,16 +89,7 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CurrentWeatherRoute(
-    onOpenForecast: () -> Unit,
-    onOpenSettings: () -> Unit = {},
-) {
-    Log.d("CurrentWeatherScreen", "CurrentWeatherRoute rendering")
-
-    LaunchedEffect(Unit) {
-        Log.d("CurrentWeatherScreen", "CurrentWeatherRoute LaunchedEffect fired")
-    }
-
+fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val activity = LocalActivity.current as ComponentActivity
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val weatherForecastViewModel =
@@ -118,16 +106,6 @@ fun CurrentWeatherRoute(
     val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
     val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
-
-    // Navigate to forecast when the "See forecast" notification action is tapped.
-    val pendingForecastNavigation by weatherForecastViewModel.pendingForecastNavigation.collectAsStateWithLifecycle()
-    LaunchedEffect(pendingForecastNavigation) {
-        if (pendingForecastNavigation) {
-            weatherForecastViewModel.consumeForecastNavigation()
-            weatherForecastViewModel.logForecastOpened()
-            onOpenForecast()
-        }
-    }
 
     // Full refresh whenever the active location changes
     LaunchedEffect(activeLocation) {
@@ -164,10 +142,6 @@ fun CurrentWeatherRoute(
         forecastDays = forecastDays,
         isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
-        onOpenForecast = {
-            weatherForecastViewModel.logForecastOpened()
-            onOpenForecast()
-        },
         onOpenSettings = {
             weatherForecastViewModel.logSettingsOpened()
             onOpenSettings()
@@ -245,7 +219,6 @@ fun CurrentWeatherScreen(
     forecastDays: List<DayForecast> = emptyList(),
     isRefreshing: Boolean = false,
     onTabSelected: (Int) -> Unit,
-    onOpenForecast: () -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
     onRefresh: () -> Unit = {},
@@ -372,7 +345,6 @@ fun CurrentWeatherScreen(
                         is LoadingState.Success -> CurrentWeatherContent(
                             weather = weatherState.data,
                             forecastDays = forecastDays,
-                            onOpenForecast = onOpenForecast,
                             showLocationSubtitle = locations.getOrNull(activeIndex)?.isCurrentLocation == true,
                             location = locations.getOrNull(activeIndex),
                         )
@@ -563,7 +535,6 @@ fun AddCitySheetContent(
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
     forecastDays: List<DayForecast>,
-    onOpenForecast: () -> Unit,
     modifier: Modifier = Modifier,
     showLocationSubtitle: Boolean = false,
     location: SavedLocation? = null,
@@ -731,24 +702,10 @@ private fun CurrentWeatherContent(
                 UpcomingDayRow(day = day, onClick = { selectedDay = day })
             }
         }
-
-        OutlinedButton(
-            onClick = onOpenForecast,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.TrendingFlat,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.size(8.dp))
-            Text(stringResource(R.string.action_view_forecast))
-        }
     }
 
     selectedDay?.let { day ->
-        DayDetailBottomSheet(day = day, onDismiss = { selectedDay = null })
+        DayDetailBottomSheet(day = day) { selectedDay = null }
     }
 }
 
@@ -892,7 +849,6 @@ private fun CurrentWeatherEmptyPreview() {
             activeIndex = 0,
             weatherState = LoadingState.Idle,
             onTabSelected = {},
-            onOpenForecast = {},
             onAddCityClick = {},
         ) {}
     }
@@ -929,7 +885,6 @@ private fun CurrentWeatherSuccessPreview() {
             activeIndex = 1,
             weatherState = LoadingState.Success(previewWeather),
             onTabSelected = {},
-            onOpenForecast = {},
             onAddCityClick = {},
         ) {}
     }

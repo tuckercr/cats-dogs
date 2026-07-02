@@ -19,18 +19,18 @@ import androidx.navigation.compose.rememberNavController
 import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
-import com.tuckercr.catsdogs.ui.ForecastRoute
 import com.tuckercr.catsdogs.ui.LocationsRoute
 import com.tuckercr.catsdogs.ui.OnboardingLocationScreen
+import com.tuckercr.catsdogs.ui.OnboardingNotificationScreen
 import com.tuckercr.catsdogs.ui.SettingsRoute
 import com.tuckercr.catsdogs.ui.WelcomeScreen
 
 object WeatherDestinations {
     const val LOADING = "loading"
     const val WELCOME = "welcome"
+    const val NOTIFICATION_PERMISSION = "notification_permission"
     const val LOCATION_PERMISSION = "location_permission"
     const val CURRENT = "current"
-    const val FORECAST = "forecast"
     const val SETTINGS = "settings"
     const val LOCATIONS = "locations"
 }
@@ -58,6 +58,7 @@ fun WeatherNavHost(
                 val state = onboardingState ?: return@LaunchedEffect
                 val next = when {
                     !state.hasSeenWelcome -> WeatherDestinations.WELCOME
+                    !state.notificationOnboardingDone -> WeatherDestinations.NOTIFICATION_PERMISSION
                     !state.locationOnboardingDone -> WeatherDestinations.LOCATION_PERMISSION
                     else -> WeatherDestinations.CURRENT
                 }
@@ -72,8 +73,20 @@ fun WeatherNavHost(
             WelcomeScreen(
                 onGetStarted = {
                     welcomeViewModel.completeWelcome()
-                    navController.navigate(WeatherDestinations.LOCATION_PERMISSION) {
+                    navController.navigate(WeatherDestinations.NOTIFICATION_PERMISSION) {
                         popUpTo(WeatherDestinations.WELCOME) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        composable(WeatherDestinations.NOTIFICATION_PERMISSION) {
+            OnboardingNotificationScreen(
+                onDone = {
+                    welcomeViewModel.completeNotificationOnboarding()
+                    navController.navigate(WeatherDestinations.LOCATION_PERMISSION) {
+                        popUpTo(WeatherDestinations.NOTIFICATION_PERMISSION) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -102,17 +115,10 @@ fun WeatherNavHost(
 
         composable(WeatherDestinations.CURRENT) {
             CurrentWeatherRoute(
-                onOpenForecast = {
-                    navController.navigate(WeatherDestinations.FORECAST)
-                },
                 onOpenSettings = {
                     navController.navigate(WeatherDestinations.SETTINGS)
                 },
             )
-        }
-
-        composable(WeatherDestinations.FORECAST) {
-            ForecastRoute(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(WeatherDestinations.SETTINGS) {

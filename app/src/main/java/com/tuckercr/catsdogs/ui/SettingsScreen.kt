@@ -3,6 +3,7 @@ package com.tuckercr.catsdogs.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -71,13 +72,24 @@ fun SettingsRoute(
             Manifest.permission.ACCESS_COARSE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
 
+    fun isNotificationGranted() =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+
     var locationGranted by remember { mutableStateOf(isLocationGranted()) }
+    var notificationGranted by remember { mutableStateOf(isNotificationGranted()) }
 
     // Re-check each time the screen returns to foreground (user may have toggled in App Settings).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) locationGranted = isLocationGranted()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                locationGranted = isLocationGranted()
+                notificationGranted = isNotificationGranted()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -145,10 +157,35 @@ fun SettingsRoute(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader("Locations")
+            SettingsSectionHeader(stringResource(R.string.settings_section_notifications))
+
+            if (notificationGranted) {
+                Text(
+                    text = stringResource(R.string.settings_notifications_enabled),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            } else {
+                SettingsLinkRow(
+                    label = stringResource(R.string.settings_notifications_disabled),
+                    onClick = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = "package:${context.packageName}".toUri()
+                            },
+                        )
+                    },
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsSectionHeader(stringResource(R.string.settings_section_locations))
 
             SettingsLinkRow(
-                label = "Manage Locations",
+                label = stringResource(R.string.settings_manage_locations),
                 onClick = onOpenLocations,
             )
 
