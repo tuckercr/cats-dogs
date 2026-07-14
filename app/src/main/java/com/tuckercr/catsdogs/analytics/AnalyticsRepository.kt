@@ -15,8 +15,6 @@ class AnalyticsRepository @Inject constructor() {
 
     fun logCityAdded() = log(EVENT_CITY_ADDED)
 
-    fun logForecastOpened() = log(EVENT_FORECAST_OPENED)
-
     fun logSettingsOpened() = log(EVENT_SETTINGS_OPENED)
 
     fun logWeatherError(errorKey: String) =
@@ -35,7 +33,6 @@ class AnalyticsRepository @Inject constructor() {
     companion object {
         const val EVENT_ONBOARDING_COMPLETE = "onboarding_complete"
         const val EVENT_CITY_ADDED = "city_added"
-        const val EVENT_FORECAST_OPENED = "forecast_opened"
         const val EVENT_SETTINGS_OPENED = "settings_opened"
         const val EVENT_WEATHER_ERROR = "weather_error"
         const val PARAM_ERROR_KEY = "error_key"

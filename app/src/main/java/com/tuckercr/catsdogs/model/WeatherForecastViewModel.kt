@@ -122,17 +122,25 @@ class WeatherForecastViewModel internal constructor(
 
     private val currentWeatherFetchGeneration = AtomicInteger(0)
     private val forecastFetchGeneration = AtomicInteger(0)
-    private val lastRefreshedLocation = MutableStateFlow<SavedLocation?>(null)
+
+    // The location targeted by the most recent *foreground* refresh, per stream. A silent background
+    // refresh drops its result if this has since changed (the user switched cities), but it does NOT
+    // share the foreground generation counters — otherwise a background refresh for the same location
+    // would invalidate the in-flight foreground refresh and leave the spinner hanging.
+    private val currentTargetKey = MutableStateFlow<String?>(null)
+    private val forecastTargetKey = MutableStateFlow<String?>(null)
 
     /** Silent background refresh (foreground return). Updates data if fetch succeeds; never shows loading or errors. */
     fun backgroundRefreshCurrent(location: SavedLocation) {
-        lastRefreshedLocation.value = location
         viewModelScope.launch {
             val units = resolveWeatherUnits()
             val label = if (location.isCurrentLocation) "" else location.label
             val result = fetchForLocation(location) { lat, lon ->
                 fetchCurrentWeather(units, label, null, lat, lon)
             } ?: fetchCurrentWeather(units, label, location.label, null, null)
+            // Drop stale results only when the user has since switched to a different location.
+            val target = currentTargetKey.value
+            if (target != null && target != location.cacheKey) return@launch
             result.onSuccess { weather ->
                 _currentWeather.value = LoadingState.Success(weather)
                 setLastCity(weather.cityName)
@@ -152,6 +160,9 @@ class WeatherForecastViewModel internal constructor(
             val result = fetchForLocation(location) { lat, lon ->
                 fetchForecast(units, null, lat, lon)
             } ?: fetchForecast(units, location.label, null, null)
+            // Drop stale results only when the user has since switched to a different location.
+            val target = forecastTargetKey.value
+            if (target != null && target != location.cacheKey) return@launch
             result.onSuccess { forecast ->
                 _forecast.value = LoadingState.Success(forecast)
                 viewModelScope.launch {
@@ -167,7 +178,7 @@ class WeatherForecastViewModel internal constructor(
      * replaces with fresh data. Shows an error only when there is no cached data to fall back to.
      */
     fun refreshCurrent(location: SavedLocation) {
-        lastRefreshedLocation.value = location
+        currentTargetKey.value = location.cacheKey
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         currentRefreshing.value = true
         viewModelScope.launch {
@@ -209,6 +220,7 @@ class WeatherForecastViewModel internal constructor(
     }
 
     fun refreshForecast(location: SavedLocation) {
+        forecastTargetKey.value = location.cacheKey
         val fetchId = forecastFetchGeneration.incrementAndGet()
         forecastRefreshing.value = true
         viewModelScope.launch {

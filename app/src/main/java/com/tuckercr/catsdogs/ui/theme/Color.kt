@@ -5,7 +5,8 @@ import androidx.compose.ui.graphics.Color
 // Light scheme
 val SkyBlue = Color(0xFF0288D1)
 val SkyBlueDark = Color(0xFF01579B)
-val SkyBlueLight = Color(0xFFE1F5FE)
+val SkyBlueContainer = Color(0xFF81C7EC)
+val SkyBlueSurface = Color(0xFFB3DDF2)
 val TealAccent = Color(0xFF00897B)
 val SurfaceLight = Color(0xFFF6FBFF)
 

@@ -311,6 +311,103 @@ class WeatherForecastViewModelTest {
         }
 
     @Test
+    fun `concurrent same-location background refresh does not block foreground result`() =
+        runTest {
+            // Reproduces the indefinite-spinner bug: on screen entry both a foreground refresh
+            // (location change) and a silent background refresh (ON_RESUME) fire for the SAME
+            // location. The background refresh must not prevent the foreground refresh from
+            // resolving the visible state, even when the background fetch fails.
+            val foreground = CompletableDeferred<Result<CurrentWeather>>()
+            val background = CompletableDeferred<Result<CurrentWeather>>()
+            var call = 0
+            val viewModel = viewModel(
+                fetchCurrentWeather = { units, _, _, _, _ ->
+                    val n = call++
+                    (if (n == 0) foreground else background).await().map { it.copy(units = units) }
+                },
+            )
+            val location = SavedLocation(label = "Austin", latitude = null, longitude = null)
+
+            viewModel.refreshCurrent(location)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            viewModel.backgroundRefreshCurrent(location)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            // The silent background fetch fails and is dropped.
+            background.complete(Result.failure(IOException("offline")))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            // The foreground fetch succeeds and must still be shown (spinner cleared).
+            foreground.complete(Result.success(currentWeather(cityName = "Austin")))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(LoadingState.Success(currentWeather(cityName = "Austin")), viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `stale background current refresh does not overwrite newer foreground result`() =
+        runTest {
+            val backgroundRequest = CompletableDeferred<Result<CurrentWeather>>()
+            val foregroundRequest = CompletableDeferred<Result<CurrentWeather>>()
+            val viewModel = viewModel(
+                fetchCurrentWeather = { units, locationLabel, _, _, _ ->
+                    when (locationLabel) {
+                        "Austin" -> backgroundRequest.await()
+                        "Denver" -> foregroundRequest.await()
+                        else -> error("Unexpected location $locationLabel")
+                    }.map { it.copy(units = units) }
+                },
+            )
+
+            // A background refresh for Austin is in flight when the user switches to Denver.
+            viewModel.backgroundRefreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            viewModel.refreshCurrent(SavedLocation(label = "Denver", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            // Denver (the newer request) resolves first and is shown.
+            foregroundRequest.complete(Result.success(currentWeather(cityName = "Denver")))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            assertEquals(LoadingState.Success(currentWeather(cityName = "Denver")), viewModel.currentWeather.value)
+
+            // The stale Austin background fetch finishes last and must be dropped.
+            backgroundRequest.complete(Result.success(currentWeather(cityName = "Austin")))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(LoadingState.Success(currentWeather(cityName = "Denver")), viewModel.currentWeather.value)
+        }
+
+    @Test
+    fun `stale background forecast refresh does not overwrite newer foreground result`() =
+        runTest {
+            val austinForecast = listOf(dayForecast().copy(dateLabel = "Austin day"))
+            val denverForecast = listOf(dayForecast().copy(dateLabel = "Denver day"))
+            val backgroundRequest = CompletableDeferred<Result<List<DayForecast>>>()
+            val foregroundRequest = CompletableDeferred<Result<List<DayForecast>>>()
+            val viewModel = viewModel(
+                fetchForecast = { _, cityQuery, _, _ ->
+                    when (cityQuery) {
+                        "Austin" -> backgroundRequest.await()
+                        "Denver" -> foregroundRequest.await()
+                        else -> error("Unexpected city $cityQuery")
+                    }
+                },
+            )
+
+            viewModel.backgroundRefreshForecast(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            viewModel.refreshForecast(SavedLocation(label = "Denver", latitude = null, longitude = null))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            foregroundRequest.complete(Result.success(denverForecast))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            assertEquals(LoadingState.Success(denverForecast), viewModel.forecast.value)
+
+            backgroundRequest.complete(Result.success(austinForecast))
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(LoadingState.Success(denverForecast), viewModel.forecast.value)
+        }
+
+    @Test
     fun `current weather label is empty string for current location`() =
         runTest {
             var capturedLabel: String? = null

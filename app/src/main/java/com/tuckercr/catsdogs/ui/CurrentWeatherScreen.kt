@@ -133,13 +133,11 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
 
     var showAddSheet by remember { mutableStateOf(false) }
 
-    val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
-
     CurrentWeatherScreen(
         locations = locations,
         activeIndex = activeIndex,
         weatherState = weatherState,
-        forecastDays = forecastDays,
+        forecastState = forecastState,
         isRefreshing = isRefreshing,
         onTabSelected = cityListViewModel::setActiveIndex,
         onOpenSettings = {
@@ -216,7 +214,7 @@ fun CurrentWeatherScreen(
     locations: List<SavedLocation>,
     activeIndex: Int,
     weatherState: LoadingState<CurrentWeather>,
-    forecastDays: List<DayForecast> = emptyList(),
+    forecastState: LoadingState<List<DayForecast>> = LoadingState.Idle,
     isRefreshing: Boolean = false,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -344,9 +342,9 @@ fun CurrentWeatherScreen(
 
                         is LoadingState.Success -> CurrentWeatherContent(
                             weather = weatherState.data,
-                            forecastDays = forecastDays,
-                            showLocationSubtitle = locations.getOrNull(activeIndex)?.isCurrentLocation == true,
+                            forecastState = forecastState,
                             location = locations.getOrNull(activeIndex),
+                            onForecastRetry = onRetry,
                         )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
@@ -534,11 +532,12 @@ fun AddCitySheetContent(
 @Composable
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
-    forecastDays: List<DayForecast>,
+    forecastState: LoadingState<List<DayForecast>>,
     modifier: Modifier = Modifier,
-    showLocationSubtitle: Boolean = false,
     location: SavedLocation? = null,
+    onForecastRetry: () -> Unit = {},
 ) {
+    val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
     val todayLabel = remember {
         java.time.LocalDate
             .now()
@@ -583,7 +582,7 @@ private fun CurrentWeatherContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (showLocationSubtitle && location != null) {
+                if (location != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -592,12 +591,12 @@ private fun CurrentWeatherContent(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = weather.cityName,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -691,15 +690,43 @@ private fun CurrentWeatherContent(
         RadarCard(location = location)
 
         // Upcoming days section (excludes today)
-        if (upcomingDays.isNotEmpty()) {
+        if (upcomingDays.isNotEmpty() || forecastState is LoadingState.Loading ||
+            forecastState is LoadingState.Error
+        ) {
             Text(
                 text = stringResource(R.string.section_upcoming),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            upcomingDays.forEach { day ->
-                UpcomingDayRow(day = day, onClick = { selectedDay = day })
+            when {
+                upcomingDays.isNotEmpty() -> upcomingDays.forEach { day ->
+                    UpcomingDayRow(day = day, onClick = { selectedDay = day })
+                }
+
+                forecastState is LoadingState.Loading -> Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+
+                forecastState is LoadingState.Error -> Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = weatherErrorMessage(forecastState.errorKey),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    if (forecastState.canRetry) {
+                        TextButton(onClick = onForecastRetry) {
+                            Text(stringResource(R.string.action_retry))
+                        }
+                    }
+                }
             }
         }
     }
@@ -882,7 +909,7 @@ private fun CurrentWeatherSuccessPreview() {
                 SavedLocation("London, GB", 51.5074, -0.1278),
                 SavedLocation("New York, US", 40.7128, -74.0060),
             ),
-            activeIndex = 1,
+            activeIndex = 0,
             weatherState = LoadingState.Success(previewWeather),
             onTabSelected = {},
             onAddCityClick = {},

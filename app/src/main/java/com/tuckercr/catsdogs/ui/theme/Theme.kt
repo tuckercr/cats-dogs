@@ -9,12 +9,12 @@ import androidx.compose.runtime.Composable
 private val LightColorScheme = lightColorScheme(
     primary = SkyBlue,
     onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = SkyBlueLight,
+    primaryContainer = SkyBlueContainer,
     onPrimaryContainer = SkyBlueDark,
     secondary = TealAccent,
     background = SurfaceLight,
     surface = SurfaceLight,
-    surfaceVariant = SkyBlueLight,
+    surfaceVariant = SkyBlueSurface,
 )
 
 private val DarkColorScheme = darkColorScheme(
