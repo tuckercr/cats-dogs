@@ -690,7 +690,8 @@ private fun CurrentWeatherContent(
         RadarCard(location = location)
 
         // Upcoming days section (excludes today)
-        if (upcomingDays.isNotEmpty() || forecastState is LoadingState.Loading ||
+        if (upcomingDays.isNotEmpty() ||
+            forecastState is LoadingState.Loading ||
             forecastState is LoadingState.Error
         ) {
             Text(
