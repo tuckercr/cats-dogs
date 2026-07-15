@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Cats &amp; Dogs</string>
     <string name="action_retry">Retry</string>
-    <string name="screen_forecast">Forecast</string>
     <string name="cd_navigate_back">Back</string>
     <string name="field_city_label">City</string>
     <string name="label_feels_like">Feels like</string>
@@ -11,7 +10,6 @@
     <string name="label_visibility">Visibility</string>
     <string name="label_cloud_cover">Cloud cover</string>
     <string name="label_temp_range">%1$s / %2$s</string>
-    <string name="action_view_forecast">View 5-day forecast</string>
     <string name="format_temperature_c">%.1f °C</string>
     <string name="format_temperature_f">%.1f °F</string>
     <string name="format_percent">%d%%</string>
@@ -83,7 +81,6 @@
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
-    <string name="notif_see_forecast">See forecast</string>
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay up to date</string>

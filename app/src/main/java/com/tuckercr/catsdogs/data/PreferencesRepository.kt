@@ -22,7 +22,7 @@ private val Context.weatherDataStore: DataStore<Preferences> by preferencesDataS
 
 @Singleton
 class PreferencesRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val json: Json,
 ) {
 
@@ -37,7 +37,8 @@ class PreferencesRepository @Inject constructor(
     }
 
     val notificationOnboardingDone: Flow<Boolean> = dataStore.data.map { prefs ->
-        prefs[KEY_NOTIFICATION_ONBOARDING_DONE] == true
+        prefs[KEY_NOTIFICATION_ONBOARDING_DONE] == true ||
+            (prefs[KEY_NOTIFICATION_ONBOARDING_DONE] == null && prefs[KEY_LOCATION_ONBOARDING_DONE] == true)
     }
 
     val lastCity: Flow<String?> = dataStore.data.map { prefs ->
