@@ -77,7 +77,7 @@
     <string name="settings_section_about">ABOUT</string>
     <string name="settings_attribution">Weather data by OpenWeather</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
-    <string name="settings_privacy_policy_url">https://fangjet.com/privacy</string>
+    <string name="settings_privacy_policy_url">https://fangjet.com/privacy-policy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
