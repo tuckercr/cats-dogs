@@ -18,61 +18,47 @@ import kotlinx.serialization.json.Json
 class WeatherUpdateWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted workerParams: WorkerParameters,
-    private val preferencesRepository: PreferencesRepository,
-    private val weatherRepository: WeatherRepository,
-    private val json: Json,
+    preferencesRepository: PreferencesRepository,
+    weatherRepository: WeatherRepository,
+    json: Json,
 ) : CoroutineWorker(context, workerParams) {
 
-    override suspend fun doWork(): Result {
-        val locations = preferencesRepository.savedLocations.first()
-        val activeIndex = preferencesRepository.activeLocationIndex.first()
-        val location = locations.getOrNull(activeIndex) ?: return Result.success()
-
-        val units = context.resolveWeatherUnits()
-
-        val currentResult = if (location.latitude != null && location.longitude != null) {
-            weatherRepository.fetchCurrentWeather(
-                units = units,
-                locationLabel = location.label,
-                latitude = location.latitude,
-                longitude = location.longitude,
+    private val logic = UpdateWorkerLogic(
+        getSavedLocations = { preferencesRepository.savedLocations.first() },
+        getActiveIndex = { preferencesRepository.activeLocationIndex.first() },
+        getUnits = {
+            // Honor the user's unit override so the background worker never writes a different
+            // unit system into the cache than a foreground refresh would.
+            val override = preferencesRepository.unitOverride.first()
+            context.resolveWeatherUnits(override)
+        },
+        fetchCurrentWeather = { units, label, lat, lon ->
+            if (lat != null && lon != null) {
+                weatherRepository.fetchCurrentWeather(units, label, latitude = lat, longitude = lon)
+            } else {
+                weatherRepository.fetchCurrentWeather(units, label, cityQuery = label)
+            }
+        },
+        fetchForecast = { units, label, lat, lon ->
+            if (lat != null && lon != null) {
+                weatherRepository.fetchForecast(units, latitude = lat, longitude = lon)
+            } else {
+                weatherRepository.fetchForecast(units, cityQuery = label)
+            }
+        },
+        cacheCurrentWeather = { key, weather ->
+            preferencesRepository.setCachedWeatherFor(
+                key,
+                json.encodeToString<CurrentWeather>(weather),
             )
-        } else {
-            weatherRepository.fetchCurrentWeather(
-                units = units,
-                locationLabel = location.label,
-                cityQuery = location.label,
+        },
+        cacheForecast = { key, forecast ->
+            preferencesRepository.setCachedForecastFor(
+                key,
+                json.encodeToString<List<DayForecast>>(forecast),
             )
-        }
+        },
+    )
 
-        val forecastResult = if (location.latitude != null && location.longitude != null) {
-            weatherRepository.fetchForecast(
-                units = units,
-                latitude = location.latitude,
-                longitude = location.longitude,
-            )
-        } else {
-            weatherRepository.fetchForecast(units = units, cityQuery = location.label)
-        }
-
-        val cacheKey = location.cacheKey
-
-        val weatherOk = currentResult
-            .onSuccess { weather ->
-                preferencesRepository.setCachedWeatherFor(
-                    cacheKey,
-                    json.encodeToString<CurrentWeather>(weather),
-                )
-            }.isSuccess
-
-        val forecastOk = forecastResult
-            .onSuccess { forecast ->
-                preferencesRepository.setCachedForecastFor(
-                    cacheKey,
-                    json.encodeToString<List<DayForecast>>(forecast),
-                )
-            }.isSuccess
-
-        return if (weatherOk || forecastOk) Result.success() else Result.retry()
-    }
+    override suspend fun doWork() = logic.doWork()
 }
