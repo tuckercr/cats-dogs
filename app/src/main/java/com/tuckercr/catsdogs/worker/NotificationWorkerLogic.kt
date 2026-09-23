@@ -5,6 +5,8 @@ import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 /**
@@ -29,6 +31,8 @@ internal class NotificationWorkerLogic(
     ) -> kotlin.Result<List<DayForecast>>,
     private val hasNotificationPermission: () -> Boolean,
     private val postNotification: (title: String, body: String) -> Unit,
+    // Same label format as ForecastAggregator produces; overridable so tests are date-independent.
+    private val todayLabel: () -> String = { LocalDate.now().format(DAY_LABEL_FORMATTER) },
 ) {
     suspend fun doWork(): Result {
         val locations = getSavedLocations()
@@ -52,13 +56,19 @@ internal class NotificationWorkerLogic(
             location.latitude,
             location.longitude,
         ).getOrNull()
-        val todayForecast = forecast?.firstOrNull()
+        // /forecast only returns upcoming 3-hour slots, so once today's last slot has passed the
+        // first day is tomorrow. Only an entry that is actually today may supply the high/low.
+        val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel() }
 
         if (!hasNotificationPermission()) return Result.success()
 
         val (title, body) = buildContent(weather, todayForecast)
         postNotification(title, body)
         return Result.success()
+    }
+
+    private companion object {
+        val DAY_LABEL_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
     }
 }
 

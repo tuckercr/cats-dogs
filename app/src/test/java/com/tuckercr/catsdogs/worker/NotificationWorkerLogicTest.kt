@@ -172,6 +172,47 @@ class NotificationWorkerLogicTest {
         }
 
     @Test
+    fun `notification body ignores a forecast whose first day is tomorrow`() =
+        runTest {
+            // Late in the evening /forecast has no slots left for today, so its first day is tomorrow.
+            var capturedBody: String? = null
+            val logic = logic(
+                fetchCurrentWeather = { _, _, _, _ ->
+                    kotlin.Result.success(weather(tempMin = 50.0, tempMax = 60.0))
+                },
+                fetchForecast = { _, _, _, _ ->
+                    kotlin.Result.success(listOf(forecast(tempMin = 45.0, tempMax = 99.0, dateLabel = "Tue, Jan 2")))
+                },
+                postNotification = { _, body -> capturedBody = body },
+            )
+
+            logic.doWork()
+
+            assertTrue("body was: $capturedBody", capturedBody?.startsWith("60°/50°") == true)
+        }
+
+    @Test
+    fun `notification body uses today's entry even when it is not first`() =
+        runTest {
+            var capturedBody: String? = null
+            val logic = logic(
+                fetchForecast = { _, _, _, _ ->
+                    kotlin.Result.success(
+                        listOf(
+                            forecast(tempMin = 10.0, tempMax = 20.0, dateLabel = "Sun, Dec 31"),
+                            forecast(tempMin = 45.0, tempMax = 99.0),
+                        ),
+                    )
+                },
+                postNotification = { _, body -> capturedBody = body },
+            )
+
+            logic.doWork()
+
+            assertTrue("body was: $capturedBody", capturedBody?.startsWith("99°/45°") == true)
+        }
+
+    @Test
     fun `notification body falls back to current weather temps when forecast fails`() =
         runTest {
             var capturedBody: String? = null
@@ -262,6 +303,7 @@ class NotificationWorkerLogicTest {
             { _, _, _, _ -> kotlin.Result.success(listOf(forecast())) },
         hasNotificationPermission: () -> Boolean = { true },
         postNotification: (String, String) -> Unit = { _, _ -> },
+        todayLabel: String = TODAY_LABEL,
     ) = NotificationWorkerLogic(
         getSavedLocations = { savedLocations },
         getActiveIndex = { activeIndex },
@@ -270,9 +312,11 @@ class NotificationWorkerLogicTest {
         fetchForecast = fetchForecast,
         hasNotificationPermission = hasNotificationPermission,
         postNotification = postNotification,
+        todayLabel = { todayLabel },
     )
 
     private companion object {
+        const val TODAY_LABEL = "Mon, Jan 1"
         val london = SavedLocation(label = "My Location", latitude = 51.5, longitude = -0.1)
         val cityByName = SavedLocation(label = "Austin, TX", latitude = null, longitude = null)
 
@@ -303,8 +347,9 @@ class NotificationWorkerLogicTest {
         fun forecast(
             tempMin: Double = 55.0,
             tempMax: Double = 85.0,
+            dateLabel: String = TODAY_LABEL,
         ) = DayForecast(
-            dateLabel = "Mon, Jan 1",
+            dateLabel = dateLabel,
             conditionMain = "Clear",
             description = "clear sky",
             iconCode = "01d",
