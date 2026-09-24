@@ -116,34 +116,36 @@ class CurrentWeatherScreenTest {
         // No coordinates: keeps the radar tile static so the screen reaches idle for assertions.
         val london = SavedLocation(label = "London, GB", latitude = null, longitude = null)
 
-        fun weather() = CurrentWeather(
-            cityName = "London",
-            conditionMain = "Clouds",
-            description = "Broken clouds",
-            iconCode = "04d",
-            temperature = 15.0,
-            feelsLike = 14.2,
-            tempMin = 12.0,
-            tempMax = 17.5,
-            humidityPercent = 72,
-            pressureHpa = 1012,
-            windSpeed = 4.1,
-            windDeg = 225,
-            visibilityMeters = 9000,
-            cloudPercent = 75,
-            units = WeatherUnits.METRIC,
-        )
+        fun weather() =
+            CurrentWeather(
+                cityName = "London",
+                conditionMain = "Clouds",
+                description = "Broken clouds",
+                iconCode = "04d",
+                temperature = 15.0,
+                feelsLike = 14.2,
+                tempMin = 12.0,
+                tempMax = 17.5,
+                humidityPercent = 72,
+                pressureHpa = 1012,
+                windSpeed = 4.1,
+                windDeg = 225,
+                visibilityMeters = 9000,
+                cloudPercent = 75,
+                units = WeatherUnits.METRIC,
+            )
 
-        fun dayForecast(dateLabel: String) = DayForecast(
-            dateLabel = dateLabel,
-            conditionMain = "Clouds",
-            description = "cloudy",
-            iconCode = "02d",
-            temperature = 14.0,
-            feelsLike = 13.0,
-            tempMin = 10.0,
-            tempMax = 16.0,
-            units = WeatherUnits.METRIC,
-        )
+        fun dayForecast(dateLabel: String) =
+            DayForecast(
+                dateLabel = dateLabel,
+                conditionMain = "Clouds",
+                description = "cloudy",
+                iconCode = "02d",
+                temperature = 14.0,
+                feelsLike = 13.0,
+                tempMin = 10.0,
+                tempMax = 16.0,
+                units = WeatherUnits.METRIC,
+            )
     }
 }
