@@ -109,4 +109,28 @@ class OpenWeatherParsingTest {
         )
         assertEquals("Denver", parsed.city?.name)
     }
+
+    @Test
+    fun `parses utc offset from current weather and forecast payloads`() {
+        val current = json.decodeFromString<CurrentWeatherResponse>(
+            """
+            {
+              "name": "Denver",
+              "weather": [ { "main": "Clear", "description": "clear sky", "icon": "01d" } ],
+              "main": { "temp": 10.0, "feels_like": 9.0, "humidity": 40 },
+              "wind": { "speed": 1.0 },
+              "timezone": -21600
+            }
+            """.trimIndent(),
+        )
+        // Mountain Daylight Time is UTC-6h = -21600 seconds.
+        assertEquals(-21600, current.timezone)
+
+        val forecast = json.decodeFromString<ForecastResponse>(
+            """
+            { "list": [], "city": { "name": "London", "timezone": 3600 } }
+            """.trimIndent(),
+        )
+        assertEquals(3600, forecast.city?.timezone)
+    }
 }
