@@ -65,7 +65,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.time.Instant
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.ln
@@ -78,12 +78,12 @@ import android.graphics.Canvas as AndroidCanvas
 // "Zoom Level Not Supported" placeholder tile. Regional zoom is the norm for precipitation radar.
 private const val ZOOM = 7
 private const val TILE_PX = 256
-private const val FRAME_INTERVAL_MS = 550L
 
 @Composable
 fun RadarCard(
     location: SavedLocation?,
     modifier: Modifier = Modifier,
+    utcOffsetSeconds: Int = 0,
 ) {
     Card(
         modifier = modifier
@@ -114,6 +114,8 @@ fun RadarCard(
         RadarView(
             tileInfo = tileInfo,
             timelineState = timelineState,
+            frameIntervalMs = viewModel.frameIntervalMs,
+            utcOffsetSeconds = utcOffsetSeconds,
             onRetry = viewModel::retry,
         )
     }
@@ -135,6 +137,8 @@ private fun CenteredMessage(text: String) {
 private fun RadarView(
     tileInfo: TileInfo,
     timelineState: LoadingState<RadarTimeline>,
+    frameIntervalMs: Long,
+    utcOffsetSeconds: Int,
     onRetry: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -169,10 +173,10 @@ private fun RadarView(
         }
     }
 
-    LaunchedEffect(playing, frames) {
+    LaunchedEffect(playing, frames, frameIntervalMs) {
         if (!playing || frames.isEmpty()) return@LaunchedEffect
         while (true) {
-            delay(FRAME_INTERVAL_MS)
+            delay(frameIntervalMs)
             frameIndex = (frameIndex + 1) % frames.size
         }
     }
@@ -182,12 +186,14 @@ private fun RadarView(
     Box(modifier = Modifier.fillMaxSize()) {
         RadarCanvas(tileInfo = tileInfo, baseMap = baseMap, overlay = currentOverlay)
 
-        // Timestamp chip (top-start)
+        // Timestamp chip (top-start), rendered in the selected city's local time (via its UTC
+        // offset) rather than the device's timezone.
         frames.getOrNull(frameIndex)?.let { frame ->
             OverlayChip(modifier = Modifier.align(Alignment.TopStart)) {
                 Text(
                     text = frameTimeLabel(
                         epochSeconds = frame.timeEpochSeconds,
+                        utcOffsetSeconds = utcOffsetSeconds,
                         isNow = frameIndex == nowIndex,
                         isForecast = frame.isForecast,
                     ),
@@ -365,18 +371,20 @@ private val RADAR_LEGEND_COLORS = listOf(
     Color(0xFFE24B4B), // heavy
 )
 
-private val radarTimeFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-
+/**
+ * Labels a radar frame with its wall-clock time in the selected city's timezone (via
+ * [utcOffsetSeconds]), tagging the current frame as "Now" and nowcast frames as "Forecast".
+ */
 private fun frameTimeLabel(
     epochSeconds: Long,
+    utcOffsetSeconds: Int,
     isNow: Boolean,
     isForecast: Boolean,
 ): String {
     val time = Instant
         .ofEpochSecond(epochSeconds)
-        .atZone(ZoneId.systemDefault())
-        .format(radarTimeFormatter)
+        .atZone(ZoneOffset.ofTotalSeconds(utcOffsetSeconds))
+        .format(DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
     return when {
         isNow -> "Now · $time"
         isForecast -> "Forecast · $time"

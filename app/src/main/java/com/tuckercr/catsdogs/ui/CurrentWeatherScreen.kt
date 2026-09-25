@@ -543,9 +543,10 @@ private fun CurrentWeatherContent(
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
-    val todayLabel = remember {
-        java.time.LocalDate
-            .now()
+    val todayLabel = remember(weather.utcOffsetSeconds) {
+        // "Today" in the city's local date, so it matches the city-local forecast day labels.
+        java.time.OffsetDateTime
+            .now(java.time.ZoneOffset.ofTotalSeconds(weather.utcOffsetSeconds))
             .format(
                 java.time.format.DateTimeFormatter
                     .ofPattern("EEE, MMM d"),
@@ -692,7 +693,7 @@ private fun CurrentWeatherContent(
                     MetricIconRow(
                         icon = Icons.Default.WbSunny,
                         label = stringResource(R.string.label_sunrise),
-                        value = formatEpochTime(epoch),
+                        value = formatEpochTime(epoch, weather.utcOffsetSeconds),
                     )
                 }
                 weather.sunsetEpoch?.let { epoch ->
@@ -700,14 +701,14 @@ private fun CurrentWeatherContent(
                     MetricIconRow(
                         icon = Icons.Default.WbSunny,
                         label = stringResource(R.string.label_sunset),
-                        value = formatEpochTime(epoch),
+                        value = formatEpochTime(epoch, weather.utcOffsetSeconds),
                     )
                 }
             }
         }
 
         // Weather radar
-        RadarCard(location = location)
+        RadarCard(location = location, utcOffsetSeconds = weather.utcOffsetSeconds)
 
         // Upcoming days section (excludes today)
         if (upcomingDays.isNotEmpty() ||
@@ -874,10 +875,13 @@ private fun formatVisibility(meters: Int): String =
         stringResource(R.string.format_visibility_m, meters)
     }
 
-private fun formatEpochTime(epochSeconds: Long): String {
+private fun formatEpochTime(
+    epochSeconds: Long,
+    utcOffsetSeconds: Int,
+): String {
     val localTime = java.time.Instant
         .ofEpochSecond(epochSeconds)
-        .atZone(java.time.ZoneId.systemDefault())
+        .atZone(java.time.ZoneOffset.ofTotalSeconds(utcOffsetSeconds))
         .toLocalTime()
     return localTime.format(
         java.time.format.DateTimeFormatter

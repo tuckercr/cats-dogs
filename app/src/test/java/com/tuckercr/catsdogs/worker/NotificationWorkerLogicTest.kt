@@ -291,6 +291,32 @@ class NotificationWorkerLogicTest {
         assertEquals("86° in Tokyo", title)
     }
 
+    @Test
+    fun `today matching uses the city's utc offset`() =
+        runTest {
+            var capturedOffset: Int? = null
+            val logic = NotificationWorkerLogic(
+                getSavedLocations = { listOf(london) },
+                getActiveIndex = { 0 },
+                getUnits = { WeatherUnits.IMPERIAL },
+                fetchCurrentWeather = { _, _, _, _ ->
+                    kotlin.Result.success(weather(utcOffsetSeconds = -21600))
+                },
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast())) },
+                hasNotificationPermission = { true },
+                postNotification = { _, _ -> },
+                todayLabel = { offset ->
+                    capturedOffset = offset
+                    TODAY_LABEL
+                },
+            )
+
+            logic.doWork()
+
+            // The city's offset (Mountain Daylight, UTC-6h) is used to resolve "today", not the device's.
+            assertEquals(-21600, capturedOffset)
+        }
+
     // --- helpers ---
 
     private fun logic(
@@ -312,7 +338,7 @@ class NotificationWorkerLogicTest {
         fetchForecast = fetchForecast,
         hasNotificationPermission = hasNotificationPermission,
         postNotification = postNotification,
-        todayLabel = { todayLabel },
+        todayLabel = { _ -> todayLabel },
     )
 
     private companion object {
@@ -326,6 +352,7 @@ class NotificationWorkerLogicTest {
             tempMin: Double = 60.0,
             tempMax: Double = 80.0,
             description: String = "clear sky",
+            utcOffsetSeconds: Int = 0,
         ) = CurrentWeather(
             cityName = cityName,
             conditionMain = "Clear",
@@ -342,6 +369,7 @@ class NotificationWorkerLogicTest {
             visibilityMeters = 10000,
             cloudPercent = 0,
             units = WeatherUnits.IMPERIAL,
+            utcOffsetSeconds = utcOffsetSeconds,
         )
 
         fun forecast(
