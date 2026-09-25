@@ -222,6 +222,23 @@ class ForecastAggregatorTest {
 
     // --- helpers ---
 
+    @Test
+    fun `precipitation chance is per-slot percent hourly and daily max`() {
+        val dayStart = 1_704_067_200L // 2024-01-01T00:00:00Z
+        val slots = listOf(
+            slot(epochSeconds = dayStart + 3600, pop = 0.1),
+            slot(epochSeconds = dayStart + 12 * 3600, pop = 0.85),
+            slot(epochSeconds = dayStart + 18 * 3600, pop = 0.4),
+        )
+
+        val day = ForecastAggregator.aggregate(slots, utc, WeatherUnits.METRIC).single()
+
+        // Daily chance is the max across the day's slots, as a rounded percentage.
+        assertEquals(85, day.precipitationChance)
+        // Each hourly slot carries its own rounded percentage, in chronological order.
+        assertEquals(listOf(10, 85, 40), day.hourlySlots.map { it.precipitationChance })
+    }
+
     private fun slot(
         epochSeconds: Long,
         temperature: Double = 15.0,
@@ -235,6 +252,7 @@ class ForecastAggregatorTest {
         windDeg: Int = 0,
         humidity: Int = 0,
         pressure: Int = 0,
+        pop: Double = 0.0,
     ) = ForecastAggregator.Slot(
         epochSeconds = epochSeconds,
         temperature = temperature,
@@ -248,5 +266,6 @@ class ForecastAggregatorTest {
         windDeg = windDeg,
         humidity = humidity,
         pressure = pressure,
+        pop = pop,
     )
 }

@@ -119,6 +119,7 @@ class WeatherRepository @Inject constructor(
                 windDeg = item.wind.deg,
                 humidity = item.main.humidity,
                 pressure = item.main.pressure,
+                pop = item.pop,
             )
         }
         return ForecastAggregator.aggregate(slots, zoneId, units)

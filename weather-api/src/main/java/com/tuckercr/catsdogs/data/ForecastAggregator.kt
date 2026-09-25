@@ -10,6 +10,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Collapses OpenWeatherMap 3-hour forecast samples into one representative row per calendar day
@@ -38,6 +39,7 @@ object ForecastAggregator {
         val windDeg: Int = 0,
         val humidity: Int = 0,
         val pressure: Int = 0,
+        val pop: Double = 0.0,
     )
 
     fun aggregate(
@@ -78,8 +80,11 @@ object ForecastAggregator {
                         humidity = slot.humidity,
                         pressure = slot.pressure,
                         units = units,
+                        precipitationChance = (slot.pop * 100).roundToInt(),
                     )
                 }
+
+            val dailyPop = daySlots.maxOfOrNull { it.pop } ?: 0.0
 
             DayForecast(
                 dateLabel = date.atStartOfDay(zoneId).format(dayLabelFormatter),
@@ -92,6 +97,7 @@ object ForecastAggregator {
                 tempMax = dailyMax,
                 units = units,
                 hourlySlots = hourlySlots,
+                precipitationChance = (dailyPop * 100).roundToInt(),
             )
         }
     }

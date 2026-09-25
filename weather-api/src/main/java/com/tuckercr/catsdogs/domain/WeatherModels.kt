@@ -39,6 +39,8 @@ data class HourlySlot(
     val humidity: Int,
     val pressure: Int,
     val units: WeatherUnits,
+    /** Probability of precipitation as a percentage, 0..100. */
+    val precipitationChance: Int = 0,
 )
 
 @Serializable
@@ -54,4 +56,6 @@ data class DayForecast(
     val units: WeatherUnits,
     /** All 3-hour slots for this calendar day, ordered chronologically. */
     val hourlySlots: List<HourlySlot> = emptyList(),
+    /** Highest probability of precipitation across the day's slots, as a percentage, 0..100. */
+    val precipitationChance: Int = 0,
 )
