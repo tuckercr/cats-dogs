@@ -140,6 +140,34 @@ class CurrentWeatherScreenTest {
         composeRule.onNodeWithText("9 AM").performScrollTo().assertIsDisplayed()
     }
 
+    @Test
+    fun precipitationChanceIsShownInHourlyStrip() {
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(weather()),
+                    forecastState = LoadingState.Success(
+                        listOf(
+                            dayForecast(
+                                dateLabel = "Mon, Jan 1",
+                                hourlySlots = listOf(
+                                    hourlySlot(timeLabel = "9 AM", precipitationChance = 80),
+                                ),
+                            ),
+                        ),
+                    ),
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("80%").performScrollTo().assertIsDisplayed()
+    }
+
     private companion object {
         // No coordinates: keeps the radar tile static so the screen reaches idle for assertions.
         val london = SavedLocation(label = "London, GB", latitude = null, longitude = null)
@@ -179,18 +207,21 @@ class CurrentWeatherScreenTest {
             hourlySlots = hourlySlots,
         )
 
-        fun hourlySlot(timeLabel: String) =
-            HourlySlot(
-                timeLabel = timeLabel,
-                iconCode = "02d",
-                description = "Cloudy",
-                temperature = 14.0,
-                feelsLike = 13.0,
-                windSpeed = 3.0,
-                windDeg = 180,
-                humidity = 60,
-                pressure = 1012,
-                units = WeatherUnits.METRIC,
-            )
+        fun hourlySlot(
+            timeLabel: String,
+            precipitationChance: Int = 0,
+        ) = HourlySlot(
+            timeLabel = timeLabel,
+            iconCode = "02d",
+            description = "Cloudy",
+            temperature = 14.0,
+            feelsLike = 13.0,
+            windSpeed = 3.0,
+            windDeg = 180,
+            humidity = 60,
+            pressure = 1012,
+            units = WeatherUnits.METRIC,
+            precipitationChance = precipitationChance,
+        )
     }
 }

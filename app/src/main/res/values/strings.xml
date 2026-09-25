@@ -32,6 +32,7 @@
     <!-- Multi-city -->
     <string name="cd_add_city">Add a city</string>
     <string name="cd_remove_city">Remove city</string>
+    <string name="cd_precip_chance">Chance of precipitation</string>
     <string name="action_add_city">Add city</string>
     <string name="action_remove_city">Remove</string>
     <string name="action_cancel">Cancel</string>

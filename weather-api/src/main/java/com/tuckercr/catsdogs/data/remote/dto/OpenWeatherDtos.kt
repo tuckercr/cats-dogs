@@ -39,6 +39,8 @@ data class ForecastListItemDto(
     @SerialName("main") val main: MainDto,
     @SerialName("weather") val weather: List<WeatherDescDto>,
     @SerialName("wind") val wind: WindDto,
+    // Probability of precipitation, 0.0..1.0. Absent on some payloads, so default to 0.
+    @SerialName("pop") val pop: Double = 0.0,
 )
 
 @Serializable

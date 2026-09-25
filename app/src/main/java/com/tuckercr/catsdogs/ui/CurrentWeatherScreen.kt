@@ -805,6 +805,33 @@ private fun HourlyCell(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
+        PrecipChance(percent = slot.precipitationChance)
+    }
+}
+
+/** Small "raindrop N%" chip; renders nothing when the chance is zero to avoid clutter. */
+@Composable
+private fun PrecipChance(
+    percent: Int,
+    modifier: Modifier = Modifier,
+) {
+    if (percent <= 0) return
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Default.WaterDrop,
+            contentDescription = stringResource(R.string.cd_precip_chance),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(12.dp),
+        )
+        Text(
+            text = stringResource(R.string.format_percent, percent),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
     }
 }
 
@@ -889,6 +916,7 @@ private fun UpcomingDayRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            PrecipChance(percent = day.precipitationChance)
         }
         Text(
             text = formatTemperature(day.tempMax, day.units),
