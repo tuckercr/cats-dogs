@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performScrollTo
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.HourlySlot
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.LoadingState
@@ -112,6 +113,33 @@ class CurrentWeatherScreenTest {
         composeRule.onNodeWithText("Mon, Jan 1").performScrollTo().assertIsDisplayed()
     }
 
+    @Test
+    fun hourlyStripRendersWhenForecastHasHourlySlots() {
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(weather()),
+                    forecastState = LoadingState.Success(
+                        listOf(
+                            dayForecast(
+                                dateLabel = "Mon, Jan 1",
+                                hourlySlots = listOf(hourlySlot(timeLabel = "9 AM")),
+                            ),
+                        ),
+                    ),
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.section_hourly)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("9 AM").performScrollTo().assertIsDisplayed()
+    }
+
     private companion object {
         // No coordinates: keeps the radar tile static so the screen reaches idle for assertions.
         val london = SavedLocation(label = "London, GB", latitude = null, longitude = null)
@@ -135,16 +163,33 @@ class CurrentWeatherScreenTest {
                 units = WeatherUnits.METRIC,
             )
 
-        fun dayForecast(dateLabel: String) =
-            DayForecast(
-                dateLabel = dateLabel,
-                conditionMain = "Clouds",
-                description = "cloudy",
+        fun dayForecast(
+            dateLabel: String,
+            hourlySlots: List<HourlySlot> = emptyList(),
+        ) = DayForecast(
+            dateLabel = dateLabel,
+            conditionMain = "Clouds",
+            description = "cloudy",
+            iconCode = "02d",
+            temperature = 14.0,
+            feelsLike = 13.0,
+            tempMin = 10.0,
+            tempMax = 16.0,
+            units = WeatherUnits.METRIC,
+            hourlySlots = hourlySlots,
+        )
+
+        fun hourlySlot(timeLabel: String) =
+            HourlySlot(
+                timeLabel = timeLabel,
                 iconCode = "02d",
+                description = "Cloudy",
                 temperature = 14.0,
                 feelsLike = 13.0,
-                tempMin = 10.0,
-                tempMax = 16.0,
+                windSpeed = 3.0,
+                windDeg = 180,
+                humidity = 60,
+                pressure = 1012,
                 units = WeatherUnits.METRIC,
             )
     }
