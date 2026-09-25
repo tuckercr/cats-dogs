@@ -5,7 +5,8 @@ import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
-import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
@@ -31,8 +32,11 @@ internal class NotificationWorkerLogic(
     ) -> kotlin.Result<List<DayForecast>>,
     private val hasNotificationPermission: () -> Boolean,
     private val postNotification: (title: String, body: String) -> Unit,
-    // Same label format as ForecastAggregator produces; overridable so tests are date-independent.
-    private val todayLabel: () -> String = { LocalDate.now().format(DAY_LABEL_FORMATTER) },
+    // Same label format as ForecastAggregator produces, in the city's local date (its UTC offset)
+    // so it matches the city-local forecast labels. Overridable so tests are date-independent.
+    private val todayLabel: (utcOffsetSeconds: Int) -> String = { offset ->
+        OffsetDateTime.now(ZoneOffset.ofTotalSeconds(offset)).format(DAY_LABEL_FORMATTER)
+    },
 ) {
     suspend fun doWork(): Result {
         val locations = getSavedLocations()
@@ -58,7 +62,7 @@ internal class NotificationWorkerLogic(
         ).getOrNull()
         // /forecast only returns upcoming 3-hour slots, so once today's last slot has passed the
         // first day is tomorrow. Only an entry that is actually today may supply the high/low.
-        val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel() }
+        val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel(weather.utcOffsetSeconds) }
 
         if (!hasNotificationPermission()) return Result.success()
 
