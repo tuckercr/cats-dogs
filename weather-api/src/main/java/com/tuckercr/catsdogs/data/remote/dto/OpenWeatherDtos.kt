@@ -14,6 +14,8 @@ data class CurrentWeatherResponse(
     @SerialName("visibility") val visibility: Int? = null,
     @SerialName("clouds") val clouds: CloudsDto? = null,
     @SerialName("sys") val sys: SysDto? = null,
+    // Shift in seconds from UTC for the location's local time.
+    @SerialName("timezone") val timezone: Int = 0,
 )
 
 @Serializable
@@ -46,6 +48,8 @@ data class ForecastListItemDto(
 @Serializable
 data class CityDto(
     @SerialName("name") val name: String?,
+    // Shift in seconds from UTC for the city's local time.
+    @SerialName("timezone") val timezone: Int = 0,
 )
 
 @Serializable
