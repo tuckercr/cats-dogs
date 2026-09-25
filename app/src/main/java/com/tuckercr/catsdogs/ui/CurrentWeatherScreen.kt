@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -79,6 +82,7 @@ import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.HourlySlot
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.CityListViewModel
@@ -86,6 +90,7 @@ import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -628,6 +633,21 @@ private fun CurrentWeatherContent(
             }
         }
 
+        // Hourly strip (next ~36h) — the OWM /forecast endpoint returns only forward-looking
+        // 3-hour slots, so flattening them in order already starts at the upcoming hour.
+        val hourly = remember(forecastDays) {
+            forecastDays.flatMap { it.hourlySlots }.take(HOURLY_STRIP_COUNT)
+        }
+        if (hourly.isNotEmpty()) {
+            Text(
+                text = stringResource(R.string.section_hourly),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            HourlyStrip(slots = hourly)
+        }
+
         // Details card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -734,6 +754,57 @@ private fun CurrentWeatherContent(
 
     selectedDay?.let { day ->
         DayDetailBottomSheet(day = day) { selectedDay = null }
+    }
+}
+
+private const val HOURLY_STRIP_COUNT = 12
+
+@Composable
+private fun HourlyStrip(
+    slots: List<HourlySlot>,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            items(slots) { slot -> HourlyCell(slot = slot) }
+        }
+    }
+}
+
+@Composable
+private fun HourlyCell(
+    slot: HourlySlot,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = slot.timeLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        WeatherIcon(
+            iconCode = slot.iconCode,
+            contentDescription = slot.description,
+            sizeDp = 32,
+        )
+        Text(
+            text = "${slot.temperature.roundToInt()}°",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
