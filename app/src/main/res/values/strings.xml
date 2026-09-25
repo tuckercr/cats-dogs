@@ -42,6 +42,16 @@
     <string name="empty_cities_title">No cities added yet</string>
     <string name="empty_cities_body">Tap the + button to add your first city and get started.</string>
 
+    <!-- Radar -->
+    <string name="radar_no_location">No location selected</string>
+    <string name="radar_unavailable_coords">Radar unavailable\n(coordinates not available)</string>
+    <string name="radar_unavailable">Radar unavailable</string>
+    <string name="radar_loading">Loading radar…</string>
+    <string name="radar_play">Play radar animation</string>
+    <string name="radar_pause">Pause radar animation</string>
+    <string name="radar_legend_light">Light</string>
+    <string name="radar_legend_heavy">Heavy</string>
+
     <!-- Day detail / upcoming forecast -->
     <string name="section_hourly">HOURLY</string>
     <string name="section_upcoming">UPCOMING</string>
