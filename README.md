@@ -29,9 +29,9 @@ WorkManager, and full CI/CD.
 
 ## Screenshots
 
-| Current weather | Forecast & radar | Multiple cities | Settings |
+| Current & hourly | Animated radar | Multiple cities | Settings & units |
 |---|---|---|---|
-| ![Current weather](./screenshots/current.png) | ![Forecast and radar](./screenshots/forecast.png) | ![Multiple cities](./screenshots/cities.png) | ![Settings](./screenshots/settings.png) |
+| ![Current conditions with the hourly strip and rain chance](./screenshots/current.png) | ![Animated RainViewer radar and upcoming days](./screenshots/forecast.png) | ![Swipeable multi-city tabs](./screenshots/cities.png) | ![Settings with unit selection](./screenshots/settings.png) |
 
 ## Getting started
 
