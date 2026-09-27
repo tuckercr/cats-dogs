@@ -15,3 +15,13 @@ val SkyBlueNight = Color(0xFF4FC3F7)
 val TealAccentNight = Color(0xFF4DB6AC)
 val SurfaceDark = Color(0xFF0D1B2A)
 val SurfaceContainerDark = Color(0xFF1A2C3D)
+
+// Radar precipitation legend, light (low intensity) to heavy (high intensity).
+val RadarLegendColors = listOf(
+    Color(0xFF8CD9FF),
+    Color(0xFF2E9BE6),
+    Color(0xFF39C24A),
+    Color(0xFFF4E04D),
+    Color(0xFFF39B2E),
+    Color(0xFFE24B4B),
+)

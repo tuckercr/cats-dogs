@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +58,7 @@ import com.tuckercr.catsdogs.domain.RadarTimeline
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.RadarViewModel
+import com.tuckercr.catsdogs.ui.theme.RadarLegendColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -74,9 +74,9 @@ import kotlin.math.roundToInt
 import kotlin.math.tan
 import android.graphics.Canvas as AndroidCanvas
 
-// RainViewer's public radar tiles are only served up to zoom 7; higher zooms return a
-// "Zoom Level Not Supported" placeholder tile. Regional zoom is the norm for precipitation radar.
-private const val ZOOM = 7
+// RainViewer's public radar tiles are only served up to zoom 7 (RadarTimeline.MAX_ZOOM); higher
+// zooms return a "Zoom Level Not Supported" placeholder. Regional zoom suits precipitation radar.
+private const val ZOOM = RadarTimeline.MAX_ZOOM
 private const val TILE_PX = 256
 
 @Composable
@@ -164,12 +164,20 @@ private fun RadarView(
     var frameIndex by remember(frames) { mutableIntStateOf(nowIndex) }
     var playing by remember(frames) { mutableStateOf(true) }
 
-    LaunchedEffect(frameIndex, tileInfo, timeline) {
-        val frame = frames.getOrNull(frameIndex) ?: return@LaunchedEffect
-        if (!overlays.containsKey(frame.path)) {
-            stitchTiles(context, tileInfo) { x, y ->
-                timeline!!.tileUrl(frame, ZOOM, x, y)
-            }?.let { overlays[frame.path] = it }
+    // Prefetch every frame's overlay once, keyed on the tile/timeline rather than frameIndex, so
+    // autoplay advancing the frame never cancels an in-flight stitch (which would otherwise leave
+    // the radar layer blank during the first loop). Frames closest to "now" load first so the
+    // initial view paints quickly.
+    LaunchedEffect(tileInfo, timeline) {
+        val tl = timeline ?: return@LaunchedEffect
+        val loadOrder = frames.indices.sortedBy { kotlin.math.abs(it - nowIndex) }
+        for (i in loadOrder) {
+            val frame = frames[i]
+            if (!overlays.containsKey(frame.path)) {
+                stitchTiles(context, tileInfo) { x, y ->
+                    tl.tileUrl(frame, ZOOM, x, y)
+                }?.let { overlays[frame.path] = it }
+            }
         }
     }
 
@@ -348,7 +356,7 @@ private fun RadarLegend(modifier: Modifier = Modifier) {
                 .width(96.dp)
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Brush.horizontalGradient(RADAR_LEGEND_COLORS)),
+                .background(Brush.horizontalGradient(RadarLegendColors)),
         )
         Row(
             modifier = Modifier
@@ -361,15 +369,6 @@ private fun RadarLegend(modifier: Modifier = Modifier) {
         }
     }
 }
-
-private val RADAR_LEGEND_COLORS = listOf(
-    Color(0xFF8CD9FF), // light
-    Color(0xFF2E9BE6),
-    Color(0xFF39C24A),
-    Color(0xFFF4E04D),
-    Color(0xFFF39B2E),
-    Color(0xFFE24B4B), // heavy
-)
 
 /**
  * Labels a radar frame with its wall-clock time in the selected city's timezone (via
