@@ -24,6 +24,8 @@ data class CurrentWeather(
     val units: WeatherUnits,
     val sunriseEpoch: Long? = null,
     val sunsetEpoch: Long? = null,
+    /** The location's offset from UTC, in seconds, for rendering its local time. */
+    val utcOffsetSeconds: Int = 0,
 )
 
 /** A single 3-hour forecast slot used in the day-detail hourly breakdown. */

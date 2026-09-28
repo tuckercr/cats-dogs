@@ -50,10 +50,13 @@ class RadarRepositoryTest {
             """.trimIndent()
 
         val timeline = RadarRepository.parseTimeline(json, body)
-        val url = timeline.tileUrl(timeline.frames.first(), z = 10, x = 163, y = 395)
+        // Exercise the real zoom the app requests (RadarTimeline.MAX_ZOOM = 7); x/y are a valid
+        // tile at that zoom.
+        val zoom = com.tuckercr.catsdogs.domain.RadarTimeline.MAX_ZOOM
+        val url = timeline.tileUrl(timeline.frames.first(), z = zoom, x = 34, y = 50)
 
         assertEquals(
-            "https://tilecache.rainviewer.com/v2/radar/100/256/10/163/395/4/1_1.png",
+            "https://tilecache.rainviewer.com/v2/radar/100/256/$zoom/34/50/4/1_1.png",
             url,
         )
     }

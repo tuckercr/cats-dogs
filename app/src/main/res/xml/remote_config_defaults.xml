@@ -5,4 +5,9 @@
         <key>weather_refresh_interval_minutes</key>
         <value>30</value>
     </entry>
+    <!-- Delay between radar animation frames, in milliseconds. Higher is slower. -->
+    <entry>
+        <key>radar_frame_interval_ms</key>
+        <value>850</value>
+    </entry>
 </defaultsMap>

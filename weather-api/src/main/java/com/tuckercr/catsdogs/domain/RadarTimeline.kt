@@ -25,6 +25,12 @@ data class RadarTimeline(
     ): String = "$host${frame.path}/$TILE_SIZE/$z/$x/$y/$COLOR_SCHEME/${SMOOTH}_$SNOW.png"
 
     companion object {
+        /**
+         * Highest slippy-map zoom RainViewer's public radar tiles are served at; higher zooms return
+         * a "Zoom Level Not Supported" placeholder. Callers request tiles at this zoom.
+         */
+        const val MAX_ZOOM = 7
+
         private const val TILE_SIZE = 256
 
         // RainViewer color scheme 4 (Universal Blue -> heavy). smooth=1 (interpolated),

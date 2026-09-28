@@ -122,7 +122,10 @@ class WeatherRepository @Inject constructor(
                 pop = item.pop,
             )
         }
-        return ForecastAggregator.aggregate(slots, zoneId, units)
+        // Group and label in the city's own local time (from the API), not the device timezone,
+        // so a remote city's forecast days/hours read in that city's clock.
+        val cityZone = response.city?.let { java.time.ZoneOffset.ofTotalSeconds(it.timezone) } ?: zoneId
+        return ForecastAggregator.aggregate(slots, cityZone, units)
     }
 
     private fun mapCurrent(
@@ -152,6 +155,7 @@ class WeatherRepository @Inject constructor(
             units = units,
             sunriseEpoch = response.sys?.sunrise?.takeIf { it > 0L },
             sunsetEpoch = response.sys?.sunset?.takeIf { it > 0L },
+            utcOffsetSeconds = response.timezone,
         )
     }
 
