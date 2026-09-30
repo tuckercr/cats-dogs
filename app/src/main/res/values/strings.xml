@@ -106,4 +106,63 @@
     <string name="settings_notifications_disabled">Notifications are disabled — tap to open Settings</string>
     <string name="settings_section_locations">LOCATIONS</string>
     <string name="settings_manage_locations">Manage Locations</string>
+
+    <!-- Pet scene captions, in the pets' voice. One is picked per day. -->
+    <string-array name="pet_caption_sunny">
+        <item>Perfect walkies weather! Off we go.</item>
+        <item>The cat has claimed the sunniest windowsill.</item>
+        <item>Sunshine and tail wags all round.</item>
+    </string-array>
+    <string-array name="pet_caption_cloudy">
+        <item>A bit grey, but the dog is still keen for a walk.</item>
+        <item>Nap weather, says the cat.</item>
+        <item>No sun, no problem. Still time for a stroll.</item>
+    </string-array>
+    <string-array name="pet_caption_rain">
+        <item>The dog wants puddles. The cat wants a towel.</item>
+        <item>Grab a raincoat. The cat is NOT going out in this.</item>
+        <item>Wet paws ahead. Keep a towel by the door.</item>
+    </string-array>
+    <string-array name="pet_caption_storm">
+        <item>Thunder! The cat is under the bed. Keep pets inside.</item>
+        <item>Stormy out there. Sofa cuddles today.</item>
+    </string-array>
+    <string-array name="pet_caption_snow">
+        <item>Snow zoomies, then straight back to the blanket.</item>
+        <item>Wipe those paws when you come in.</item>
+    </string-array>
+    <string-array name="pet_caption_hot">
+        <item>Too hot for paws on the pavement. Walk early or late.</item>
+        <item>Fresh water bowls today. It is a scorcher.</item>
+    </string-array>
+    <string-array name="pet_caption_cold">
+        <item>Brrr. Short walks and warm blankets.</item>
+        <item>Coat weather for small dogs today.</item>
+    </string-array>
+    <string-array name="pet_caption_night">
+        <item>Both are curled up asleep. Shh.</item>
+        <item>Quiet night. Time for one last stroll before bed?</item>
+    </string-array>
+    <string name="cd_pet_scene">The cat and dog reacting to the weather</string>
+
+    <!-- Walk advice -->
+    <string name="walk_title">Best walk time</string>
+    <string name="walk_now">Now is a great time</string>
+    <string name="walk_around">Around %1$s</string>
+    <string name="walk_none">No good window soon</string>
+    <string name="walk_rating_great">Great</string>
+    <string name="walk_rating_okay">Okay</string>
+    <string name="walk_rating_poor">Stay in</string>
+    <string name="walk_rating_hot">Paws hot</string>
+    <string name="walk_rating_cold">Too cold</string>
+
+    <!-- UV index -->
+    <string name="label_uv_index">UV index</string>
+    <string name="format_uv">%1$d (%2$s)</string>
+    <string name="uv_low">Low</string>
+    <string name="uv_moderate">Moderate</string>
+    <string name="uv_high">High</string>
+    <string name="uv_very_high">Very high</string>
+    <string name="uv_extreme">Extreme</string>
+    <string name="walk_pavement">Pavement about %1$d°. Too hot for paws.</string>
 </resources>
