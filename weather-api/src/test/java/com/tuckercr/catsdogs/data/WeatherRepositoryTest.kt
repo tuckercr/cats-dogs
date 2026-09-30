@@ -11,6 +11,9 @@ import com.tuckercr.catsdogs.data.remote.dto.WindDto
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -22,11 +25,28 @@ import java.time.ZoneOffset
 
 class WeatherRepositoryTest {
 
+    /** Open-Meteo source backed by a fake HTTP layer that always answers with [body]. */
+    private fun openMeteo(body: String = """{"hourly":{}}"""): OpenMeteoForecastSource {
+        val client = OkHttpClient
+            .Builder()
+            .addInterceptor { chain ->
+                okhttp3.Response
+                    .Builder()
+                    .request(chain.request())
+                    .protocol(Protocol.HTTP_1_1)
+                    .code(200)
+                    .message("OK")
+                    .body(body.toResponseBody("application/json".toMediaType()))
+                    .build()
+            }.build()
+        return OpenMeteoForecastSource(client, Json { ignoreUnknownKeys = true })
+    }
+
     @Test
     fun `fetchCurrentWeather with coordinates sends coordinates and preserves location label`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, " test-key ", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), " test-key ", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.IMPERIAL,
@@ -51,7 +71,7 @@ class WeatherRepositoryTest {
     fun `fetchCurrentWeather trims city query when coordinates are absent`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -70,7 +90,7 @@ class WeatherRepositoryTest {
     fun `fetchCurrentWeather with partial coordinates falls back to city query`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -90,7 +110,7 @@ class WeatherRepositoryTest {
     fun `fetchCurrentWeather with blank city query fails before calling api`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -106,7 +126,7 @@ class WeatherRepositoryTest {
     fun `fetchForecast with missing api key fails before calling api`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "   ", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "   ", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -133,7 +153,7 @@ class WeatherRepositoryTest {
                     city = null,
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.IMPERIAL,
@@ -153,7 +173,7 @@ class WeatherRepositoryTest {
     fun `fetchForecast with partial coordinates and blank city query fails before calling api`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -171,7 +191,7 @@ class WeatherRepositoryTest {
     fun `fetchForecast with blank city query fails before calling api`() =
         runBlocking {
             val api = FakeOpenWeatherApi()
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -203,7 +223,11 @@ class WeatherRepositoryTest {
                     city = null,
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val openMeteoBody =
+                """{"utc_offset_seconds":0,"hourly":{"time":[4102444800],"temperature_2m":[21.0],
+                "weather_code":[0],"is_day":[1],"uv_index":[6.5],"shortwave_radiation":[800.0],
+                "precipitation_probability":[10]}}"""
+            val repository = WeatherRepository(api, openMeteo(openMeteoBody), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -212,21 +236,20 @@ class WeatherRepositoryTest {
             )
             val forecast = result.getOrThrow()
 
-            assertEquals(1, forecast.size)
-            assertEquals("Noon", forecast.single().conditionMain)
-            assertEquals("Noon description", forecast.single().description)
-            assertEquals(10.0, forecast.single().temperature, 0.0001)
-            assertEquals(WeatherUnits.METRIC, forecast.single().units)
-            assertNull(api.lastForecastCityQuery)
-            assertEquals(30.2672, api.lastForecastLatitude ?: 0.0, 0.0001)
-            assertEquals(-97.7431, api.lastForecastLongitude ?: 0.0, 0.0001)
+            // Coordinates are served by Open-Meteo; OpenWeatherMap's forecast is not called.
+            assertEquals(0, api.forecastCallCount)
+            val slot = forecast.single().hourlySlots.single()
+            assertEquals("Clear", forecast.single().conditionMain)
+            assertEquals(21.0, slot.temperature, 0.0001)
+            assertEquals(6.5, slot.uvIndex, 0.0001)
+            assertEquals(10, slot.precipitationChance)
         }
 
     @Test
     fun `fetchForecast maps network failures to network message`() =
         runBlocking {
             val api = FakeOpenWeatherApi(forecastThrowable = IOException("timeout"))
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -247,7 +270,7 @@ class WeatherRepositoryTest {
                     body = """{"cod":"404","message":"city not found"}""",
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -268,7 +291,7 @@ class WeatherRepositoryTest {
                     body = """{"cod":"401","message":"   "}""",
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -295,7 +318,7 @@ class WeatherRepositoryTest {
                     city = null,
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchForecast(
                 units = WeatherUnits.METRIC,
@@ -311,7 +334,7 @@ class WeatherRepositoryTest {
     fun `fetchCurrentWeather maps network failures to network message`() =
         runBlocking {
             val api = FakeOpenWeatherApi(currentThrowable = IOException("timeout"))
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -331,7 +354,7 @@ class WeatherRepositoryTest {
                     body = """{"cod":"404","message":"city not found"}""",
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -351,7 +374,7 @@ class WeatherRepositoryTest {
                     body = """{"cod":"500","message":""",
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -378,7 +401,7 @@ class WeatherRepositoryTest {
                     wind = WindDto(speed = 4.2),
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val result = repository.fetchCurrentWeather(
                 units = WeatherUnits.METRIC,
@@ -415,7 +438,7 @@ class WeatherRepositoryTest {
                     clouds = CloudsDto(all = 90),
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val weather = repository
                 .fetchCurrentWeather(
@@ -453,7 +476,7 @@ class WeatherRepositoryTest {
                     clouds = null,
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val weather = repository
                 .fetchCurrentWeather(
@@ -493,7 +516,7 @@ class WeatherRepositoryTest {
                     city = null,
                 ),
             )
-            val repository = WeatherRepository(api, "test-key", ZoneOffset.UTC, Json)
+            val repository = WeatherRepository(api, openMeteo(), "test-key", ZoneOffset.UTC, Json)
 
             val day = repository
                 .fetchForecast(
