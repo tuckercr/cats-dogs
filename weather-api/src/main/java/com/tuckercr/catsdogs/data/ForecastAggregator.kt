@@ -40,6 +40,8 @@ object ForecastAggregator {
         val humidity: Int = 0,
         val pressure: Int = 0,
         val pop: Double = 0.0,
+        val uvIndex: Double = 0.0,
+        val pavementTemperature: Double? = null,
     )
 
     fun aggregate(
@@ -81,6 +83,8 @@ object ForecastAggregator {
                         pressure = slot.pressure,
                         units = units,
                         precipitationChance = (slot.pop * 100).roundToInt(),
+                        uvIndex = slot.uvIndex,
+                        pavementTemperature = slot.pavementTemperature,
                     )
                 }
 
@@ -98,6 +102,7 @@ object ForecastAggregator {
                 units = units,
                 hourlySlots = hourlySlots,
                 precipitationChance = (dailyPop * 100).roundToInt(),
+                uvIndexMax = daySlots.maxOfOrNull { it.uvIndex } ?: 0.0,
             )
         }
     }
