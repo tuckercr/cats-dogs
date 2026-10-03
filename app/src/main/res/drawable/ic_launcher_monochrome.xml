@@ -1,0 +1,30 @@
+<!--
+  Monochrome layer for the themed (Android 13+) launcher icon. Must be a single-colour silhouette:
+  the system re-tints it, so the detailed multi-colour mascot cannot be reused here. A paw print
+  reads cleanly at any size and stays on-brand for a cats & dogs app.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group>
+        <!-- Toe beans -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M27.5,52 a6.5,8.5 0 1,0 13,0 a6.5,8.5 0 1,0 -13,0 z" />
+        <path
+            android:fillColor="#000000"
+            android:pathData="M41,44 a7,9 0 1,0 14,0 a7,9 0 1,0 -14,0 z" />
+        <path
+            android:fillColor="#000000"
+            android:pathData="M55,44 a7,9 0 1,0 14,0 a7,9 0 1,0 -14,0 z" />
+        <path
+            android:fillColor="#000000"
+            android:pathData="M69.5,52 a6.5,8.5 0 1,0 13,0 a6.5,8.5 0 1,0 -13,0 z" />
+        <!-- Main pad -->
+        <path
+            android:fillColor="#000000"
+            android:pathData="M37,71 a18,15 0 1,0 36,0 a18,15 0 1,0 -36,0 z" />
+    </group>
+</vector>

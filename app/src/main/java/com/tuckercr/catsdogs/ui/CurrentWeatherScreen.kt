@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
@@ -64,6 +65,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -89,6 +91,14 @@ import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
+import com.tuckercr.catsdogs.ui.pets.PetScene
+import com.tuckercr.catsdogs.ui.pets.WalkCard
+import com.tuckercr.catsdogs.ui.pets.inkColor
+import com.tuckercr.catsdogs.ui.pets.petCaption
+import com.tuckercr.catsdogs.ui.pets.petMoodFor
+import com.tuckercr.catsdogs.ui.pets.skyColor
+import com.tuckercr.catsdogs.ui.pets.toCelsius
+import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import kotlin.math.roundToInt
 
@@ -555,6 +565,12 @@ private fun CurrentWeatherContent(
     val todayForecast = forecastDays.firstOrNull()?.takeIf { it.dateLabel == todayLabel }
     val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
+    val currentTempC = toCelsius(weather.temperature, weather.units)
+    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC)
+    val ink = mood.inkColor
+    val walkAdvice = remember(forecastDays, currentTempC) {
+        walkAdviceFor(currentTempC, forecastDays.flatMap { it.hourlySlots })
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -570,23 +586,19 @@ private fun CurrentWeatherContent(
                         Modifier
                     },
                 ),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            colors = CardDefaults.cardColors(containerColor = mood.skyColor),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                WeatherIcon(
-                    iconCode = weather.iconCode,
-                    contentDescription = weather.description,
-                    sizeDp = 88,
-                )
+                PetScene(mood = mood)
                 Text(
                     text = weather.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = ink,
                 )
                 if (location != null) {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -598,12 +610,12 @@ private fun CurrentWeatherContent(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = ink,
                         )
                         Text(
                             text = weather.cityName,
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = ink,
                         )
                     }
                 }
@@ -612,7 +624,7 @@ private fun CurrentWeatherContent(
                     text = formatTemperature(weather.temperature, weather.units),
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    color = ink,
                 )
                 Text(
                     text = stringResource(
@@ -621,7 +633,7 @@ private fun CurrentWeatherContent(
                         formatTemperature(weather.tempMax, weather.units),
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = ink,
                 )
                 Text(
                     text = stringResource(R.string.label_feels_like) + " " + formatTemperature(
@@ -629,12 +641,21 @@ private fun CurrentWeatherContent(
                         weather.units,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = ink,
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = petCaption(mood),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ink,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
 
-        // Hourly strip (next ~36h) — the OWM /forecast endpoint returns only forward-looking
+        WalkCard(advice = walkAdvice)
+
+        // Hourly strip (next 24h) — the OWM /forecast endpoint returns only forward-looking
         // 3-hour slots, so flattening them in order already starts at the upcoming hour.
         val hourly = remember(forecastDays) {
             forecastDays.flatMap { it.hourlySlots }.take(HOURLY_STRIP_COUNT)
@@ -688,12 +709,22 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_cloud_cover),
                     value = stringResource(R.string.format_percent, weather.cloudPercent),
                 )
+                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.let { now ->
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.LightMode,
+                        label = stringResource(R.string.label_uv_index),
+                        value = uvLabel(now.uvIndex),
+                        iconTint = MaterialTheme.colorScheme.secondary,
+                    )
+                }
                 weather.sunriseEpoch?.let { epoch ->
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     MetricIconRow(
                         icon = Icons.Default.WbSunny,
                         label = stringResource(R.string.label_sunrise),
                         value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                        iconTint = MaterialTheme.colorScheme.secondary,
                     )
                 }
                 weather.sunsetEpoch?.let { epoch ->
@@ -702,6 +733,7 @@ private fun CurrentWeatherContent(
                         icon = Icons.Default.WbSunny,
                         label = stringResource(R.string.label_sunset),
                         value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                        iconTint = MaterialTheme.colorScheme.secondary,
                     )
                 }
             }
@@ -758,7 +790,7 @@ private fun CurrentWeatherContent(
     }
 }
 
-private const val HOURLY_STRIP_COUNT = 12
+private const val HOURLY_STRIP_COUNT = 24
 
 @Composable
 private fun HourlyStrip(
@@ -834,6 +866,20 @@ private fun PrecipChance(
             color = MaterialTheme.colorScheme.primary,
         )
     }
+}
+
+/** UV index with the WHO exposure category, e.g. "6 (High)". */
+@Composable
+private fun uvLabel(uv: Double): String {
+    val value = uv.roundToInt()
+    val level = when {
+        value <= 2 -> R.string.uv_low
+        value <= 5 -> R.string.uv_moderate
+        value <= 7 -> R.string.uv_high
+        value <= 10 -> R.string.uv_very_high
+        else -> R.string.uv_extreme
+    }
+    return stringResource(R.string.format_uv, value, stringResource(level))
 }
 
 @Composable
@@ -942,6 +988,7 @@ private fun MetricIconRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
 ) {
     Row(
         modifier = modifier
@@ -953,7 +1000,7 @@ private fun MetricIconRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = iconTint,
             modifier = Modifier.size(20.dp),
         )
         Text(
