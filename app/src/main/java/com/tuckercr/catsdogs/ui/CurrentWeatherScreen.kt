@@ -708,7 +708,9 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_cloud_cover),
                     value = stringResource(R.string.format_percent, weather.cloudPercent),
                 )
-                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.let { uv ->
+                // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
+                val isNight = weather.iconCode.endsWith("n")
+                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.takeUnless { isNight }?.let { uv ->
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     MetricIconRow(
                         icon = Icons.Default.LightMode,
