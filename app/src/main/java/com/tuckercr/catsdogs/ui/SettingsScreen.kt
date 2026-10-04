@@ -220,6 +220,17 @@ fun SettingsRoute(
                 },
             )
 
+            // Open-Meteo's free API is CC BY 4.0, which requires this credit.
+            val openMeteoUrl = stringResource(R.string.settings_openmeteo_url)
+            SettingsLinkRow(
+                label = stringResource(R.string.settings_attribution_openmeteo),
+                onClick = {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, openMeteoUrl.toUri()),
+                    )
+                },
+            )
+
             val privacyUrl = stringResource(R.string.settings_privacy_policy_url)
             SettingsLinkRow(
                 label = stringResource(R.string.settings_privacy_policy),

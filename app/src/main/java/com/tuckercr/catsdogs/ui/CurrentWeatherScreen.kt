@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -598,7 +599,13 @@ private fun CurrentWeatherContent(
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    PetScene(mood = mood)
+                    // Kept a bit smaller than the card so the scene doesn't dominate, especially on wide screens.
+                    PetScene(
+                        mood = mood,
+                        modifier = Modifier
+                            .fillMaxWidth(PET_SCENE_WIDTH_FRACTION)
+                            .widthIn(max = PET_SCENE_MAX_WIDTH),
+                    )
                     Text(
                         text = weather.description,
                         style = MaterialTheme.typography.bodyMedium,
@@ -826,6 +833,8 @@ private fun CurrentWeatherContent(
 
 private const val HOURLY_STRIP_COUNT = 24
 private val WIDE_LAYOUT_MIN_WIDTH = 600.dp
+private const val PET_SCENE_WIDTH_FRACTION = 0.8f
+private val PET_SCENE_MAX_WIDTH = 280.dp
 
 @Composable
 private fun HourlyStrip(

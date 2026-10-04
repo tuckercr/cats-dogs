@@ -88,6 +88,8 @@
     <string name="settings_cache_cleared">Cache cleared</string>
     <string name="settings_section_about">ABOUT</string>
     <string name="settings_attribution">Weather data by OpenWeather</string>
+    <string name="settings_attribution_openmeteo">Forecast data by Open-Meteo.com</string>
+    <string name="settings_openmeteo_url">https://open-meteo.com</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/privacy-policy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
