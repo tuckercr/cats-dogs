@@ -41,6 +41,8 @@ WorkManager, and full CI/CD.
 
 On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
 
+![Phone in landscape with the pets beside today's details](./screenshots/landscape.png)
+
 ![Tablet layout with the pets beside today's details](./screenshots/tablet.png)
 
 ## Getting started
