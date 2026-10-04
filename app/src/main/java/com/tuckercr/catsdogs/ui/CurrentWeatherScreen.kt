@@ -26,11 +26,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
@@ -67,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -618,10 +619,16 @@ private fun CurrentWeatherContent(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = formatTemperature(weather.temperature, weather.units),
                     style = MaterialTheme.typography.displayMedium,
+                    // Baloo 2 reserves a lot of empty space above its digits; pull the number up
+                    // into it so it sits close under the city name.
+                    modifier = Modifier.layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val cut = TEMP_TOP_TRIM.roundToPx()
+                        layout(placeable.width, placeable.height - cut) { placeable.place(0, -cut) }
+                    },
                     fontWeight = FontWeight.Bold,
                     color = ink,
                 )
@@ -630,14 +637,6 @@ private fun CurrentWeatherContent(
                         R.string.label_temp_range,
                         formatTemperature(weather.tempMin, weather.units),
                         formatTemperature(weather.tempMax, weather.units),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ink,
-                )
-                Text(
-                    text = stringResource(R.string.label_feels_like) + " " + formatTemperature(
-                        weather.feelsLike,
-                        weather.units,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = ink,
@@ -669,12 +668,19 @@ private fun CurrentWeatherContent(
             HourlyStrip(slots = hourly)
         }
 
-        // Details card
+        // Today's details card
+        SectionHeader(R.string.section_today)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                MetricIconRow(
+                    icon = Icons.Default.Thermostat,
+                    label = stringResource(R.string.label_feels_like),
+                    value = formatTemperature(weather.feelsLike, weather.units),
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 MetricIconRow(
                     icon = Icons.Default.WaterDrop,
                     label = stringResource(R.string.label_humidity),
@@ -687,12 +693,6 @@ private fun CurrentWeatherContent(
                     value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
                         weather.windDeg,
                     ),
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                MetricIconRow(
-                    icon = Icons.Default.Compress,
-                    label = stringResource(R.string.label_pressure),
-                    value = stringResource(R.string.format_pressure_hpa, weather.pressureHpa),
                 )
                 weather.visibilityMeters?.let { visibilityMeters ->
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -739,6 +739,7 @@ private fun CurrentWeatherContent(
         }
 
         // Weather radar
+        SectionHeader(R.string.section_radar)
         RadarCard(location = location, utcOffsetSeconds = weather.utcOffsetSeconds)
 
         // Upcoming days section (excludes today)
@@ -1091,3 +1092,17 @@ private fun AddCitySheetPreview() {
         )
     }
 }
+
+@Composable
+private fun SectionHeader(
+    @androidx.annotation.StringRes text: Int,
+) {
+    Text(
+        text = stringResource(text),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+private val TEMP_TOP_TRIM = 14.dp

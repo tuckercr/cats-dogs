@@ -6,7 +6,6 @@
     <string name="label_feels_like">Feels like</string>
     <string name="label_humidity">Humidity</string>
     <string name="label_wind">Wind</string>
-    <string name="label_pressure">Pressure</string>
     <string name="label_visibility">Visibility</string>
     <string name="label_cloud_cover">Cloud cover</string>
     <string name="label_temp_range">%1$s / %2$s</string>
@@ -15,7 +14,6 @@
     <string name="format_percent">%d%%</string>
     <string name="format_wind_ms">%.1f m/s</string>
     <string name="format_wind_mph">%.1f mph</string>
-    <string name="format_pressure_hpa">%d hPa</string>
     <string name="format_visibility_km">%.1f km</string>
     <string name="format_visibility_m">%d m</string>
     <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
@@ -54,7 +52,9 @@
 
     <!-- Day detail / upcoming forecast -->
     <string name="section_hourly">HOURLY</string>
-    <string name="section_upcoming">UPCOMING</string>
+    <string name="section_upcoming">REST OF WEEK</string>
+    <string name="section_today">TODAY</string>
+    <string name="section_radar">RADAR</string>
     <string name="detail_no_hourly_data">Hourly data not available for this day.</string>
     <string name="detail_time_label">TIME</string>
     <string name="detail_temp_label">TEMP</string>
