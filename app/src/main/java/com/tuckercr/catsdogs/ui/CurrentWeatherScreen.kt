@@ -6,10 +6,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -572,214 +575,243 @@ private fun CurrentWeatherContent(
         walkAdviceFor(currentTempC, forecastDays.flatMap { it.hourlySlots })
     }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (todayForecast != null) {
-                        Modifier.clickable { selectedDay = todayForecast }
-                    } else {
-                        Modifier
-                    },
-                ),
-            colors = CardDefaults.cardColors(containerColor = mood.skyColor),
-        ) {
-            Column(
+    // Landscape phones and tablets put the hero beside today's details instead of stacking
+    // everything in one stretched column.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val wide = maxWidth >= WIDE_LAYOUT_MIN_WIDTH
+        val heroSection: @Composable () -> Unit = {
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .then(
+                        if (todayForecast != null) {
+                            Modifier.clickable { selectedDay = todayForecast }
+                        } else {
+                            Modifier
+                        },
+                    ),
+                colors = CardDefaults.cardColors(containerColor = mood.skyColor),
             ) {
-                PetScene(mood = mood)
-                Text(
-                    text = weather.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ink,
-                )
-                if (location != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = ink,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    PetScene(mood = mood)
+                    Text(
+                        text = weather.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ink,
+                    )
+                    if (location != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = ink,
+                            )
+                            Text(
+                                text = weather.cityName,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = ink,
+                            )
+                        }
+                    }
+                    Text(
+                        text = formatTemperature(weather.temperature, weather.units),
+                        style = MaterialTheme.typography.displayMedium,
+                        // Baloo 2 reserves a lot of empty space above its digits; pull the number up
+                        // into it so it sits close under the city name.
+                        modifier = Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val cut = TEMP_TOP_TRIM.roundToPx()
+                            layout(placeable.width, placeable.height - cut) { placeable.place(0, -cut) }
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = ink,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.label_temp_range,
+                            formatTemperature(weather.tempMin, weather.units),
+                            formatTemperature(weather.tempMax, weather.units),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ink,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = petCaption(mood),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ink,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+        val walkSection: @Composable () -> Unit = {
+            walkAdvice?.let { WalkCard(advice = it) }
+        }
+        val detailsSection: @Composable () -> Unit = {
+            // Today's details card
+            SectionHeader(R.string.section_today)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    MetricIconRow(
+                        icon = Icons.Default.Thermostat,
+                        label = stringResource(R.string.label_feels_like),
+                        value = formatTemperature(weather.feelsLike, weather.units),
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WaterDrop,
+                        label = stringResource(R.string.label_humidity),
+                        value = stringResource(R.string.format_percent, weather.humidityPercent),
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.Air,
+                        label = stringResource(R.string.label_wind),
+                        value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
+                            weather.windDeg,
+                        ),
+                    )
+                    weather.visibilityMeters?.let { visibilityMeters ->
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        MetricIconRow(
+                            icon = Icons.Default.Visibility,
+                            label = stringResource(R.string.label_visibility),
+                            value = formatVisibility(visibilityMeters),
                         )
-                        Text(
-                            text = weather.cityName,
-                            style = MaterialTheme.typography.titleLarge,
-                            color = ink,
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    MetricIconRow(
+                        icon = Icons.Default.WbCloudy,
+                        label = stringResource(R.string.label_cloud_cover),
+                        value = stringResource(R.string.format_percent, weather.cloudPercent),
+                    )
+                    // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
+                    val isNight = weather.iconCode.endsWith("n")
+                    forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.takeUnless { isNight }?.let { uv ->
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        MetricIconRow(
+                            icon = Icons.Default.LightMode,
+                            label = stringResource(R.string.label_uv_index),
+                            value = uvLabel(uv),
+                            iconTint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    weather.sunriseEpoch?.let { epoch ->
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        MetricIconRow(
+                            icon = Icons.Default.WbSunny,
+                            label = stringResource(R.string.label_sunrise),
+                            value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                            iconTint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    weather.sunsetEpoch?.let { epoch ->
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        MetricIconRow(
+                            icon = Icons.Default.WbSunny,
+                            label = stringResource(R.string.label_sunset),
+                            value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                            iconTint = MaterialTheme.colorScheme.secondary,
                         )
                     }
                 }
-                Text(
-                    text = formatTemperature(weather.temperature, weather.units),
-                    style = MaterialTheme.typography.displayMedium,
-                    // Baloo 2 reserves a lot of empty space above its digits; pull the number up
-                    // into it so it sits close under the city name.
-                    modifier = Modifier.layout { measurable, constraints ->
-                        val placeable = measurable.measure(constraints)
-                        val cut = TEMP_TOP_TRIM.roundToPx()
-                        layout(placeable.width, placeable.height - cut) { placeable.place(0, -cut) }
-                    },
-                    fontWeight = FontWeight.Bold,
-                    color = ink,
-                )
-                Text(
-                    text = stringResource(
-                        R.string.label_temp_range,
-                        formatTemperature(weather.tempMin, weather.units),
-                        formatTemperature(weather.tempMax, weather.units),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ink,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    text = petCaption(mood),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = ink,
-                    textAlign = TextAlign.Center,
-                )
             }
         }
-
-        walkAdvice?.let { WalkCard(advice = it) }
-
-        // Hourly strip (next 24h) — the OWM /forecast endpoint returns only forward-looking
-        // 3-hour slots, so flattening them in order already starts at the upcoming hour.
-        val hourly = remember(forecastDays) {
-            forecastDays.flatMap { it.hourlySlots }.take(HOURLY_STRIP_COUNT)
-        }
-        if (hourly.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.section_hourly),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            HourlyStrip(slots = hourly)
-        }
-
-        // Today's details card
-        SectionHeader(R.string.section_today)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                MetricIconRow(
-                    icon = Icons.Default.Thermostat,
-                    label = stringResource(R.string.label_feels_like),
-                    value = formatTemperature(weather.feelsLike, weather.units),
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                MetricIconRow(
-                    icon = Icons.Default.WaterDrop,
-                    label = stringResource(R.string.label_humidity),
-                    value = stringResource(R.string.format_percent, weather.humidityPercent),
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                MetricIconRow(
-                    icon = Icons.Default.Air,
-                    label = stringResource(R.string.label_wind),
-                    value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
-                        weather.windDeg,
-                    ),
-                )
-                weather.visibilityMeters?.let { visibilityMeters ->
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.Visibility,
-                        label = stringResource(R.string.label_visibility),
-                        value = formatVisibility(visibilityMeters),
-                    )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (wide) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        heroSection()
+                        walkSection()
+                    }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        detailsSection()
+                    }
                 }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                MetricIconRow(
-                    icon = Icons.Default.WbCloudy,
-                    label = stringResource(R.string.label_cloud_cover),
-                    value = stringResource(R.string.format_percent, weather.cloudPercent),
-                )
-                // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
-                val isNight = weather.iconCode.endsWith("n")
-                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.takeUnless { isNight }?.let { uv ->
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.LightMode,
-                        label = stringResource(R.string.label_uv_index),
-                        value = uvLabel(uv),
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                weather.sunriseEpoch?.let { epoch ->
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.WbSunny,
-                        label = stringResource(R.string.label_sunrise),
-                        value = formatEpochTime(epoch, weather.utcOffsetSeconds),
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                weather.sunsetEpoch?.let { epoch ->
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.WbSunny,
-                        label = stringResource(R.string.label_sunset),
-                        value = formatEpochTime(epoch, weather.utcOffsetSeconds),
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                    )
-                }
+            } else {
+                heroSection()
+                walkSection()
             }
-        }
+            // Hourly strip (next 24h) — the OWM /forecast endpoint returns only forward-looking
+            // 3-hour slots, so flattening them in order already starts at the upcoming hour.
+            val hourly = remember(forecastDays) {
+                forecastDays.flatMap { it.hourlySlots }.take(HOURLY_STRIP_COUNT)
+            }
+            if (hourly.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.section_hourly),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                HourlyStrip(slots = hourly)
+            }
 
-        // Weather radar
-        SectionHeader(R.string.section_radar)
-        RadarCard(location = location, utcOffsetSeconds = weather.utcOffsetSeconds)
+            if (!wide) detailsSection()
+            // Weather radar
+            SectionHeader(R.string.section_radar)
+            RadarCard(location = location, utcOffsetSeconds = weather.utcOffsetSeconds)
 
-        // Upcoming days section (excludes today)
-        if (upcomingDays.isNotEmpty() ||
-            forecastState is LoadingState.Loading ||
-            forecastState is LoadingState.Error
-        ) {
-            Text(
-                text = stringResource(R.string.section_upcoming),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            when {
-                upcomingDays.isNotEmpty() -> upcomingDays.forEach { day ->
-                    UpcomingDayRow(day = day, onClick = { selectedDay = day })
-                }
+            // Upcoming days section (excludes today)
+            if (upcomingDays.isNotEmpty() ||
+                forecastState is LoadingState.Loading ||
+                forecastState is LoadingState.Error
+            ) {
+                Text(
+                    text = stringResource(R.string.section_upcoming),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                when {
+                    // Wide screens show the days in two columns rather than stretched rows.
+                    upcomingDays.isNotEmpty() -> upcomingDays.chunked(if (wide) 2 else 1).forEach { row ->
+                        Row(
+                            modifier = Modifier.height(IntrinsicSize.Min),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        ) {
+                            row.forEach { day ->
+                                UpcomingDayRow(day = day, onClick = { selectedDay = day }, modifier = Modifier.weight(1f).fillMaxHeight())
+                            }
+                            if (row.size < 2 && wide) Spacer(modifier = Modifier.weight(1f).fillMaxHeight())
+                        }
+                    }
 
-                forecastState is LoadingState.Loading -> Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                    forecastState is LoadingState.Loading -> Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
 
-                forecastState is LoadingState.Error -> Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = weatherErrorMessage(forecastState.errorKey),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    if (forecastState.canRetry) {
-                        TextButton(onClick = onForecastRetry) {
-                            Text(stringResource(R.string.action_retry))
+                    forecastState is LoadingState.Error -> Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = weatherErrorMessage(forecastState.errorKey),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        if (forecastState.canRetry) {
+                            TextButton(onClick = onForecastRetry) {
+                                Text(stringResource(R.string.action_retry))
+                            }
                         }
                     }
                 }
@@ -793,6 +825,7 @@ private fun CurrentWeatherContent(
 }
 
 private const val HOURLY_STRIP_COUNT = 24
+private val WIDE_LAYOUT_MIN_WIDTH = 600.dp
 
 @Composable
 private fun HourlyStrip(
@@ -948,40 +981,43 @@ private fun UpcomingDayRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 4.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        WeatherIcon(iconCode = day.iconCode, contentDescription = day.description, sizeDp = 36)
-        Column(modifier = Modifier.weight(1f)) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 4.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            WeatherIcon(iconCode = day.iconCode, contentDescription = day.description, sizeDp = 36)
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                Text(
+                    text = day.dateLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = day.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                PrecipChance(percent = day.precipitationChance)
+            }
             Text(
-                text = day.dateLabel,
+                text = formatTemperature(day.tempMax, day.units),
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = day.description,
-                style = MaterialTheme.typography.bodySmall,
+                text = formatTemperature(day.tempMin, day.units),
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            PrecipChance(percent = day.precipitationChance)
         }
-        Text(
-            text = formatTemperature(day.tempMax, day.units),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = formatTemperature(day.tempMin, day.units),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
     }
-    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable
