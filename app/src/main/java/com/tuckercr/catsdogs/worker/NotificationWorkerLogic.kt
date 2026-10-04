@@ -62,7 +62,7 @@ internal class NotificationWorkerLogic(
         ).getOrNull()
         // /forecast only returns upcoming 3-hour slots, so once today's last slot has passed the
         // first day is tomorrow. Only an entry that is actually today may supply the high/low.
-        val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel(weather.utcOffsetSeconds) }
+        val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel(weather.offsetSeconds) }
 
         if (!hasNotificationPermission()) return Result.success()
 

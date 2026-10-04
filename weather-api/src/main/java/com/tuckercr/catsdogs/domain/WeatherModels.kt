@@ -24,9 +24,24 @@ data class CurrentWeather(
     val units: WeatherUnits,
     val sunriseEpoch: Long? = null,
     val sunsetEpoch: Long? = null,
-    /** The location's offset from UTC, in seconds, for rendering its local time. */
-    val utcOffsetSeconds: Int = 0,
-)
+    /**
+     * The location's offset from UTC, in seconds; null in data cached before it was recorded.
+     * Read [offsetSeconds] instead, which falls back sensibly.
+     */
+    val utcOffsetSeconds: Int? = null,
+) {
+    /**
+     * Offset for rendering the location's local time. Unknown offsets use the device's own zone,
+     * which is right for "My Location" and closer than UTC for most saved cities.
+     */
+    val offsetSeconds: Int
+        get() = utcOffsetSeconds
+            ?: java.time.ZoneId
+                .systemDefault()
+                .rules
+                .getOffset(java.time.Instant.now())
+                .totalSeconds
+}
 
 /** A single 3-hour forecast slot used in the day-detail hourly breakdown. */
 @Serializable

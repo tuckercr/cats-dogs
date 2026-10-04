@@ -70,7 +70,7 @@ class WeatherRepository @Inject constructor(
     ): Result<List<DayForecast>> {
         // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever we have coordinates.
         if (latitude != null && longitude != null) {
-            return openMeteo.fetch(units, latitude, longitude)
+            return openMeteo.fetch(units, latitude, longitude).mapApiFailure()
         }
         val key = apiKey.trim()
         if (key.isEmpty()) {
