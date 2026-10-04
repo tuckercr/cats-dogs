@@ -12,13 +12,10 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Crashlytics: keep file names and line numbers so deobfuscated release stack traces point at the
+# right line, and keep custom exception class names readable in crash reports.
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception
 # Room (used internally by WorkManager) creates its generated *_Impl database classes by
 # reflection through the no-arg constructor. Without this rule R8 strips that constructor and the
 # app crashes at startup with NoSuchMethodException: WorkDatabase_Impl.<init>.

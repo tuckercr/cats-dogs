@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 data class OpenMeteoResponse(
     // The location's offset from UTC, in seconds (timezone=auto resolves it from the coordinates).
     @SerialName("utc_offset_seconds") val utcOffsetSeconds: Int = 0,
+    // IANA zone name (e.g. "Europe/London"), so DST changes inside the forecast window are honoured.
+    @SerialName("timezone") val timezone: String? = null,
     @SerialName("hourly") val hourly: OpenMeteoHourlyDto = OpenMeteoHourlyDto(),
 )
 

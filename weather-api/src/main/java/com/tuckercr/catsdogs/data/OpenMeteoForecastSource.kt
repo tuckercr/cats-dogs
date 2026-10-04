@@ -9,6 +9,8 @@ import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,7 +71,14 @@ class OpenMeteoForecastSource @Inject constructor(
             nowEpochSeconds: Long,
         ): List<DayForecast> {
             val h = response.hourly
-            val currentHourStart = nowEpochSeconds - nowEpochSeconds % 3600
+            val zone = response.timezone
+                ?.let { runCatching { ZoneId.of(it) }.getOrNull() }
+                ?: ZoneOffset.ofTotalSeconds(response.utcOffsetSeconds)
+            // Slots start on local hour boundaries, which aren't UTC hour boundaries in half-hour
+            // zones (India +5:30, Adelaide +9:30, Nepal +5:45), so floor "now" in local time.
+            val offset = zone.rules.getOffset(Instant.ofEpochSecond(nowEpochSeconds)).totalSeconds
+            val localNow = nowEpochSeconds + offset
+            val currentHourStart = localNow - Math.floorMod(localNow, 3600L) - offset
             val slots = h.time.indices.mapNotNull { i ->
                 val epoch = h.time[i]
                 val temp = h.temperature.getOrNull(i) ?: return@mapNotNull null
@@ -88,11 +97,11 @@ class OpenMeteoForecastSource @Inject constructor(
                     humidity = h.relativeHumidity.getOrNull(i) ?: 0,
                     pressure = h.seaLevelPressure.getOrNull(i)?.toInt() ?: 0,
                     pop = (h.precipitationProbability.getOrNull(i) ?: 0) / 100.0,
-                    uvIndex = h.uvIndex.getOrNull(i) ?: 0.0,
+                    uvIndex = h.uvIndex.getOrNull(i),
                     pavementTemperature = pavementIn(units, temp, h.shortwaveRadiation.getOrNull(i), isDay),
                 )
             }
-            return ForecastAggregator.aggregate(slots, ZoneOffset.ofTotalSeconds(response.utcOffsetSeconds), units)
+            return ForecastAggregator.aggregate(slots, zone, units)
         }
 
         private fun pavementIn(
@@ -100,10 +109,6 @@ class OpenMeteoForecastSource @Inject constructor(
             air: Double,
             radiation: Double?,
             isDay: Boolean,
-        ): Double {
-            val airC = if (units == WeatherUnits.IMPERIAL) (air - 32.0) * 5.0 / 9.0 else air
-            val pavementC = PavementHeat.estimateC(airC, radiation, isDay)
-            return if (units == WeatherUnits.IMPERIAL) pavementC * 9.0 / 5.0 + 32.0 else pavementC
-        }
+        ): Double = units.fromCelsius(PavementHeat.estimateC(units.toCelsius(air), radiation, isDay))
     }
 }
