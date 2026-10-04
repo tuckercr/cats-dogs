@@ -35,9 +35,15 @@ WorkManager, and full CI/CD.
 
 ## Screenshots
 
-| Current & hourly | Animated radar | Multiple cities | Settings & units |
+| Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
 |---|---|---|---|
-| ![Current conditions with the hourly strip and rain chance](./screenshots/current.png) | ![Animated RainViewer radar and upcoming days](./screenshots/forecast.png) | ![Swipeable multi-city tabs](./screenshots/cities.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| ![The cat and dog react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+
+On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
+
+![Phone in landscape with the pets beside today's details](./screenshots/landscape.png)
+
+![Tablet layout with the pets beside today's details](./screenshots/tablet.png)
 
 ## Getting started
 

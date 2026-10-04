@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,10 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -23,9 +26,11 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.DayForecast
@@ -39,13 +44,17 @@ fun DayDetailBottomSheet(
     day: DayForecast,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState()
+    // Open fully: a half-height sheet leaves almost nothing visible in landscape.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    // In landscape there's little height, so the hours run sideways across a full-width sheet.
+    val compactHeight = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        sheetMaxWidth = if (compactHeight) Dp.Unspecified else BottomSheetDefaults.SheetMaxWidth,
     ) {
-        DayDetailContent(day = day)
+        DayDetailContent(day = day, horizontalHours = compactHeight)
     }
 }
 
@@ -53,6 +62,7 @@ fun DayDetailBottomSheet(
 private fun DayDetailContent(
     day: DayForecast,
     modifier: Modifier = Modifier,
+    horizontalHours: Boolean = false,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         // Header
@@ -106,6 +116,15 @@ private fun DayDetailContent(
                     .padding(horizontal = 20.dp, vertical = 16.dp)
                     .fillMaxWidth(),
             )
+        } else if (horizontalHours) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) {
+                items(day.hourlySlots) { slot -> HourlySlotColumn(slot = slot) }
+            }
         } else {
             // Column header
             Row(
@@ -154,6 +173,46 @@ private fun DayDetailContent(
                     )
                 }
             }
+        }
+    }
+}
+
+/** One hour as a vertical cell, for the sideways landscape layout. */
+@Composable
+private fun HourlySlotColumn(slot: HourlySlot) {
+    Column(
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(text = slot.timeLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28)
+        Text(
+            text = formatHourlyTemp(slot.temperature, slot.units),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Icon(
+                imageVector = Icons.Default.Air,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
+            )
+            Text(
+                text = formatHourlyWind(slot.windSpeed, slot.units),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Icon(
+                imageVector = Icons.Default.WaterDrop,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(14.dp),
+            )
+            Text(text = stringResource(R.string.format_percent, slot.humidity), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -306,3 +365,5 @@ private fun DayDetailContentPreview() {
         )
     }
 }
+
+private const val COMPACT_HEIGHT_DP = 480
