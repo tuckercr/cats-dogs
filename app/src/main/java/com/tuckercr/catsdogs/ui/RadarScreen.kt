@@ -63,6 +63,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneOffset
@@ -146,7 +149,7 @@ private fun RadarView(
     // Base OpenStreetMap layer, stitched once per location.
     var baseMap by remember(tileInfo) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(tileInfo) {
-        baseMap = stitchTiles(context, tileInfo) { x, y ->
+        baseMap = stitchTilesWithRetry(context, tileInfo) { x, y ->
             "https://tile.openstreetmap.org/$ZOOM/$x/$y.png"
         }
     }
@@ -164,21 +167,26 @@ private fun RadarView(
     var frameIndex by remember(frames) { mutableIntStateOf(nowIndex) }
     var playing by remember(frames) { mutableStateOf(true) }
 
-    // Prefetch every frame's overlay once, keyed on the tile/timeline rather than frameIndex, so
+    // Prefetch every frame's overlay, keyed on the tile/timeline rather than frameIndex, so
     // autoplay advancing the frame never cancels an in-flight stitch (which would otherwise leave
-    // the radar layer blank during the first loop). Frames closest to "now" load first so the
-    // initial view paints quickly.
+    // the radar layer blank during the first loop). Frames closest to "now" start first so the
+    // initial view paints quickly, a few run in parallel, and each retries if tiles fail.
     LaunchedEffect(tileInfo, timeline) {
         val tl = timeline ?: return@LaunchedEffect
-        val loadOrder = frames.indices.sortedBy { kotlin.math.abs(it - nowIndex) }
-        for (i in loadOrder) {
-            val frame = frames[i]
-            if (!overlays.containsKey(frame.path)) {
-                stitchTiles(context, tileInfo) { x, y ->
-                    tl.tileUrl(frame, ZOOM, x, y)
-                }?.let { overlays[frame.path] = it }
+        val permits = Semaphore(PARALLEL_FRAME_LOADS)
+        frames.indices
+            .sortedBy { kotlin.math.abs(it - nowIndex) }
+            .map { frames[it] }
+            .filterNot { overlays.containsKey(it.path) }
+            .forEach { frame ->
+                launch {
+                    permits.withPermit {
+                        stitchTilesWithRetry(context, tileInfo) { x, y ->
+                            tl.tileUrl(frame, ZOOM, x, y)
+                        }?.let { overlays[frame.path] = it }
+                    }
+                }
             }
-        }
     }
 
     LaunchedEffect(playing, frames, frameIntervalMs) {
@@ -391,9 +399,28 @@ private fun frameTimeLabel(
     }
 }
 
+/**
+ * Stitches the 3x3 tile grid, retrying with backoff while any tile fails so a network blip
+ * doesn't leave permanent holes. Coil caches the tiles that did load, so a retry only refetches
+ * the missing ones. After the last attempt a partial image beats none.
+ */
+private suspend fun stitchTilesWithRetry(
+    context: android.content.Context,
+    tileInfo: TileInfo,
+    urlBuilder: (x: Int, y: Int) -> String,
+): ImageBitmap? {
+    repeat(STITCH_ATTEMPTS - 1) { attempt ->
+        stitchTiles(context, tileInfo, requireAll = true, urlBuilder)?.let { return it }
+        delay(STITCH_RETRY_BASE_MS shl attempt)
+    }
+    return stitchTiles(context, tileInfo, requireAll = false, urlBuilder)
+}
+
+/** Returns null when every tile failed, or when [requireAll] and any tile failed. */
 private suspend fun stitchTiles(
     context: android.content.Context,
     tileInfo: TileInfo,
+    requireAll: Boolean,
     urlBuilder: (x: Int, y: Int) -> String,
 ): ImageBitmap? =
     withContext(Dispatchers.IO) {
@@ -415,6 +442,7 @@ private suspend fun stitchTiles(
 
         val results = jobs.awaitAll()
         if (results.all { it.third == null }) return@withContext null
+        if (requireAll && results.any { it.third == null }) return@withContext null
 
         results.forEach { (col, row, bmp) ->
             if (bmp != null) {
@@ -470,3 +498,7 @@ data class TileInfo(
         }
     }
 }
+
+private const val PARALLEL_FRAME_LOADS = 4
+private const val STITCH_ATTEMPTS = 4
+private const val STITCH_RETRY_BASE_MS = 1_000L

@@ -26,10 +26,14 @@ import java.time.ZoneOffset
 class WeatherRepositoryTest {
 
     /** Open-Meteo source backed by a fake HTTP layer that always answers with [body]. */
-    private fun openMeteo(body: String = """{"hourly":{}}"""): OpenMeteoForecastSource {
+    private fun openMeteo(
+        body: String = """{"hourly":{}}""",
+        failure: IOException? = null,
+    ): OpenMeteoForecastSource {
         val client = OkHttpClient
             .Builder()
             .addInterceptor { chain ->
+                if (failure != null) throw failure
                 okhttp3.Response
                     .Builder()
                     .request(chain.request())
@@ -243,6 +247,18 @@ class WeatherRepositoryTest {
             assertEquals(21.0, slot.temperature, 0.0001)
             assertEquals(6.5, slot.uvIndex ?: -1.0, 0.0001)
             assertEquals(10, slot.precipitationChance)
+        }
+
+    @Test
+    fun `Open-Meteo network failures map to offline`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi()
+            val noNetwork = openMeteo(failure = java.net.UnknownHostException("Unable to resolve host"))
+            val repository = WeatherRepository(api, noNetwork, "test-key", ZoneOffset.UTC, Json)
+
+            val result = repository.fetchForecast(WeatherUnits.METRIC, latitude = 39.7, longitude = -105.0)
+
+            assertEquals("offline", result.exceptionOrNull()?.message)
         }
 
     @Test

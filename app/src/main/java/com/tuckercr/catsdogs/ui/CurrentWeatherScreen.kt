@@ -557,10 +557,10 @@ private fun CurrentWeatherContent(
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
-    val todayLabel = remember(weather.utcOffsetSeconds) {
+    val todayLabel = remember(weather.offsetSeconds) {
         // "Today" in the city's local date, so it matches the city-local forecast day labels.
         java.time.OffsetDateTime
-            .now(java.time.ZoneOffset.ofTotalSeconds(weather.utcOffsetSeconds))
+            .now(java.time.ZoneOffset.ofTotalSeconds(weather.offsetSeconds))
             .format(
                 java.time.format.DateTimeFormatter
                     .ofPattern("EEE, MMM d"),
@@ -722,7 +722,7 @@ private fun CurrentWeatherContent(
                         MetricIconRow(
                             icon = Icons.Default.WbSunny,
                             label = stringResource(R.string.label_sunrise),
-                            value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                            value = formatEpochTime(epoch, weather.offsetSeconds),
                             iconTint = MaterialTheme.colorScheme.secondary,
                         )
                     }
@@ -731,7 +731,7 @@ private fun CurrentWeatherContent(
                         MetricIconRow(
                             icon = Icons.Default.WbSunny,
                             label = stringResource(R.string.label_sunset),
-                            value = formatEpochTime(epoch, weather.utcOffsetSeconds),
+                            value = formatEpochTime(epoch, weather.offsetSeconds),
                             iconTint = MaterialTheme.colorScheme.secondary,
                         )
                     }
@@ -771,7 +771,7 @@ private fun CurrentWeatherContent(
             if (!wide) detailsSection()
             // Weather radar
             SectionHeader(R.string.section_radar)
-            RadarCard(location = location, utcOffsetSeconds = weather.utcOffsetSeconds)
+            RadarCard(location = location, utcOffsetSeconds = weather.offsetSeconds)
 
             // Upcoming days section (excludes today)
             if (upcomingDays.isNotEmpty() ||
