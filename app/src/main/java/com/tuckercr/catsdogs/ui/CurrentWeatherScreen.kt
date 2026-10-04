@@ -97,7 +97,6 @@ import com.tuckercr.catsdogs.ui.pets.inkColor
 import com.tuckercr.catsdogs.ui.pets.petCaption
 import com.tuckercr.catsdogs.ui.pets.petMoodFor
 import com.tuckercr.catsdogs.ui.pets.skyColor
-import com.tuckercr.catsdogs.ui.pets.toCelsius
 import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import kotlin.math.roundToInt
@@ -565,7 +564,7 @@ private fun CurrentWeatherContent(
     val todayForecast = forecastDays.firstOrNull()?.takeIf { it.dateLabel == todayLabel }
     val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
-    val currentTempC = toCelsius(weather.temperature, weather.units)
+    val currentTempC = weather.units.toCelsius(weather.temperature)
     val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC)
     val ink = mood.inkColor
     val walkAdvice = remember(forecastDays, currentTempC) {
@@ -653,7 +652,7 @@ private fun CurrentWeatherContent(
             }
         }
 
-        WalkCard(advice = walkAdvice)
+        walkAdvice?.let { WalkCard(advice = it) }
 
         // Hourly strip (next 24h) — the OWM /forecast endpoint returns only forward-looking
         // 3-hour slots, so flattening them in order already starts at the upcoming hour.
@@ -709,12 +708,12 @@ private fun CurrentWeatherContent(
                     label = stringResource(R.string.label_cloud_cover),
                     value = stringResource(R.string.format_percent, weather.cloudPercent),
                 )
-                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.let { now ->
+                forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.let { uv ->
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     MetricIconRow(
                         icon = Icons.Default.LightMode,
                         label = stringResource(R.string.label_uv_index),
-                        value = uvLabel(now.uvIndex),
+                        value = uvLabel(uv),
                         iconTint = MaterialTheme.colorScheme.secondary,
                     )
                 }

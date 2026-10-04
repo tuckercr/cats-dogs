@@ -33,14 +33,14 @@ class WalkAdvisorTest {
 
     @Test
     fun `too cold at or below freezing`() {
-        assertEquals(WalkRating.TOO_COLD, walkAdviceFor(-3.0, listOf(slot("3 PM", -3.0, 0))).rating)
+        assertEquals(WalkRating.TOO_COLD, walkAdviceFor(-3.0, listOf(slot("3 PM", -3.0, 0)))?.rating)
     }
 
     @Test
     fun `imperial slots are compared in celsius`() {
         // 64F is ~18C: comfortable.
         val advice = walkAdviceFor(18.0, listOf(slot("3 PM", 64.0, 0, WeatherUnits.IMPERIAL)))
-        assertEquals(WalkRating.GREAT, advice.rating)
+        assertEquals(WalkRating.GREAT, advice?.rating)
     }
 
     @Test
@@ -50,12 +50,15 @@ class WalkAdvisorTest {
     }
 
     @Test
-    fun `hour labels parse to 24-hour clock`() {
-        assertEquals(0, hourOf("12 AM"))
-        assertEquals(12, hourOf("12 PM"))
-        assertEquals(15, hourOf("3 PM"))
-        assertEquals(7, hourOf("7 am"))
-        assertEquals(null, hourOf("noon"))
+    fun `no slots means no advice`() {
+        assertEquals(null, walkAdviceFor(18.0, emptyList()))
+    }
+
+    @Test
+    fun `night is judged by local hour, not the label text`() {
+        // A label in a locale the old parser couldn't read; the hour still rules it out.
+        val advice = walkAdviceFor(18.0, listOf(slot("2 午前", 18.0, 0, hour = 2), slot("8 午前", 16.0, 0, hour = 8)))
+        assertEquals("8 午前", advice?.bestTimeLabel)
     }
 
     @Test
@@ -71,7 +74,7 @@ class WalkAdvisorTest {
     fun `imperial pavement is compared in celsius`() {
         // 120F is ~49C: under the 52C paw limit, so a warm afternoon is still walkable.
         val advice = walkAdviceFor(26.0, listOf(slot("2 PM", 79.0, 0, WeatherUnits.IMPERIAL, pavement = 120.0)))
-        assertEquals(WalkRating.GREAT, advice.rating)
+        assertEquals(WalkRating.GREAT, advice?.rating)
     }
 
     private fun slot(
@@ -80,6 +83,7 @@ class WalkAdvisorTest {
         rainChance: Int,
         units: WeatherUnits = WeatherUnits.METRIC,
         pavement: Double? = null,
+        hour: Int? = hourOf(label),
     ) = HourlySlot(
         timeLabel = label,
         iconCode = "01d",
@@ -93,5 +97,13 @@ class WalkAdvisorTest {
         units = units,
         precipitationChance = rainChance,
         pavementTemperature = pavement,
+        localHour = hour,
     )
+
+    /** Test-only: reads the hour from a "3 PM"-style label. */
+    private fun hourOf(label: String): Int? {
+        val m = Regex("""^(\d{1,2})\s*([AP])M""").find(label) ?: return null
+        val h = m.groupValues[1].toInt() % 12
+        return if (m.groupValues[2] == "P") h + 12 else h
+    }
 }

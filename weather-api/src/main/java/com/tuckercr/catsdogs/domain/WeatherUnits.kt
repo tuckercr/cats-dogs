@@ -15,6 +15,20 @@ enum class WeatherUnits {
             IMPERIAL -> UNITS_IMPERIAL
         }
 
+    /** Converts a temperature in these units to Celsius. */
+    fun toCelsius(value: Double): Double =
+        when (this) {
+            METRIC -> value
+            IMPERIAL -> (value - 32.0) * 5.0 / 9.0
+        }
+
+    /** Converts a Celsius temperature to these units. */
+    fun fromCelsius(celsius: Double): Double =
+        when (this) {
+            METRIC -> celsius
+            IMPERIAL -> celsius * 9.0 / 5.0 + 32.0
+        }
+
     companion object {
         /**
          * Fallback when regional temperature preference is unavailable (pre-API 34) or not

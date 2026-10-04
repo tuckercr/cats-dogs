@@ -6,6 +6,15 @@ import java.util.Locale
 
 class WeatherUnitsTest {
 
+    @Test
+    fun `converts to and from celsius`() {
+        assertEquals(0.0, WeatherUnits.IMPERIAL.toCelsius(32.0), 0.001)
+        assertEquals(30.0, WeatherUnits.IMPERIAL.toCelsius(86.0), 0.001)
+        assertEquals(21.5, WeatherUnits.METRIC.toCelsius(21.5), 0.001)
+        assertEquals(212.0, WeatherUnits.IMPERIAL.fromCelsius(100.0), 0.001)
+        assertEquals(-4.0, WeatherUnits.METRIC.fromCelsius(-4.0), 0.001)
+    }
+
     @Suppress("DEPRECATION")
     @Test
     fun `US and territories use imperial`() {

@@ -13,13 +13,16 @@ class OpenMeteoForecastSourceTest {
     private fun response(
         hours: Int,
         offset: Int = 0,
+        zone: String? = null,
+        start: Long = dayStart,
         temp: Double = 20.0,
         radiation: Double = 0.0,
         isDay: Int = 1,
     ) = OpenMeteoResponse(
         utcOffsetSeconds = offset,
+        timezone = zone,
         hourly = OpenMeteoHourlyDto(
-            time = List(hours) { dayStart + it * 3600L },
+            time = List(hours) { start + it * 3600L },
             temperature = List(hours) { temp },
             weatherCode = List(hours) { 61 },
             isDay = List(hours) { isDay },
@@ -65,7 +68,7 @@ class OpenMeteoForecastSourceTest {
         val day = OpenMeteoForecastSource.toDayForecasts(response(6), WeatherUnits.METRIC, dayStart).single()
         assertEquals("Rain", day.conditionMain)
         assertEquals(40, day.precipitationChance)
-        assertEquals(5.0, day.uvIndexMax, 0.0001)
+        assertEquals(5.0, day.uvIndexMax ?: -1.0, 0.0001)
         assertEquals("10d", day.hourlySlots.first().iconCode)
     }
 
@@ -78,6 +81,50 @@ class OpenMeteoForecastSourceTest {
             .hourlySlots
             .single()
         assertEquals(136.4, slot.pavementTemperature ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun `keeps the current hour in a half-hour timezone`() {
+        // India (+5:30): slots start at xx:30 UTC. At 10:40 local (05:10 UTC) the 10:00 local slot
+        // (04:30 UTC) is the current hour and must stay.
+        val start = dayStart - 1800 // 23:30 UTC = 05:00 local
+        val now = dayStart + 5 * 3600 + 600
+        val first = OpenMeteoForecastSource
+            .toDayForecasts(response(24, offset = 19_800, zone = "Asia/Kolkata", start = start), WeatherUnits.METRIC, now)
+            .first()
+            .hourlySlots
+            .first()
+        assertEquals("10 AM", first.timeLabel)
+        assertEquals(10, first.localHour)
+    }
+
+    @Test
+    fun `labels follow a DST change inside the forecast window`() {
+        // London leaves BST at 01:00 UTC on 2026-10-25. Fetched before, with offset +3600, the
+        // 12:00 UTC slot after the change must read noon, not 1 PM.
+        val noonUtcAfter = 1_792_929_600L // 2026-10-25T12:00:00Z
+        val days = OpenMeteoForecastSource.toDayForecasts(
+            response(1, offset = 3600, zone = "Europe/London", start = noonUtcAfter),
+            WeatherUnits.METRIC,
+            noonUtcAfter,
+        )
+        assertEquals(
+            12,
+            days
+                .single()
+                .hourlySlots
+                .single()
+                .localHour,
+        )
+    }
+
+    @Test
+    fun `missing uv stays unknown rather than zero`() {
+        val r = response(2)
+        val noUv = r.copy(hourly = r.hourly.copy(uvIndex = emptyList()))
+        val day = OpenMeteoForecastSource.toDayForecasts(noUv, WeatherUnits.METRIC, dayStart).single()
+        assertEquals(null, day.hourlySlots.first().uvIndex)
+        assertEquals(null, day.uvIndexMax)
     }
 
     @Test

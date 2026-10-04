@@ -43,10 +43,12 @@ data class HourlySlot(
     val units: WeatherUnits,
     /** Probability of precipitation as a percentage, 0..100. */
     val precipitationChance: Int = 0,
-    /** UV index (0..11+); 0 when the source doesn't provide it. */
-    val uvIndex: Double = 0.0,
+    /** UV index (0..11+); null when the source doesn't provide it. */
+    val uvIndex: Double? = null,
     /** Estimated sun-baked pavement temperature in [units]; null when unknown. */
     val pavementTemperature: Double? = null,
+    /** Hour of day (0..23) in the location's own timezone; null in data cached before it existed. */
+    val localHour: Int? = null,
 )
 
 @Serializable
@@ -64,6 +66,6 @@ data class DayForecast(
     val hourlySlots: List<HourlySlot> = emptyList(),
     /** Highest probability of precipitation across the day's slots, as a percentage, 0..100. */
     val precipitationChance: Int = 0,
-    /** Peak UV index across the day's slots. */
-    val uvIndexMax: Double = 0.0,
+    /** Peak UV index across the day's slots; null when the source doesn't provide UV. */
+    val uvIndexMax: Double? = null,
 )

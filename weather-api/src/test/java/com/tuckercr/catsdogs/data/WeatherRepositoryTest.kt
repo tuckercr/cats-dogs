@@ -241,7 +241,7 @@ class WeatherRepositoryTest {
             val slot = forecast.single().hourlySlots.single()
             assertEquals("Clear", forecast.single().conditionMain)
             assertEquals(21.0, slot.temperature, 0.0001)
-            assertEquals(6.5, slot.uvIndex, 0.0001)
+            assertEquals(6.5, slot.uvIndex ?: -1.0, 0.0001)
             assertEquals(10, slot.precipitationChance)
         }
 

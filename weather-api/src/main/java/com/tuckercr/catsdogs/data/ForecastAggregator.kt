@@ -40,7 +40,7 @@ object ForecastAggregator {
         val humidity: Int = 0,
         val pressure: Int = 0,
         val pop: Double = 0.0,
-        val uvIndex: Double = 0.0,
+        val uvIndex: Double? = null,
         val pavementTemperature: Double? = null,
     )
 
@@ -85,6 +85,7 @@ object ForecastAggregator {
                         precipitationChance = (slot.pop * 100).roundToInt(),
                         uvIndex = slot.uvIndex,
                         pavementTemperature = slot.pavementTemperature,
+                        localHour = zdt.hour,
                     )
                 }
 
@@ -102,7 +103,7 @@ object ForecastAggregator {
                 units = units,
                 hourlySlots = hourlySlots,
                 precipitationChance = (dailyPop * 100).roundToInt(),
-                uvIndexMax = daySlots.maxOfOrNull { it.uvIndex } ?: 0.0,
+                uvIndexMax = daySlots.mapNotNull { it.uvIndex }.maxOrNull(),
             )
         }
     }

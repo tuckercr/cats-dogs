@@ -1,21 +1,10 @@
 package com.tuckercr.catsdogs.ui.pets
 
-import com.tuckercr.catsdogs.domain.WeatherUnits
-
 /** How the cat and dog react on the home screen, derived from the current conditions. */
 enum class PetMood { SUNNY, CLOUDY, RAIN, STORM, SNOW, HOT, COLD, NIGHT }
 
 internal const val HOT_THRESHOLD_C = 30.0
 internal const val COLD_THRESHOLD_C = 0.0
-
-internal fun toCelsius(
-    value: Double,
-    units: WeatherUnits,
-): Double =
-    when (units) {
-        WeatherUnits.METRIC -> value
-        WeatherUnits.IMPERIAL -> (value - 32.0) * 5.0 / 9.0
-    }
 
 /**
  * Picks the pet mood. Precipitation and storms win over temperature, temperature extremes win over
