@@ -90,6 +90,7 @@ import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.HourlySlot
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.CityListViewModel
@@ -163,6 +164,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         isRefreshing = isRefreshing,
         radarEnabled = radarEnabled,
         walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
+        petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
         onTabSelected = cityListViewModel::setActiveIndex,
         onOpenSettings = {
             weatherForecastViewModel.logSettingsOpened()
@@ -242,6 +244,7 @@ fun CurrentWeatherScreen(
     isRefreshing: Boolean = false,
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
+    petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
@@ -372,6 +375,7 @@ fun CurrentWeatherScreen(
                             location = locations.getOrNull(activeIndex),
                             radarEnabled = radarEnabled,
                             walkCardEnabled = walkCardEnabled,
+                            petWeatherThresholds = petWeatherThresholds,
                             onForecastRetry = onRetry,
                         )
                     }
@@ -565,6 +569,7 @@ private fun CurrentWeatherContent(
     location: SavedLocation? = null,
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
+    petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
@@ -581,10 +586,10 @@ private fun CurrentWeatherContent(
     val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
     val currentTempC = weather.units.toCelsius(weather.temperature)
-    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC)
+    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC, petWeatherThresholds)
     val ink = mood.inkColor
-    val walkAdvice = remember(forecastDays, currentTempC) {
-        walkAdviceFor(currentTempC, forecastDays.flatMap { it.hourlySlots })
+    val walkAdvice = remember(forecastDays, currentTempC, petWeatherThresholds) {
+        walkAdviceFor(currentTempC, forecastDays.flatMap { it.hourlySlots }, petWeatherThresholds)
     }
 
     // Landscape phones and tablets put the hero beside today's details instead of stacking

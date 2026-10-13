@@ -1,6 +1,7 @@
 package com.tuckercr.catsdogs.ui.pets
 
 import com.tuckercr.catsdogs.domain.HourlySlot
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 
 enum class WalkRating { GREAT, OKAY, POOR, PAWS_HOT, TOO_COLD }
 
@@ -15,25 +16,24 @@ data class WalkAdvice(
     val pavementNow: Double? = null,
 )
 
-private const val MAX_RAIN_CHANCE = 30
-private const val MIN_COMFORT_C = 3.0
-private const val MAX_COMFORT_C = 27.0
 private const val LOOKAHEAD_SLOTS = 24 // a day of hourly slots
 
-/** Asphalt this hot burns paws in under a minute (about 125 F). */
-internal const val PAWS_HOT_PAVEMENT_C = 52.0
-private const val FIRST_WALK_HOUR = 7
-private const val LAST_WALK_HOUR = 20
+// The walk thresholds (pavement heat, rain chance, comfort range, walking hours) are Remote Config
+// values; see PetWeatherThresholds. Defaults: pavement 52 C (about 125 F, burns paws in under a
+// minute), under 30% rain, 3..27 C, and 7 AM..8 PM.
 
-/** Nobody wants walk advice for 2 AM: only suggest slots between 7 AM and 8 PM. */
-private fun HourlySlot.isDaytime(): Boolean = localHour?.let { it in FIRST_WALK_HOUR..LAST_WALK_HOUR } ?: true
+/** Nobody wants walk advice for 2 AM: only suggest slots within the walking hours. */
+private fun HourlySlot.isDaytime(t: PetWeatherThresholds): Boolean = localHour?.let { it in t.walkHoursStart..t.walkHoursEnd } ?: true
 
 private fun HourlySlot.pavementC(): Double? = pavementTemperature?.let { units.toCelsius(it) }
 
-private fun HourlySlot.isWalkable(): Boolean {
+private fun HourlySlot.isWalkable(t: PetWeatherThresholds): Boolean {
     val c = units.toCelsius(temperature)
-    val pavementOk = (pavementC() ?: 0.0) < PAWS_HOT_PAVEMENT_C
-    return isDaytime() && pavementOk && precipitationChance < MAX_RAIN_CHANCE && c in MIN_COMFORT_C..MAX_COMFORT_C
+    val pavementOk = (pavementC() ?: 0.0) < t.hotPavementC
+    return isDaytime(t) &&
+        pavementOk &&
+        precipitationChance < t.maxRainChancePercent &&
+        c in t.comfortMinC..t.comfortMaxC
 }
 
 /**
@@ -44,16 +44,17 @@ private fun HourlySlot.isWalkable(): Boolean {
 fun walkAdviceFor(
     currentTempC: Double,
     upcoming: List<HourlySlot>,
+    thresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
 ): WalkAdvice? {
     val slots = upcoming.take(LOOKAHEAD_SLOTS)
     if (slots.isEmpty()) return null
-    val firstGood = slots.firstOrNull { it.isWalkable() }
+    val firstGood = slots.firstOrNull { it.isWalkable(thresholds) }
     val pavementNow = slots.first().pavementTemperature
-    val pavementHotNow = (slots.first().pavementC() ?: 0.0) >= PAWS_HOT_PAVEMENT_C
+    val pavementHotNow = (slots.first().pavementC() ?: 0.0) >= thresholds.hotPavementC
     val rating = when {
-        currentTempC >= HOT_THRESHOLD_C || pavementHotNow -> WalkRating.PAWS_HOT
-        currentTempC <= COLD_THRESHOLD_C -> WalkRating.TOO_COLD
-        slots.first().isWalkable() -> WalkRating.GREAT
+        currentTempC >= thresholds.petHotC || pavementHotNow -> WalkRating.PAWS_HOT
+        currentTempC <= thresholds.petColdC -> WalkRating.TOO_COLD
+        slots.first().isWalkable(thresholds) -> WalkRating.GREAT
         firstGood != null -> WalkRating.OKAY
         else -> WalkRating.POOR
     }

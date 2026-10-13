@@ -8,6 +8,7 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfigValue
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 import com.tuckercr.catsdogs.R
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,6 +84,25 @@ class RemoteConfigRepository @Inject constructor(
             ?: DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES
 
     /**
+     * Pet-mood and walk-advice thresholds (Celsius, whatever the user's units). Each value is
+     * range-checked and each pair kept ordered by [PetWeatherThresholds.validated]; anything
+     * invalid falls back to [PetWeatherThresholds.DEFAULT].
+     */
+    fun petWeatherThresholds(): PetWeatherThresholds =
+        runCatching {
+            PetWeatherThresholds.validated(
+                hotPavementC = double(KEY_WALK_HOT_PAVEMENT_C),
+                maxRainChancePercent = wholeNumber(KEY_WALK_MAX_RAIN_CHANCE),
+                comfortMinC = double(KEY_WALK_COMFORT_MIN_C),
+                comfortMaxC = double(KEY_WALK_COMFORT_MAX_C),
+                walkHoursStart = wholeNumber(KEY_WALK_HOURS_START),
+                walkHoursEnd = wholeNumber(KEY_WALK_HOURS_END),
+                petHotC = double(KEY_PET_HOT_THRESHOLD_C),
+                petColdC = double(KEY_PET_COLD_THRESHOLD_C),
+            )
+        }.getOrDefault(PetWeatherThresholds.DEFAULT)
+
+    /**
      * Analytics kill switch. False drops every analytics event and turns Firebase Analytics
      * collection off on every install, without an app update.
      */
@@ -133,6 +153,11 @@ class RemoteConfigRepository @Inject constructor(
 
     private fun long(key: String): Long? = value(key)?.let { runCatching { it.asLong() }.getOrNull() }
 
+    private fun double(key: String): Double? = value(key)?.let { runCatching { it.asDouble() }.getOrNull() }
+
+    /** A NUMBER that must be a whole number ("7" or "7.0"); "7.5" or junk reads as missing. */
+    private fun wholeNumber(key: String): Int? = double(key)?.takeIf { it.isFinite() && it == Math.floor(it) }?.toInt()
+
     private fun boolean(key: String): Boolean? = value(key)?.let { runCatching { it.asBoolean() }.getOrNull() }
 
     companion object {
@@ -150,6 +175,15 @@ class RemoteConfigRepository @Inject constructor(
         const val KEY_FOREGROUND_REFRESH_MIN_MINUTES = "foreground_refresh_min_minutes"
         const val DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES = 0L
         private const val MAX_FOREGROUND_REFRESH_MIN_MINUTES = 1440L
+
+        const val KEY_WALK_HOT_PAVEMENT_C = "walk_hot_pavement_c"
+        const val KEY_WALK_MAX_RAIN_CHANCE = "walk_max_rain_chance"
+        const val KEY_WALK_COMFORT_MIN_C = "walk_comfort_min_c"
+        const val KEY_WALK_COMFORT_MAX_C = "walk_comfort_max_c"
+        const val KEY_WALK_HOURS_START = "walk_hours_start"
+        const val KEY_WALK_HOURS_END = "walk_hours_end"
+        const val KEY_PET_HOT_THRESHOLD_C = "pet_hot_threshold_c"
+        const val KEY_PET_COLD_THRESHOLD_C = "pet_cold_threshold_c"
 
         const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
         const val DEFAULT_ANALYTICS_ENABLED = true

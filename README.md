@@ -159,7 +159,19 @@ validated — a missing or bad value falls back to the default rather than crash
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `daily_weather_notifications_enabled` | boolean | `true` | Posts the daily 9 / 13 / 19 weather-summary notifications; false skips posting (the scheduled work still runs). Other notification types will get their own switches |
 | `foreground_refresh_min_minutes` | number | `0` | Skips the silent refresh on returning to the foreground if that city's weather (or forecast, tracked separately) was fetched within this many minutes in this session; outside 0–1440 falls back to 0, which always refreshes. Pull-to-refresh, retry and switching cities are never throttled |
+| `walk_hot_pavement_c` | number | `52` | Pavement °C at or above which the walk rating is *Paws hot*; valid 40–70 |
+| `walk_max_rain_chance` | number | `30` | An hour is walkable only below this rain chance (%); valid 0–100 |
+| `walk_comfort_min_c` | number | `3` | Coldest comfortable walking temperature (°C); valid -20–20, and below `walk_comfort_max_c` |
+| `walk_comfort_max_c` | number | `27` | Warmest comfortable walking temperature (°C); valid 15–40, and above `walk_comfort_min_c` |
+| `walk_hours_start` | number | `7` | First local hour a walk may be suggested (inclusive); valid 0–23, and before `walk_hours_end` |
+| `walk_hours_end` | number | `20` | Last local hour a walk may be suggested (inclusive); valid 0–23, and after `walk_hours_start` |
+| `pet_hot_threshold_c` | number | `30` | At or above this °C the pets look hot and the walk rating is *Paws hot*; valid 20–45, and above `pet_cold_threshold_c` |
+| `pet_cold_threshold_c` | number | `0` | At or below this °C the pets look cold and the walk rating is *Too cold*; valid -20–10, and below `pet_hot_threshold_c` |
 | `analytics_enabled` | boolean | `true` | Analytics kill switch — see [Gates](#gates) |
+
+The walk and pet-mood thresholds are always Celsius, whatever units the user picks. A value outside
+its valid range falls back to its default, and so does any pair that isn't strictly ordered (comfort
+min/max, walk hours start/end, pet cold/hot) — both values of the pair revert together.
 
 [`firebase/remoteconfig.template.json`](firebase/remoteconfig.template.json) is the source of truth
 for the console parameters.

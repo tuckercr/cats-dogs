@@ -2,6 +2,7 @@ package com.tuckercr.catsdogs.model
 
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import kotlinx.coroutines.CompletableDeferred
@@ -451,6 +452,7 @@ class WeatherForecastViewModelTest {
         setCachedCurrentWeather: suspend (String, String) -> Unit = { _, _ -> },
         setCachedForecast: suspend (String, String) -> Unit = { _, _ -> },
         isWalkCardEnabled: () -> Boolean = { true },
+        readPetWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
         foregroundRefreshMinMinutes: () -> Long = { 0L },
         nowMillis: () -> Long = { 0L },
     ) = WeatherForecastViewModel(
@@ -464,9 +466,18 @@ class WeatherForecastViewModelTest {
         setCachedForecast = setCachedForecast,
         json = kotlinx.serialization.json.Json,
         isWalkCardEnabled = isWalkCardEnabled,
+        readPetWeatherThresholds = readPetWeatherThresholds,
         foregroundRefreshMinMinutes = foregroundRefreshMinMinutes,
         nowMillis = nowMillis,
     )
+
+    @Test
+    fun `pet weather thresholds come from Remote Config`() {
+        val custom = PetWeatherThresholds.validated(petHotC = 25.0)
+
+        assertEquals(PetWeatherThresholds.DEFAULT, viewModel().petWeatherThresholds)
+        assertEquals(custom, viewModel(readPetWeatherThresholds = { custom }).petWeatherThresholds)
+    }
 
     // --- foreground_refresh_min_minutes ---
 

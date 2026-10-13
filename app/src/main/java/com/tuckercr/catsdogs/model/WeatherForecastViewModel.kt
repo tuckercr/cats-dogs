@@ -9,6 +9,7 @@ import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
@@ -53,6 +54,7 @@ class WeatherForecastViewModel internal constructor(
     private val onError: (errorKey: String) -> Unit = {},
     private val onSettingsOpened: () -> Unit = {},
     isWalkCardEnabled: () -> Boolean = { true },
+    readPetWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
     // Remote Config foreground_refresh_min_minutes, read on every foreground resume. 0 = never throttle.
     private val foregroundRefreshMinMinutes: () -> Long = { 0L },
     // Monotonic clock in milliseconds; injectable for tests. Fetch times only live in this process.
@@ -115,11 +117,15 @@ class WeatherForecastViewModel internal constructor(
         onError = { key -> analyticsRepository.logWeatherError(key) },
         onSettingsOpened = { analyticsRepository.logSettingsOpened() },
         isWalkCardEnabled = remoteConfigRepository::walkCardEnabled,
+        readPetWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
         foregroundRefreshMinMinutes = remoteConfigRepository::foregroundRefreshMinMinutes,
     )
 
     /** Remote Config `walk_card_enabled`: false hides the "time to walk the dog" card. */
     val walkCardEnabled: Boolean = isWalkCardEnabled()
+
+    /** Remote Config pet-mood and walk-advice thresholds (validated; Celsius). */
+    val petWeatherThresholds: PetWeatherThresholds = readPetWeatherThresholds()
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
     val currentWeather: StateFlow<LoadingState<CurrentWeather>> = _currentWeather.asStateFlow()
