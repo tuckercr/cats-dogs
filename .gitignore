@@ -19,3 +19,6 @@ local.properties
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/deploymentTargetSelector.xml
 /.idea/runConfigurations.xml
+
+# Firebase config: download from the Firebase console (project cats-dogs-weather). CI restores it from a secret.
+app/google-services.json

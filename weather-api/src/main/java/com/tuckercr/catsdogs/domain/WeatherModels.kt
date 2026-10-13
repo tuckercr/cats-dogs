@@ -64,6 +64,8 @@ data class HourlySlot(
     val pavementTemperature: Double? = null,
     /** Hour of day (0..23) in the location's own timezone; null in data cached before it existed. */
     val localHour: Int? = null,
+    /** Start of the slot, Unix epoch seconds; null in data cached before it existed. */
+    val epochSeconds: Long? = null,
 )
 
 @Serializable

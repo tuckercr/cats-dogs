@@ -63,6 +63,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -83,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuckercr.catsdogs.R
@@ -104,6 +106,7 @@ import com.tuckercr.catsdogs.ui.pets.petMoodFor
 import com.tuckercr.catsdogs.ui.pets.skyColor
 import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
+import com.tuckercr.catsdogs.util.fromCurrentSlot
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -572,8 +575,29 @@ private fun CurrentWeatherContent(
     val currentTempC = weather.units.toCelsius(weather.temperature)
     val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC)
     val ink = mood.inkColor
-    val walkAdvice = remember(forecastDays, currentTempC) {
-        walkAdviceFor(currentTempC, forecastDays.flatMap { it.hourlySlots })
+    // Slots from the one in progress onwards. "Now" is re-read whenever the forecast changes and
+    // whenever the screen resumes, so a cached forecast, a failed refresh or an app left open for
+    // hours never shows (or advises on) hours that have already passed.
+    var resumeCount by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        resumeCount++
+        onPauseOrDispose { }
+    }
+    val nowEpochSeconds = remember(forecastDays, resumeCount) {
+        java.time.Instant
+            .now()
+            .epochSecond
+    }
+    val currentSlots = remember(forecastDays, nowEpochSeconds) {
+        forecastDays.flatMap { it.hourlySlots }.fromCurrentSlot(nowEpochSeconds)
+    }
+    val walkAdvice = remember(currentSlots, currentTempC, weather.offsetSeconds, nowEpochSeconds) {
+        walkAdviceFor(
+            currentTempC,
+            currentSlots,
+            utcOffsetSeconds = weather.offsetSeconds,
+            nowEpochSeconds = nowEpochSeconds,
+        )
     }
 
     // Landscape phones and tablets put the hero beside today's details instead of stacking
@@ -753,11 +777,8 @@ private fun CurrentWeatherContent(
                 heroSection()
                 walkSection()
             }
-            // Hourly strip (next 24h) — the OWM /forecast endpoint returns only forward-looking
-            // 3-hour slots, so flattening them in order already starts at the upcoming hour.
-            val hourly = remember(forecastDays) {
-                forecastDays.flatMap { it.hourlySlots }.take(HOURLY_STRIP_COUNT)
-            }
+            // Hourly strip (next 24h), starting at the slot in progress — see currentSlots above.
+            val hourly = remember(currentSlots) { currentSlots.take(HOURLY_STRIP_COUNT) }
             if (hourly.isNotEmpty()) {
                 Text(
                     text = stringResource(R.string.section_hourly),
