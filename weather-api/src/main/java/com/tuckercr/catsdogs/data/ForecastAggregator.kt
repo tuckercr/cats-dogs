@@ -86,6 +86,7 @@ object ForecastAggregator {
                         uvIndex = slot.uvIndex,
                         pavementTemperature = slot.pavementTemperature,
                         localHour = zdt.hour,
+                        epochSeconds = slot.epochSeconds,
                     )
                 }
 

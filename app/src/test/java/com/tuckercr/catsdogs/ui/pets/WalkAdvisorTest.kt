@@ -77,6 +77,70 @@ class WalkAdvisorTest {
         assertEquals(WalkRating.GREAT, advice?.rating)
     }
 
+    // --- tomorrow ---
+
+    // 2026-01-01T12:00:00Z
+    private val noonUtc = 1_767_268_800L
+    private val hourSec = 3_600L
+
+    /** Rainy now, so the advice points at the first dry slot ([best], at [bestEpoch]). */
+    private fun adviceWithBestAt(
+        bestEpoch: Long?,
+        utcOffsetSeconds: Int,
+        best: String = "7 AM",
+    ) = walkAdviceFor(
+        15.0,
+        listOf(
+            slot("3 PM", 15.0, 90, epoch = noonUtc),
+            slot(best, 15.0, 0, epoch = bestEpoch),
+        ),
+        utcOffsetSeconds = utcOffsetSeconds,
+        nowEpochSeconds = noonUtc,
+    )
+
+    @Test
+    fun `a best time later the same day is not tomorrow`() {
+        val advice = adviceWithBestAt(noonUtc + 6 * hourSec, utcOffsetSeconds = 0, best = "6 PM")
+
+        assertEquals(WalkAdvice(WalkRating.OKAY, "6 PM", bestTimeIsTomorrow = false), advice)
+    }
+
+    @Test
+    fun `a best time on the next day is tomorrow`() {
+        // 07:00 UTC on 2 January, with a UTC city.
+        val advice = adviceWithBestAt(noonUtc + 19 * hourSec, utcOffsetSeconds = 0)
+
+        assertEquals(WalkAdvice(WalkRating.OKAY, "7 AM", bestTimeIsTomorrow = true), advice)
+    }
+
+    @Test
+    fun `tomorrow is judged by the city's calendar, not UTC or the device`() {
+        // Tokyo (+9): now is 21:00 on 1 Jan local; a slot 4 hours later is 01:00 on 2 Jan local,
+        // though still 1 Jan in UTC.
+        val tokyo = 9 * 3600
+        assertEquals(true, adviceWithBestAt(noonUtc + 4 * hourSec, tokyo)?.bestTimeIsTomorrow)
+
+        // Los Angeles (-8): now is 04:00 on 1 Jan local; a slot 13 hours later is 2 Jan in UTC but
+        // still 17:00 on 1 Jan in LA.
+        val losAngeles = -8 * 3600
+        assertEquals(false, adviceWithBestAt(noonUtc + 13 * hourSec, losAngeles)?.bestTimeIsTomorrow)
+    }
+
+    @Test
+    fun `a best slot without a timestamp is never tomorrow`() {
+        val advice = adviceWithBestAt(bestEpoch = null, utcOffsetSeconds = 0)
+
+        assertEquals(WalkAdvice(WalkRating.OKAY, "7 AM", bestTimeIsTomorrow = false), advice)
+    }
+
+    @Test
+    fun `slots more than a day ahead are not considered`() {
+        // 3-hourly slots reach three days out; a dry slot 30 hours away is not "soon".
+        val advice = adviceWithBestAt(noonUtc + 30 * hourSec, utcOffsetSeconds = 0)
+
+        assertEquals(WalkAdvice(WalkRating.POOR, null), advice)
+    }
+
     private fun slot(
         label: String,
         temp: Double,
@@ -84,6 +148,7 @@ class WalkAdvisorTest {
         units: WeatherUnits = WeatherUnits.METRIC,
         pavement: Double? = null,
         hour: Int? = hourOf(label),
+        epoch: Long? = null,
     ) = HourlySlot(
         timeLabel = label,
         iconCode = "01d",
@@ -98,6 +163,7 @@ class WalkAdvisorTest {
         precipitationChance = rainChance,
         pavementTemperature = pavement,
         localHour = hour,
+        epochSeconds = epoch,
     )
 
     /** Test-only: reads the hour from a "3 PM"-style label. */
