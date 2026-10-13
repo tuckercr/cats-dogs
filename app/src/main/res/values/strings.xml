@@ -91,6 +91,8 @@
     <string name="settings_attribution_openmeteo">Forecast data by Open-Meteo.com</string>
     <string name="settings_openmeteo_url">https://open-meteo.com</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
+    <string name="settings_share_usage_statistics">Share usage statistics</string>
+    <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Cats &amp; Dogs</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/privacy-policy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>

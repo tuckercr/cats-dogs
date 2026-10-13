@@ -53,6 +53,12 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // Installs side by side with the Play build and reports to its own Firebase app
+            // (com.tuckercr.catsdogs.debug is registered in google-services.json).
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             // R8 shrinks, optimizes, and obfuscates release builds; resource shrinking drops
             // unused resources. The libraries in use ship their own keep rules.
@@ -135,8 +141,9 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.hilt.ext.compiler)
 
-    // Firebase Remote Config — add google-services.json + plugin to enable server-side values;
-    // without it the app falls back to the local defaults in res/xml/remote_config_defaults.xml.
+    // Firebase (project cats-dogs-weather) — optional. With app/google-services.json present the
+    // plugins above are applied; without it the app falls back to the local defaults in
+    // res/xml/remote_config_defaults.xml and analytics/crash reporting become no-ops.
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.config.ktx)
     implementation(libs.firebase.analytics.ktx)

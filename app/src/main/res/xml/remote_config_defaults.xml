@@ -10,4 +10,10 @@
         <key>radar_frame_interval_ms</key>
         <value>850</value>
     </entry>
+    <!-- Analytics kill switch: false drops every analytics event and turns Firebase Analytics
+         collection off on every install, on top of the user's own "Share usage statistics" setting. -->
+    <entry>
+        <key>analytics_enabled</key>
+        <value>true</value>
+    </entry>
 </defaultsMap>

@@ -1,0 +1,19 @@
+{
+  "parameters": {
+    "weather_refresh_interval_minutes": {
+      "defaultValue": { "value": "30" },
+      "valueType": "NUMBER",
+      "description": "How often the background weather refresh runs, in minutes. WorkManager enforces a 15-minute minimum."
+    },
+    "radar_frame_interval_ms": {
+      "defaultValue": { "value": "850" },
+      "valueType": "NUMBER",
+      "description": "Delay between radar animation frames, in milliseconds. Higher is slower. Values outside 100–5000 fall back to 850 in-app."
+    },
+    "analytics_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Kill switch: false stops all usage-analytics events and turns Firebase Analytics collection off on every install, on top of the user's own Share usage statistics setting."
+    }
+  }
+}

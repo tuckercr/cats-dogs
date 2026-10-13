@@ -57,6 +57,13 @@ On tablets and in landscape, the pets sit beside today's details and the week sp
 The key is injected at build time into `BuildConfig.OWM_API_KEY`. On GitHub it is stored as an
 Actions secret and injected automatically, so no key lives in the repository.
 
+Firebase is optional: without `app/google-services.json` the app builds and runs normally, with
+Remote Config falling back to its in-app defaults and analytics and crash reporting doing nothing.
+See [Firebase setup](#firebase-setup) to wire it up.
+
+Debug builds install as `com.tuckercr.catsdogs.debug` (version name suffixed `-debug`), so they sit
+alongside the Play build and report to their own Firebase app.
+
 ## Architecture & tech stack
 
 | Layer | Choice | Notes |
@@ -70,7 +77,7 @@ Actions secret and injected automatically, so no key lives in the repository.
 | Radar | RainViewer + OpenStreetMap tiles | Animated precipitation loop stitched on a Compose `Canvas`; frame speed via Remote Config |
 | Images | Coil | Weather condition icons and radar/basemap tiles |
 | Persistence | DataStore Preferences | Onboarding flags, saved cities, active city, unit override, per-city cache |
-| Analytics | Firebase Analytics, Remote Config, Crashlytics | Optional; no-op without `google-services.json` |
+| Analytics | Firebase Analytics, Remote Config, Crashlytics | Optional; no-op without `google-services.json`. No advertising ID; user opt-out and a remote kill switch |
 | Modules | `:app`, `:weather-api` | API DTOs, parsing, and repositories split into `:weather-api` |
 | Data sources | OpenWeatherMap `/weather` & `/forecast` + Geocoding; RainViewer radar frames | Free tiers; RainViewer needs no key |
 | CI/CD | GitHub Actions | ktlint, JVM unit tests, and Compose UI tests (emulator) on every push |
@@ -91,11 +98,87 @@ Actions secret and injected automatically, so no key lives in the repository.
    OpenStreetMap base and animated, with a scrubber and legend. All frame times display in the
    selected city's timezone.
 6. **Settings** — choose temperature units (System / Metric / Imperial), manage saved locations,
-   and open the privacy policy.
+   turn *Share usage statistics* off, and open the privacy policy.
 7. **Notifications** — WorkManager delivers daily weather briefings and refreshes cached data in
    the background; the schedule survives reboots.
 8. **Error handling** — network failures, HTTP errors, empty API keys, and malformed payloads all
    surface as inline error messages with *Retry* where appropriate.
+
+## Analytics & privacy
+
+Cats & Dogs reports a handful of **anonymous app-usage events** — nothing about where you are,
+which cities you save, or what the weather is. The whole catalogue is four functions in
+[`AnalyticsRepository`](app/src/main/java/com/tuckercr/catsdogs/analytics/AnalyticsRepository.kt),
+so the privacy policy can be checked against the code line by line.
+
+| Event | Parameters | When |
+|---|---|---|
+| `onboarding_complete` | — | First-run onboarding finished |
+| `city_added` | — | A city was saved (never which one) |
+| `settings_opened` | — | Settings opened from the weather screen |
+| `weather_error` | `error_key` = `offline` / `rate_limited` / `server_error` / `city_not_found` / `empty_query` / `missing_api_key` / `bad_api_key` / `generic` | A current-weather or forecast load failed — the category only, never coordinates or a city |
+
+### Gates
+
+An event is sent only if every gate passes:
+
+1. **Remote Config kill switch** `analytics_enabled` — false drops every event, and turns Firebase
+   Analytics collection off, on every install without an app update.
+2. **The user's own opt-out** — Settings → About → *Share usage statistics* (on by default). It is
+   enforced at the SDK level via `setAnalyticsCollectionEnabled`, at app start and whenever it
+   changes, so Firebase's automatic events (`first_open`, sessions, screen views) stop too — not
+   just ours. Flipping it is deliberately not itself tracked.
+3. **Firebase configured** — without `google-services.json` there is no Firebase app and nothing is
+   sent.
+
+Debug builds do send, but to their own `com.tuckercr.catsdogs.debug` app stream, so development
+never pollutes the production numbers. Every analytics call is wrapped so it can never crash the
+app; a failure just drops the event.
+
+**No advertising ID.** The app shows no ads, so the manifest strips the `AD_ID` and
+`ACCESS_ADSERVICES_*` permissions that `firebase-analytics` merges in, and turns off ad-ID
+collection and ad-personalisation signals. Analytics keeps working on its app-instance ID.
+
+Crashlytics is enabled in release builds only (off in debug).
+
+## Remote Config
+
+Server-tunable values, so behaviour can change without shipping an update. The app never blocks on
+a fetch: it starts from the in-app defaults in
+[`remote_config_defaults.xml`](app/src/main/res/xml/remote_config_defaults.xml), reads the last
+activated values on cold start, and refreshes in the background at most hourly. Every read is
+validated — a missing or bad value falls back to the default rather than crashing.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `weather_refresh_interval_minutes` | number | `30` | Background weather refresh interval (WorkManager minimum is 15) |
+| `radar_frame_interval_ms` | number | `850` | Delay between radar animation frames; outside 100–5000 falls back to 850 |
+| `analytics_enabled` | boolean | `true` | Analytics kill switch — see [Gates](#gates) |
+
+[`firebase/remoteconfig.template.json`](firebase/remoteconfig.template.json) is the source of truth
+for the console parameters.
+
+## Firebase setup
+
+The app is wired to the Firebase project **`cats-dogs-weather`** (Analytics, Remote Config,
+Crashlytics). To build against it, or your own:
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) **with
+   Google Analytics enabled** — events silently no-op if the project has no linked Analytics
+   property.
+2. Register **two** Android apps under it: `com.tuckercr.catsdogs` and `com.tuckercr.catsdogs.debug`.
+   Debug builds use an `applicationIdSuffix`, and the `google-services` plugin matches package
+   names exactly.
+3. Download the merged `google-services.json` to `app/`. It is git-ignored — each developer
+   supplies their own. CI restores it from the base64-encoded `GOOGLE_SERVICES_JSON` Actions secret
+   when that is set, and builds without Firebase when it isn't.
+4. Deploy the Remote Config parameters from this repo (the default project is set in
+   [`.firebaserc`](.firebaserc)):
+   ```bash
+   firebase deploy --only remoteconfig
+   ```
+   `firebase remoteconfig:get` shows what is live. See [`firebase/README.md`](firebase/README.md).
+5. In Analytics settings, set data retention to **14 months**.
 
 ## Unit tests
 
@@ -106,7 +189,9 @@ Actions secret and injected automatically, so no key lives in the repository.
 | `WeatherRepositoryTest` | Repository contract: coordinate routing, city-query trimming, error mapping |
 | `WeatherUnitsTest` | Locale-to-unit resolution (Android 13 and earlier fallback) |
 | `WeatherForecastViewModelTest` | Cache-first loading, refresh races, and background-refresh staleness guards |
-| `SettingsViewModelTest` | Unit-override selection and cache clearing |
+| `SettingsViewModelTest` | Unit-override selection, *Share usage statistics*, and cache clearing |
+| `AnalyticsRepositoryTest` | Analytics gates: kill switch, user opt-out, both on, and never crashing |
+| `AnalyticsCollectionControllerTest` | SDK collection flag follows the opt-out and kill switch, at start and on change |
 | `WelcomeViewModelTest` | Onboarding state and persistence |
 | `CityListViewModelTest` | Add, remove, reorder, and active-city tracking |
 | `RadarRepositoryTest` | RainViewer timeline parsing, past/nowcast frame ordering, and tile URLs |

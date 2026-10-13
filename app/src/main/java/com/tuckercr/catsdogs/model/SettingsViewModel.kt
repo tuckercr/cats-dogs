@@ -22,6 +22,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.setUnitOverride(override) }
     }
 
+    /** "Share usage statistics". Deliberately not itself tracked by analytics. */
+    val shareUsageStatistics = preferencesRepository.shareUsageStatistics
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setShareUsageStatistics(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setShareUsageStatistics(enabled) }
+    }
+
     fun clearCache() {
         viewModelScope.launch { preferencesRepository.clearCache() }
     }

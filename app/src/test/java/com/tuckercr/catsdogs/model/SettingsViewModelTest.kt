@@ -44,6 +44,7 @@ class SettingsViewModelTest {
         runTest {
             val repo = mockk<PreferencesRepository>(relaxed = true)
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
+            every { repo.shareUsageStatistics } returns flowOf(true)
             val viewModel = SettingsViewModel(repo)
 
             viewModel.setUnitOverride(UnitOverride.METRIC)
@@ -57,6 +58,7 @@ class SettingsViewModelTest {
         runTest {
             val repo = mockk<PreferencesRepository>(relaxed = true)
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
+            every { repo.shareUsageStatistics } returns flowOf(true)
             val viewModel = SettingsViewModel(repo)
 
             viewModel.clearCache()
@@ -65,9 +67,40 @@ class SettingsViewModelTest {
             coVerify { repo.clearCache() }
         }
 
-    private fun viewModel(unitOverride: UnitOverride = UnitOverride.SYSTEM): SettingsViewModel {
+    @Test
+    fun `shareUsageStatistics reflects value from repository`() =
+        runTest {
+            val viewModel = viewModel(shareUsageStatistics = false)
+            val collected = mutableListOf<Boolean>()
+            val job = backgroundScope.launch { viewModel.shareUsageStatistics.collect { collected += it } }
+
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(false, collected.last())
+            job.cancel()
+        }
+
+    @Test
+    fun `setShareUsageStatistics delegates to repository`() =
+        runTest {
+            val repo = mockk<PreferencesRepository>(relaxed = true)
+            every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
+            every { repo.shareUsageStatistics } returns flowOf(true)
+            val viewModel = SettingsViewModel(repo)
+
+            viewModel.setShareUsageStatistics(false)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify { repo.setShareUsageStatistics(false) }
+        }
+
+    private fun viewModel(
+        unitOverride: UnitOverride = UnitOverride.SYSTEM,
+        shareUsageStatistics: Boolean = true,
+    ): SettingsViewModel {
         val repo = mockk<PreferencesRepository>(relaxed = true)
         every { repo.unitOverride } returns flowOf(unitOverride)
+        every { repo.shareUsageStatistics } returns flowOf(shareUsageStatistics)
         return SettingsViewModel(repo)
     }
 
