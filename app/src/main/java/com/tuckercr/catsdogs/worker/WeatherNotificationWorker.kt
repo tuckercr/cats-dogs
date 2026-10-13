@@ -16,6 +16,7 @@ import com.tuckercr.catsdogs.MainActivity
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.WeatherApplication.Companion.NOTIF_CHANNEL_ID
 import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
 import dagger.assisted.Assisted
@@ -28,6 +29,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     preferencesRepository: PreferencesRepository,
     weatherRepository: WeatherRepository,
+    remoteConfigRepository: RemoteConfigRepository,
 ) : CoroutineWorker(context, workerParams) {
 
     private val logic = NotificationWorkerLogic(
@@ -59,6 +61,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
                 ) == PackageManager.PERMISSION_GRANTED
         },
         postNotification = { title, body -> post(title, body) },
+        isDailyWeatherNotificationEnabled = remoteConfigRepository::dailyWeatherNotificationsEnabled,
     )
 
     override suspend fun doWork() = logic.doWork()

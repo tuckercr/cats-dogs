@@ -157,6 +157,8 @@ validated — a missing or bad value falls back to the default rather than crash
 | `radar_enabled` | boolean | `true` | Radar kill switch — false hides the radar section (header and card, phone and tablet layouts) and skips the RainViewer timeline and tile requests, for when RainViewer or the OpenStreetMap tiles become unavailable |
 | `walk_card_enabled` | boolean | `true` | Shows the "time to walk the dog" card; false hides it on the current-weather screen (phone and tablet layouts) |
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
+| `daily_weather_notifications_enabled` | boolean | `true` | Posts the daily 9 / 13 / 19 weather-summary notifications; false skips posting (the scheduled work still runs). Other notification types will get their own switches |
+| `foreground_refresh_min_minutes` | number | `0` | Skips the silent refresh on returning to the foreground if that city's weather (or forecast, tracked separately) was fetched within this many minutes in this session; outside 0–1440 falls back to 0, which always refreshes. Pull-to-refresh, retry and switching cities are never throttled |
 | `analytics_enabled` | boolean | `true` | Analytics kill switch — see [Gates](#gates) |
 
 [`firebase/remoteconfig.template.json`](firebase/remoteconfig.template.json) is the source of truth

@@ -25,6 +25,16 @@
       "valueType": "BOOLEAN",
       "description": "Use Open-Meteo for forecasts of cities with coordinates; off falls back to OpenWeatherMap"
     },
+    "daily_weather_notifications_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Post the daily 9 / 13 / 19 weather-summary notifications. Other notification types will have their own switches."
+    },
+    "foreground_refresh_min_minutes": {
+      "defaultValue": { "value": "0" },
+      "valueType": "NUMBER",
+      "description": "Skip the silent refresh when the app returns to the foreground if this city was fetched within this many minutes. 0 always refreshes. Pull-to-refresh is never throttled."
+    },
     "analytics_enabled": {
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",

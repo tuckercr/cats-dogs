@@ -27,6 +27,18 @@
         <key>open_meteo_enabled</key>
         <value>true</value>
     </entry>
+    <!-- Post the daily 9 / 13 / 19 weather-summary notifications. Other notification types will
+         have their own switches. -->
+    <entry>
+        <key>daily_weather_notifications_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Skip the silent foreground-resume refresh if this city was fetched within this many
+         minutes (0..1440). 0 always refreshes. Pull-to-refresh is never throttled. -->
+    <entry>
+        <key>foreground_refresh_min_minutes</key>
+        <value>0</value>
+    </entry>
     <!-- Analytics kill switch: false drops every analytics event and turns Firebase Analytics
          collection off on every install, on top of the user's own "Share usage statistics" setting. -->
     <entry>

@@ -67,6 +67,22 @@ class RemoteConfigRepository @Inject constructor(
     fun openMeteoEnabled(): Boolean = boolean(KEY_OPEN_METEO_ENABLED) ?: DEFAULT_OPEN_METEO_ENABLED
 
     /**
+     * Daily 9 / 13 / 19 weather-summary notifications. False skips posting them (the scheduled
+     * work still runs). Other notification types will have their own switches.
+     */
+    fun dailyWeatherNotificationsEnabled(): Boolean =
+        boolean(KEY_DAILY_WEATHER_NOTIFICATIONS_ENABLED) ?: DEFAULT_DAILY_WEATHER_NOTIFICATIONS_ENABLED
+
+    /**
+     * Minimum minutes between silent foreground-resume refreshes of the same city. 0 always
+     * refreshes; values outside 0..1440 fall back to 0. Explicit refreshes are never throttled.
+     */
+    fun foregroundRefreshMinMinutes(): Long =
+        long(KEY_FOREGROUND_REFRESH_MIN_MINUTES)
+            ?.takeIf { it in 0L..MAX_FOREGROUND_REFRESH_MIN_MINUTES }
+            ?: DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES
+
+    /**
      * Analytics kill switch. False drops every analytics event and turns Firebase Analytics
      * collection off on every install, without an app update.
      */
@@ -127,6 +143,13 @@ class RemoteConfigRepository @Inject constructor(
         const val DEFAULT_RADAR_FRAME_INTERVAL_MS = 850L
         private const val MIN_RADAR_FRAME_INTERVAL_MS = 100L
         private const val MAX_RADAR_FRAME_INTERVAL_MS = 5000L
+
+        const val KEY_DAILY_WEATHER_NOTIFICATIONS_ENABLED = "daily_weather_notifications_enabled"
+        const val DEFAULT_DAILY_WEATHER_NOTIFICATIONS_ENABLED = true
+
+        const val KEY_FOREGROUND_REFRESH_MIN_MINUTES = "foreground_refresh_min_minutes"
+        const val DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES = 0L
+        private const val MAX_FOREGROUND_REFRESH_MIN_MINUTES = 1440L
 
         const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
         const val DEFAULT_ANALYTICS_ENABLED = true

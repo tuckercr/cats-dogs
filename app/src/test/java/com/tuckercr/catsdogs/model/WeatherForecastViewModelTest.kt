@@ -451,6 +451,8 @@ class WeatherForecastViewModelTest {
         setCachedCurrentWeather: suspend (String, String) -> Unit = { _, _ -> },
         setCachedForecast: suspend (String, String) -> Unit = { _, _ -> },
         isWalkCardEnabled: () -> Boolean = { true },
+        foregroundRefreshMinMinutes: () -> Long = { 0L },
+        nowMillis: () -> Long = { 0L },
     ) = WeatherForecastViewModel(
         resolveWeatherUnits = resolveWeatherUnits,
         fetchCurrentWeather = fetchCurrentWeather,
@@ -462,7 +464,154 @@ class WeatherForecastViewModelTest {
         setCachedForecast = setCachedForecast,
         json = kotlinx.serialization.json.Json,
         isWalkCardEnabled = isWalkCardEnabled,
+        foregroundRefreshMinMinutes = foregroundRefreshMinMinutes,
+        nowMillis = nowMillis,
     )
+
+    // --- foreground_refresh_min_minutes ---
+
+    private val austin = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+
+    /** A view model whose fetches are counted, with a 10-minute throttle and a settable clock. */
+    private class Throttled {
+        var now = 0L
+        var currentFetches = 0
+        var forecastFetches = 0
+    }
+
+    private fun throttledViewModel(
+        state: Throttled,
+        minMinutes: Long = 10,
+    ) = viewModel(
+        fetchCurrentWeather = { _, _, _, _, _ ->
+            state.currentFetches++
+            Result.success(currentWeather(cityName = "Austin"))
+        },
+        fetchForecast = { units, _, _, _ ->
+            state.forecastFetches++
+            Result.success(listOf(dayForecast(units = units)))
+        },
+        foregroundRefreshMinMinutes = { minMinutes },
+        nowMillis = { state.now },
+    )
+
+    private fun settle() = mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+    @Test
+    fun `foreground refresh is skipped within the window after a fetch`() =
+        runTest {
+            val state = Throttled()
+            val viewModel = throttledViewModel(state)
+            viewModel.backgroundRefreshCurrent(austin)
+            viewModel.backgroundRefreshForecast(austin)
+            settle()
+
+            state.now += 9 * MINUTE
+            viewModel.backgroundRefreshCurrent(austin)
+            viewModel.backgroundRefreshForecast(austin)
+            settle()
+
+            assertEquals(1, state.currentFetches)
+            assertEquals(1, state.forecastFetches)
+        }
+
+    @Test
+    fun `foreground refresh runs again once the window has passed`() =
+        runTest {
+            val state = Throttled()
+            val viewModel = throttledViewModel(state)
+            viewModel.backgroundRefreshCurrent(austin)
+            viewModel.backgroundRefreshForecast(austin)
+            settle()
+
+            state.now += 10 * MINUTE
+            viewModel.backgroundRefreshCurrent(austin)
+            viewModel.backgroundRefreshForecast(austin)
+            settle()
+
+            assertEquals(2, state.currentFetches)
+            assertEquals(2, state.forecastFetches)
+        }
+
+    @Test
+    fun `a zero window always refreshes`() =
+        runTest {
+            val state = Throttled()
+            val viewModel = throttledViewModel(state, minMinutes = 0)
+
+            repeat(3) {
+                viewModel.backgroundRefreshCurrent(austin)
+                viewModel.backgroundRefreshForecast(austin)
+                settle()
+            }
+
+            assertEquals(3, state.currentFetches)
+            assertEquals(3, state.forecastFetches)
+        }
+
+    @Test
+    fun `explicit refresh is never throttled but counts as the last fetch`() =
+        runTest {
+            val state = Throttled()
+            val viewModel = throttledViewModel(state)
+            viewModel.refreshCurrent(austin)
+            viewModel.refreshForecast(austin)
+            settle()
+
+            // Explicit refreshes inside the window still fetch…
+            state.now += 1 * MINUTE
+            viewModel.refreshCurrent(austin)
+            viewModel.refreshForecast(austin)
+            settle()
+            assertEquals(2, state.currentFetches)
+            assertEquals(2, state.forecastFetches)
+
+            // …and their success throttles the next silent foreground refresh.
+            state.now += 1 * MINUTE
+            viewModel.backgroundRefreshCurrent(austin)
+            viewModel.backgroundRefreshForecast(austin)
+            settle()
+            assertEquals(2, state.currentFetches)
+            assertEquals(2, state.forecastFetches)
+        }
+
+    @Test
+    fun `current weather and forecast are throttled separately and per city`() =
+        runTest {
+            val state = Throttled()
+            val viewModel = throttledViewModel(state)
+            val denver = SavedLocation(label = "Denver", latitude = 39.74, longitude = -104.99)
+            viewModel.backgroundRefreshCurrent(austin)
+            settle()
+
+            viewModel.backgroundRefreshForecast(austin) // forecast never fetched: runs
+            viewModel.backgroundRefreshCurrent(denver) // other city: runs
+            viewModel.backgroundRefreshCurrent(austin) // just fetched: skipped
+            settle()
+
+            assertEquals(2, state.currentFetches)
+            assertEquals(1, state.forecastFetches)
+        }
+
+    @Test
+    fun `a failed fetch does not start the window`() =
+        runTest {
+            var currentFetches = 0
+            val viewModel = viewModel(
+                fetchCurrentWeather = { _, _, _, _, _ ->
+                    currentFetches++
+                    Result.failure(IOException("offline"))
+                },
+                foregroundRefreshMinMinutes = { 10 },
+            )
+
+            viewModel.backgroundRefreshCurrent(austin)
+            settle()
+            viewModel.backgroundRefreshCurrent(austin)
+            settle()
+
+            assertEquals(2, currentFetches)
+        }
 
     @Test
     fun `walk card is shown by default and hidden when Remote Config turns it off`() {
@@ -533,3 +682,5 @@ class WeatherForecastViewModelTest {
             )
     }
 }
+
+private const val MINUTE = 60_000L
