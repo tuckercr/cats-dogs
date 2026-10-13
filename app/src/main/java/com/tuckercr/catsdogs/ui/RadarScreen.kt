@@ -49,7 +49,10 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import coil.Coil
 import coil.request.ImageRequest
 import coil.request.SuccessResult
@@ -107,7 +110,18 @@ fun RadarCard(
 
         // Obtained here (not as a default arg) so the coordinate-less path above never needs Hilt.
         val viewModel: RadarViewModel = hiltViewModel()
-        LaunchedEffect(Unit) { viewModel.load() }
+        // Load on first composition and on every resume, then re-check while the card is on
+        // screen so the timeline never goes stale (load() is a no-op while it is fresh).
+        // Lives below the coordinate-less early return, which is the path the UI tests render.
+        val lifecycleOwner = LocalLifecycleOwner.current
+        LaunchedEffect(viewModel, lifecycleOwner) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    viewModel.load()
+                    delay(RadarViewModel.STALE_AFTER_MS)
+                }
+            }
+        }
         val timelineState by viewModel.timeline.collectAsStateWithLifecycle()
 
         val tileInfo = remember(location.latitude, location.longitude) {
@@ -157,8 +171,14 @@ private fun RadarView(
     val timeline = (timelineState as? LoadingState.Success)?.data
     val frames = timeline?.frames.orEmpty()
 
-    // Radar overlays are stitched lazily per frame and cached so replays are smooth.
-    val overlays = remember(tileInfo, timeline) { mutableStateMapOf<String, ImageBitmap>() }
+    // Radar overlays are stitched lazily per frame and cached so replays are smooth. The cache
+    // outlives a timeline refresh (most frames carry over), but frames that have dropped out of
+    // the timeline are evicted so it doesn't grow.
+    val overlays = remember(tileInfo) { mutableStateMapOf<String, ImageBitmap>() }
+    LaunchedEffect(overlays, frames) {
+        val live = frames.mapTo(HashSet()) { it.path }
+        overlays.keys.filterNot { it in live }.forEach { overlays.remove(it) }
+    }
 
     // Start on the most recent observed frame ("now").
     val nowIndex = remember(frames) {
