@@ -162,6 +162,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         forecastState = forecastState,
         isRefreshing = isRefreshing,
         radarEnabled = radarEnabled,
+        walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
         onTabSelected = cityListViewModel::setActiveIndex,
         onOpenSettings = {
             weatherForecastViewModel.logSettingsOpened()
@@ -240,6 +241,7 @@ fun CurrentWeatherScreen(
     forecastState: LoadingState<List<DayForecast>> = LoadingState.Idle,
     isRefreshing: Boolean = false,
     radarEnabled: Boolean = true,
+    walkCardEnabled: Boolean = true,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
@@ -369,6 +371,7 @@ fun CurrentWeatherScreen(
                             forecastState = forecastState,
                             location = locations.getOrNull(activeIndex),
                             radarEnabled = radarEnabled,
+                            walkCardEnabled = walkCardEnabled,
                             onForecastRetry = onRetry,
                         )
                     }
@@ -561,6 +564,7 @@ private fun CurrentWeatherContent(
     modifier: Modifier = Modifier,
     location: SavedLocation? = null,
     radarEnabled: Boolean = true,
+    walkCardEnabled: Boolean = true,
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
@@ -670,7 +674,8 @@ private fun CurrentWeatherContent(
             }
         }
         val walkSection: @Composable () -> Unit = {
-            walkAdvice?.let { WalkCard(advice = it) }
+            // walk_card_enabled: Remote Config can hide the card.
+            if (walkCardEnabled) walkAdvice?.let { WalkCard(advice = it) }
         }
         val detailsSection: @Composable () -> Unit = {
             // Today's details card

@@ -15,6 +15,11 @@
       "valueType": "BOOLEAN",
       "description": "Hide the radar card if RainViewer or OpenStreetMap tiles become unavailable"
     },
+    "walk_card_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Show the \"time to walk the dog\" card on the current-weather screen"
+    },
     "open_meteo_enabled": {
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",

@@ -450,6 +450,7 @@ class WeatherForecastViewModelTest {
         getCachedForecast: suspend (String) -> List<DayForecast>? = { null },
         setCachedCurrentWeather: suspend (String, String) -> Unit = { _, _ -> },
         setCachedForecast: suspend (String, String) -> Unit = { _, _ -> },
+        isWalkCardEnabled: () -> Boolean = { true },
     ) = WeatherForecastViewModel(
         resolveWeatherUnits = resolveWeatherUnits,
         fetchCurrentWeather = fetchCurrentWeather,
@@ -460,7 +461,14 @@ class WeatherForecastViewModelTest {
         setCachedCurrentWeather = setCachedCurrentWeather,
         setCachedForecast = setCachedForecast,
         json = kotlinx.serialization.json.Json,
+        isWalkCardEnabled = isWalkCardEnabled,
     )
+
+    @Test
+    fun `walk card is shown by default and hidden when Remote Config turns it off`() {
+        assertEquals(true, viewModel().walkCardEnabled)
+        assertEquals(false, viewModel(isWalkCardEnabled = { false }).walkCardEnabled)
+    }
 
     class MainDispatcherRule(
         val testDispatcher: TestDispatcher = StandardTestDispatcher(),

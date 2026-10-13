@@ -57,6 +57,9 @@ class RemoteConfigRepository @Inject constructor(
      */
     fun radarEnabled(): Boolean = boolean(KEY_RADAR_ENABLED) ?: DEFAULT_RADAR_ENABLED
 
+    /** False hides the "time to walk the dog" card on the current-weather screen. */
+    fun walkCardEnabled(): Boolean = boolean(KEY_WALK_CARD_ENABLED) ?: DEFAULT_WALK_CARD_ENABLED
+
     /**
      * Forecast provider for cities with coordinates: true uses Open-Meteo, false falls back to
      * the OpenWeatherMap 3-hourly forecast by lat/lon.
@@ -130,6 +133,9 @@ class RemoteConfigRepository @Inject constructor(
 
         const val KEY_RADAR_ENABLED = "radar_enabled"
         const val DEFAULT_RADAR_ENABLED = true
+
+        const val KEY_WALK_CARD_ENABLED = "walk_card_enabled"
+        const val DEFAULT_WALK_CARD_ENABLED = true
 
         const val KEY_OPEN_METEO_ENABLED = "open_meteo_enabled"
         const val DEFAULT_OPEN_METEO_ENABLED = true

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuckercr.catsdogs.analytics.AnalyticsRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
@@ -50,6 +51,7 @@ class WeatherForecastViewModel internal constructor(
     private val json: Json,
     private val onError: (errorKey: String) -> Unit = {},
     private val onSettingsOpened: () -> Unit = {},
+    isWalkCardEnabled: () -> Boolean = { true },
 ) : ViewModel() {
 
     @Inject
@@ -59,6 +61,7 @@ class WeatherForecastViewModel internal constructor(
         weatherRepository: WeatherRepository,
         injectedJson: Json,
         analyticsRepository: AnalyticsRepository,
+        remoteConfigRepository: RemoteConfigRepository,
     ) : this(
         resolveWeatherUnits = {
             val override = preferencesRepository.unitOverride.first()
@@ -106,7 +109,11 @@ class WeatherForecastViewModel internal constructor(
         json = injectedJson,
         onError = { key -> analyticsRepository.logWeatherError(key) },
         onSettingsOpened = { analyticsRepository.logSettingsOpened() },
+        isWalkCardEnabled = remoteConfigRepository::walkCardEnabled,
     )
+
+    /** Remote Config `walk_card_enabled`: false hides the "time to walk the dog" card. */
+    val walkCardEnabled: Boolean = isWalkCardEnabled()
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
     val currentWeather: StateFlow<LoadingState<CurrentWeather>> = _currentWeather.asStateFlow()

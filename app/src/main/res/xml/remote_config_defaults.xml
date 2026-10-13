@@ -16,6 +16,11 @@
         <key>radar_enabled</key>
         <value>true</value>
     </entry>
+    <!-- Shows the "time to walk the dog" card; false hides it. -->
+    <entry>
+        <key>walk_card_enabled</key>
+        <value>true</value>
+    </entry>
     <!-- Forecasts for cities with coordinates: true uses Open-Meteo, false falls back to the
          OpenWeatherMap 3-hourly forecast by lat/lon. -->
     <entry>

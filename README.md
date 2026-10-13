@@ -155,6 +155,7 @@ validated — a missing or bad value falls back to the default rather than crash
 | `weather_refresh_interval_minutes` | number | `30` | Background weather refresh interval (WorkManager minimum is 15) |
 | `radar_frame_interval_ms` | number | `850` | Delay between radar animation frames; outside 100–5000 falls back to 850 |
 | `radar_enabled` | boolean | `true` | Radar kill switch — false hides the radar section (header and card, phone and tablet layouts) and skips the RainViewer timeline and tile requests, for when RainViewer or the OpenStreetMap tiles become unavailable |
+| `walk_card_enabled` | boolean | `true` | Shows the "time to walk the dog" card; false hides it on the current-weather screen (phone and tablet layouts) |
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `analytics_enabled` | boolean | `true` | Analytics kill switch — see [Gates](#gates) |
 
