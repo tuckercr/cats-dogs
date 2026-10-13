@@ -18,7 +18,8 @@ import javax.inject.Inject
  * publishes a new frame every 10 minutes and only serves the last couple of hours, so an old
  * timeline would label hours-old frames "Now" and point at tiles that no longer exist.
  *
- * [load] is a no-op while a load is in flight or while the timeline is fresh. A refresh keeps the
+ * [load] is a no-op when Remote Config `radar_enabled` is off, while a load is in flight, or
+ * while the timeline is fresh. A refresh keeps the
  * current timeline visible until the new one arrives, and a failed refresh keeps it (the next
  * [load] retries); only a failed first load shows the error.
  */
@@ -27,6 +28,11 @@ class RadarViewModel internal constructor(
     private val getTimeline: suspend () -> Result<RadarTimeline>,
     /** Delay between animation frames (ms), from Remote Config. */
     val frameIntervalMs: Long,
+    /**
+     * Remote Config `radar_enabled`. When false the radar section is hidden and nothing is
+     * fetched from RainViewer or the OpenStreetMap tile servers.
+     */
+    val radarEnabled: Boolean = true,
     // Monotonic clock in milliseconds; injectable for tests.
     private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : ViewModel() {
@@ -38,6 +44,7 @@ class RadarViewModel internal constructor(
     ) : this(
         getTimeline = radarRepository::getTimeline,
         frameIntervalMs = remoteConfigRepository.radarFrameIntervalMs(),
+        radarEnabled = remoteConfigRepository.radarEnabled(),
     )
 
     private val _timeline = MutableStateFlow<LoadingState<RadarTimeline>>(LoadingState.Idle)
@@ -51,6 +58,7 @@ class RadarViewModel internal constructor(
     private fun isStale(): Boolean = loadedAtMillis?.let { nowMillis() - it >= STALE_AFTER_MS } ?: true
 
     fun load() {
+        if (!radarEnabled) return
         if (loadInFlight) return
         val current = _timeline.value
         if (current is LoadingState.Success && !isStale()) return

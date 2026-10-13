@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuckercr.catsdogs.analytics.AnalyticsRepository
 import com.tuckercr.catsdogs.data.PreferencesRepository
+import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
@@ -50,6 +53,12 @@ class WeatherForecastViewModel internal constructor(
     private val json: Json,
     private val onError: (errorKey: String) -> Unit = {},
     private val onSettingsOpened: () -> Unit = {},
+    isWalkCardEnabled: () -> Boolean = { true },
+    readPetWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
+    // Remote Config foreground_refresh_min_minutes, read on every foreground resume. 0 = never throttle.
+    private val foregroundRefreshMinMinutes: () -> Long = { 0L },
+    // Monotonic clock in milliseconds; injectable for tests. Fetch times only live in this process.
+    private val nowMillis: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : ViewModel() {
 
     @Inject
@@ -59,6 +68,7 @@ class WeatherForecastViewModel internal constructor(
         weatherRepository: WeatherRepository,
         injectedJson: Json,
         analyticsRepository: AnalyticsRepository,
+        remoteConfigRepository: RemoteConfigRepository,
     ) : this(
         resolveWeatherUnits = {
             val override = preferencesRepository.unitOverride.first()
@@ -106,7 +116,16 @@ class WeatherForecastViewModel internal constructor(
         json = injectedJson,
         onError = { key -> analyticsRepository.logWeatherError(key) },
         onSettingsOpened = { analyticsRepository.logSettingsOpened() },
+        isWalkCardEnabled = remoteConfigRepository::walkCardEnabled,
+        readPetWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
+        foregroundRefreshMinMinutes = remoteConfigRepository::foregroundRefreshMinMinutes,
     )
+
+    /** Remote Config `walk_card_enabled`: false hides the "time to walk the dog" card. */
+    val walkCardEnabled: Boolean = isWalkCardEnabled()
+
+    /** Remote Config pet-mood and walk-advice thresholds (validated; Celsius). */
+    val petWeatherThresholds: PetWeatherThresholds = readPetWeatherThresholds()
 
     private val _currentWeather = MutableStateFlow<LoadingState<CurrentWeather>>(LoadingState.Idle)
     val currentWeather: StateFlow<LoadingState<CurrentWeather>> = _currentWeather.asStateFlow()
@@ -130,8 +149,14 @@ class WeatherForecastViewModel internal constructor(
     private val currentTargetKey = MutableStateFlow<String?>(null)
     private val forecastTargetKey = MutableStateFlow<String?>(null)
 
+    // When each location's current weather / forecast was last successfully fetched and shown, by
+    // SavedLocation.cacheKey. In memory only: used to throttle the silent foreground-resume refresh.
+    private val lastCurrentFetchMillis = ConcurrentHashMap<String, Long>()
+    private val lastForecastFetchMillis = ConcurrentHashMap<String, Long>()
+
     /** Silent background refresh (foreground return). Updates data if fetch succeeds; never shows loading or errors. */
     fun backgroundRefreshCurrent(location: SavedLocation) {
+        if (fetchedRecently(lastCurrentFetchMillis, location)) return
         viewModelScope.launch {
             val units = resolveWeatherUnits()
             val label = if (location.isCurrentLocation) "" else location.label
@@ -142,6 +167,7 @@ class WeatherForecastViewModel internal constructor(
             val target = currentTargetKey.value
             if (target != null && target != location.cacheKey) return@launch
             result.onSuccess { weather ->
+                lastCurrentFetchMillis[location.cacheKey] = nowMillis()
                 _currentWeather.value = LoadingState.Success(weather)
                 setLastCity(weather.cityName)
                 viewModelScope.launch {
@@ -155,6 +181,7 @@ class WeatherForecastViewModel internal constructor(
     }
 
     fun backgroundRefreshForecast(location: SavedLocation) {
+        if (fetchedRecently(lastForecastFetchMillis, location)) return
         viewModelScope.launch {
             val units = resolveWeatherUnits()
             val result = fetchForLocation(location) { lat, lon ->
@@ -164,6 +191,7 @@ class WeatherForecastViewModel internal constructor(
             val target = forecastTargetKey.value
             if (target != null && target != location.cacheKey) return@launch
             result.onSuccess { forecast ->
+                lastForecastFetchMillis[location.cacheKey] = nowMillis()
                 _forecast.value = LoadingState.Success(forecast)
                 viewModelScope.launch {
                     setCachedForecast(location.cacheKey, encodeForecasts(forecast))
@@ -194,6 +222,7 @@ class WeatherForecastViewModel internal constructor(
             if (fetchId != currentWeatherFetchGeneration.get()) return@launch
             result.fold(
                 onSuccess = { weather ->
+                    lastCurrentFetchMillis[location.cacheKey] = nowMillis()
                     setLastCity(weather.cityName)
                     viewModelScope.launch {
                         setCachedCurrentWeather(
@@ -235,6 +264,7 @@ class WeatherForecastViewModel internal constructor(
             if (fetchId != forecastFetchGeneration.get()) return@launch
             result.fold(
                 onSuccess = { forecast ->
+                    lastForecastFetchMillis[location.cacheKey] = nowMillis()
                     viewModelScope.launch {
                         setCachedForecast(location.cacheKey, encodeForecasts(forecast))
                     }
@@ -255,6 +285,21 @@ class WeatherForecastViewModel internal constructor(
     }
 
     fun logSettingsOpened() = onSettingsOpened()
+
+    /**
+     * True when the silent foreground-resume refresh should be skipped: this location was
+     * successfully fetched (by any refresh) less than `foreground_refresh_min_minutes` ago.
+     * Explicit refreshes never call this.
+     */
+    private fun fetchedRecently(
+        lastFetchMillis: Map<String, Long>,
+        location: SavedLocation,
+    ): Boolean {
+        val minMinutes = runCatching { foregroundRefreshMinMinutes() }.getOrDefault(0L)
+        if (minMinutes <= 0L) return false
+        val last = lastFetchMillis[location.cacheKey] ?: return false
+        return nowMillis() - last < minMinutes * MILLIS_PER_MINUTE
+    }
 
     fun clearCurrentError() {
         _currentWeather.update { if (it is LoadingState.Error) LoadingState.Idle else it }
@@ -294,3 +339,5 @@ class WeatherForecastViewModel internal constructor(
             null
         }
 }
+
+private const val MILLIS_PER_MINUTE = 60_000L

@@ -43,12 +43,15 @@ class RadarViewModelTest {
 
     private var now = 0L
 
-    private fun viewModel(source: FakeSource) =
-        RadarViewModel(
-            getTimeline = source::fetch,
-            frameIntervalMs = 850,
-            nowMillis = { now },
-        )
+    private fun viewModel(
+        source: FakeSource,
+        radarEnabled: Boolean = true,
+    ) = RadarViewModel(
+        getTimeline = source::fetch,
+        frameIntervalMs = 850,
+        radarEnabled = radarEnabled,
+        nowMillis = { now },
+    )
 
     private fun settle() = mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
@@ -168,6 +171,51 @@ class RadarViewModelTest {
             settle()
 
             assertEquals(2, source.calls)
+        }
+
+    // --- radar_enabled ---
+
+    @Test
+    fun `radar_enabled off disables the radar and never fetches the timeline`() =
+        runTest {
+            val source = FakeSource(listOf(Result.success(morning)))
+            val viewModel = viewModel(source, radarEnabled = false)
+
+            viewModel.load()
+            settle()
+
+            assertEquals(false, viewModel.radarEnabled)
+            assertEquals(LoadingState.Idle, viewModel.timeline.value)
+            assertEquals(0, source.calls)
+        }
+
+    @Test
+    fun `radar_enabled off makes retry and later loads no-ops too`() =
+        runTest {
+            val source = FakeSource(listOf(Result.success(morning)))
+            val viewModel = viewModel(source, radarEnabled = false)
+
+            viewModel.retry()
+            now += RadarViewModel.STALE_AFTER_MS
+            viewModel.load()
+            settle()
+
+            assertEquals(LoadingState.Idle, viewModel.timeline.value)
+            assertEquals(0, source.calls)
+        }
+
+    @Test
+    fun `radar_enabled on loads the timeline`() =
+        runTest {
+            val source = FakeSource(listOf(Result.success(morning)))
+            val viewModel = viewModel(source, radarEnabled = true)
+
+            viewModel.load()
+            settle()
+
+            assertEquals(true, viewModel.radarEnabled)
+            assertEquals(LoadingState.Success(morning), viewModel.timeline.value)
+            assertEquals(1, source.calls)
         }
 
     private fun timeline(nowPath: String) =

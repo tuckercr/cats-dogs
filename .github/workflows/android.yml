@@ -39,6 +39,20 @@ jobs:
           echo "KEY_PASSWORD=$KEY_PASSWORD" >> local.properties
         fi
 
+    # Firebase is optional: app/google-services.json is git-ignored, and without it the
+    # build skips the google-services/Crashlytics plugins and Firebase is a no-op at runtime.
+    # When the base64-encoded GOOGLE_SERVICES_JSON secret is set, restore it so CI builds
+    # the real Firebase configuration; otherwise carry on without it.
+    - name: Restore google-services.json
+      env:
+        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      run: |
+        if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+          echo "GOOGLE_SERVICES_JSON secret not set; building without Firebase."
+          exit 0
+        fi
+        echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+
     - name: Build with Gradle
       run: ./gradlew lint test build
 

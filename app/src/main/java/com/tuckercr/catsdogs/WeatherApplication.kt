@@ -8,8 +8,12 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import com.google.firebase.crashlytics.ktx.crashlytics
 import com.google.firebase.ktx.Firebase
+import com.tuckercr.catsdogs.analytics.AnalyticsCollectionController
 import com.tuckercr.catsdogs.worker.WorkManagerScheduler
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -27,6 +31,12 @@ class WeatherApplication :
     @Inject
     lateinit var coilImageLoader: ImageLoader
 
+    @Inject
+    lateinit var analyticsCollectionController: AnalyticsCollectionController
+
+    /** Lives as long as the process; for app-wide observers such as [analyticsCollectionController]. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override val workManagerConfiguration: Configuration
         get() = Configuration
             .Builder()
@@ -41,6 +51,9 @@ class WeatherApplication :
         runCatching {
             Firebase.crashlytics.setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         }
+        // Applies "Share usage statistics" + the analytics_enabled kill switch to the SDK now,
+        // and again whenever either changes.
+        runCatching { analyticsCollectionController.start(appScope) }
         createNotificationChannel()
     }
 

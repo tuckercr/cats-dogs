@@ -92,11 +92,13 @@ import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
 import com.tuckercr.catsdogs.domain.HourlySlot
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
+import com.tuckercr.catsdogs.model.RadarViewModel
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
@@ -117,6 +119,8 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val weatherForecastViewModel =
         hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
     val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
+    // Same owner RadarCard uses, so this is the instance that would load the timeline.
+    val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
 
     val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
     val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
@@ -161,6 +165,9 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         weatherState = weatherState,
         forecastState = forecastState,
         isRefreshing = isRefreshing,
+        radarEnabled = radarEnabled,
+        walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
+        petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
         onTabSelected = cityListViewModel::setActiveIndex,
         onOpenSettings = {
             weatherForecastViewModel.logSettingsOpened()
@@ -238,6 +245,9 @@ fun CurrentWeatherScreen(
     weatherState: LoadingState<CurrentWeather>,
     forecastState: LoadingState<List<DayForecast>> = LoadingState.Idle,
     isRefreshing: Boolean = false,
+    radarEnabled: Boolean = true,
+    walkCardEnabled: Boolean = true,
+    petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
@@ -366,6 +376,9 @@ fun CurrentWeatherScreen(
                             weather = weatherState.data,
                             forecastState = forecastState,
                             location = locations.getOrNull(activeIndex),
+                            radarEnabled = radarEnabled,
+                            walkCardEnabled = walkCardEnabled,
+                            petWeatherThresholds = petWeatherThresholds,
                             onForecastRetry = onRetry,
                         )
                     }
@@ -557,6 +570,9 @@ private fun CurrentWeatherContent(
     forecastState: LoadingState<List<DayForecast>>,
     modifier: Modifier = Modifier,
     location: SavedLocation? = null,
+    radarEnabled: Boolean = true,
+    walkCardEnabled: Boolean = true,
+    petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
@@ -573,7 +589,7 @@ private fun CurrentWeatherContent(
     val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
     val currentTempC = weather.units.toCelsius(weather.temperature)
-    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC)
+    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC, petWeatherThresholds)
     val ink = mood.inkColor
     // Slots from the one in progress onwards. "Now" is re-read whenever the forecast changes and
     // whenever the screen resumes, so a cached forecast, a failed refresh or an app left open for
@@ -591,10 +607,11 @@ private fun CurrentWeatherContent(
     val currentSlots = remember(forecastDays, nowEpochSeconds) {
         forecastDays.flatMap { it.hourlySlots }.fromCurrentSlot(nowEpochSeconds)
     }
-    val walkAdvice = remember(currentSlots, currentTempC, weather.offsetSeconds, nowEpochSeconds) {
+    val walkAdvice = remember(currentSlots, currentTempC, weather.offsetSeconds, nowEpochSeconds, petWeatherThresholds) {
         walkAdviceFor(
             currentTempC,
             currentSlots,
+            thresholds = petWeatherThresholds,
             utcOffsetSeconds = weather.offsetSeconds,
             nowEpochSeconds = nowEpochSeconds,
         )
@@ -687,7 +704,8 @@ private fun CurrentWeatherContent(
             }
         }
         val walkSection: @Composable () -> Unit = {
-            walkAdvice?.let { WalkCard(advice = it) }
+            // walk_card_enabled: Remote Config can hide the card.
+            if (walkCardEnabled) walkAdvice?.let { WalkCard(advice = it) }
         }
         val detailsSection: @Composable () -> Unit = {
             // Today's details card
@@ -790,9 +808,12 @@ private fun CurrentWeatherContent(
             }
 
             if (!wide) detailsSection()
-            // Weather radar
-            SectionHeader(R.string.section_radar)
-            RadarCard(location = location, utcOffsetSeconds = weather.offsetSeconds)
+            // Weather radar (shared by the phone and wide layouts). Off via Remote Config
+            // radar_enabled: not composing RadarCard means no RainViewer or tile requests.
+            if (radarEnabled) {
+                SectionHeader(R.string.section_radar)
+                RadarCard(location = location, utcOffsetSeconds = weather.offsetSeconds)
+            }
 
             // Upcoming days section (excludes today)
             if (upcomingDays.isNotEmpty() ||

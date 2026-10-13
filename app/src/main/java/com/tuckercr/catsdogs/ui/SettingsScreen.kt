@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -61,6 +64,7 @@ fun SettingsRoute(
 ) {
     val viewModel = hiltViewModel<SettingsViewModel>()
     val unitOverride by viewModel.unitOverride.collectAsStateWithLifecycle()
+    val shareUsageStatistics by viewModel.shareUsageStatistics.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -231,6 +235,13 @@ fun SettingsRoute(
                 },
             )
 
+            SettingsSwitchRow(
+                label = stringResource(R.string.settings_share_usage_statistics),
+                summary = stringResource(R.string.settings_share_usage_statistics_summary),
+                checked = shareUsageStatistics,
+                onCheckedChange = viewModel::setShareUsageStatistics,
+            )
+
             val privacyUrl = stringResource(R.string.settings_privacy_policy_url)
             SettingsLinkRow(
                 label = stringResource(R.string.settings_privacy_policy),
@@ -288,4 +299,31 @@ private fun SettingsLinkRow(
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
     )
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    label: String,
+    summary: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // The whole row is the toggle target; the Switch itself is display-only.
+        Switch(checked = checked, onCheckedChange = null, modifier = Modifier.padding(start = 16.dp))
+    }
 }

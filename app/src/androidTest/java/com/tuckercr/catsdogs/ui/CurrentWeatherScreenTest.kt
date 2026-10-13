@@ -1,8 +1,10 @@
 package com.tuckercr.catsdogs.ui
 
 import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -166,6 +168,39 @@ class CurrentWeatherScreenTest {
         }
 
         composeRule.onNodeWithText("80%").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun radarSectionIsShownByDefault() {
+        setRadarContent(radarEnabled = true)
+
+        composeRule.onNodeWithText(radarHeader()).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun radarSectionIsHiddenWhenRadarIsDisabled() {
+        setRadarContent(radarEnabled = false)
+
+        composeRule.onAllNodesWithText(radarHeader()).assertCountEquals(0)
+        composeRule.onAllNodesWithText(composeRule.activity.getString(R.string.radar_unavailable_coords)).assertCountEquals(0)
+    }
+
+    private fun radarHeader() = composeRule.activity.getString(R.string.section_radar)
+
+    private fun setRadarContent(radarEnabled: Boolean) {
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(weather()),
+                    radarEnabled = radarEnabled,
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
     }
 
     private companion object {

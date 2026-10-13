@@ -10,4 +10,74 @@
         <key>radar_frame_interval_ms</key>
         <value>850</value>
     </entry>
+    <!-- Radar kill switch: false hides the radar section and skips RainViewer / OpenStreetMap
+         fetches, for when either becomes unavailable. -->
+    <entry>
+        <key>radar_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Shows the "time to walk the dog" card; false hides it. -->
+    <entry>
+        <key>walk_card_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Forecasts for cities with coordinates: true uses Open-Meteo, false falls back to the
+         OpenWeatherMap 3-hourly forecast by lat/lon. -->
+    <entry>
+        <key>open_meteo_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Post the daily 9 / 13 / 19 weather-summary notifications. Other notification types will
+         have their own switches. -->
+    <entry>
+        <key>daily_weather_notifications_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Skip the silent foreground-resume refresh if this city was fetched within this many
+         minutes (0..1440). 0 always refreshes. Pull-to-refresh is never throttled. -->
+    <entry>
+        <key>foreground_refresh_min_minutes</key>
+        <value>0</value>
+    </entry>
+    <!-- Pet mood and walk advice thresholds, all Celsius whatever the user's units. Out-of-range
+         values and unordered pairs (comfort min/max, walk hours start/end, pet cold/hot) fall back
+         to these defaults; see PetWeatherThresholds. -->
+    <entry>
+        <key>walk_hot_pavement_c</key>
+        <value>52</value>
+    </entry>
+    <entry>
+        <key>walk_max_rain_chance</key>
+        <value>30</value>
+    </entry>
+    <entry>
+        <key>walk_comfort_min_c</key>
+        <value>3</value>
+    </entry>
+    <entry>
+        <key>walk_comfort_max_c</key>
+        <value>27</value>
+    </entry>
+    <entry>
+        <key>walk_hours_start</key>
+        <value>7</value>
+    </entry>
+    <entry>
+        <key>walk_hours_end</key>
+        <value>20</value>
+    </entry>
+    <entry>
+        <key>pet_hot_threshold_c</key>
+        <value>30</value>
+    </entry>
+    <entry>
+        <key>pet_cold_threshold_c</key>
+        <value>0</value>
+    </entry>
+    <!-- Analytics kill switch: false drops every analytics event and turns Firebase Analytics
+         collection off on every install, on top of the user's own "Share usage statistics" setting. -->
+    <entry>
+        <key>analytics_enabled</key>
+        <value>true</value>
+    </entry>
 </defaultsMap>

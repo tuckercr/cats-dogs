@@ -21,6 +21,7 @@ class WeatherRepository @Inject constructor(
     @param:Named(WeatherNetworkModule.OWM_API_KEY) private val apiKey: String,
     private val zoneId: ZoneId,
     private val json: Json,
+    private val forecastSourcePolicy: ForecastSourcePolicy = ForecastSourcePolicy.OpenMeteoPreferred,
 ) {
 
     suspend fun fetchCurrentWeather(
@@ -68,13 +69,28 @@ class WeatherRepository @Inject constructor(
         latitude: Double? = null,
         longitude: Double? = null,
     ): Result<List<DayForecast>> {
-        // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever we have coordinates.
-        if (latitude != null && longitude != null) {
+        val hasCoordinates = latitude != null && longitude != null
+        // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever we have coordinates,
+        // unless Remote Config has switched it off.
+        if (hasCoordinates && openMeteoEnabled()) {
             return openMeteo.fetch(units, latitude, longitude).mapApiFailure()
         }
         val key = apiKey.trim()
         if (key.isEmpty()) {
             return Result.failure(IllegalStateException("missing_api_key"))
+        }
+        if (hasCoordinates) {
+            // Open-Meteo switched off: the OpenWeatherMap 3-hourly forecast, by coordinates.
+            return runCatching {
+                val response = api.forecast(
+                    cityQuery = null,
+                    latitude = latitude,
+                    longitude = longitude,
+                    apiKey = key,
+                    units = units.units,
+                )
+                mapForecast(response, units)
+            }.mapApiFailure()
         }
         val q = cityQuery?.trim().orEmpty()
         if (q.isEmpty()) {
@@ -91,6 +107,9 @@ class WeatherRepository @Inject constructor(
             mapForecast(response, units)
         }.mapApiFailure()
     }
+
+    /** A failing policy never breaks forecasts: fall back to the default, Open-Meteo. */
+    private fun openMeteoEnabled(): Boolean = runCatching { forecastSourcePolicy.openMeteoEnabled() }.getOrDefault(true)
 
     private fun mapForecast(
         response: com.tuckercr.catsdogs.data.remote.dto.ForecastResponse,

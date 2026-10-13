@@ -74,6 +74,53 @@ class NotificationWorkerLogicTest {
             assertEquals(emptyList<Pair<String, String>>(), posted)
         }
 
+    // --- daily_weather_notifications_enabled ---
+
+    @Test
+    fun `daily weather notifications switched off posts nothing but still fetches and succeeds`() =
+        runTest {
+            val posted = mutableListOf<Pair<String, String>>()
+            var fetches = 0
+            val logic = logic(
+                fetchCurrentWeather = { _, _, _, _ ->
+                    fetches++
+                    kotlin.Result.success(weather())
+                },
+                postNotification = { t, b -> posted += t to b },
+                isDailyWeatherNotificationEnabled = { false },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(emptyList<Pair<String, String>>(), posted)
+            assertEquals(1, fetches)
+        }
+
+    @Test
+    fun `daily weather notifications switched on posts as before`() =
+        runTest {
+            val posted = mutableListOf<Pair<String, String>>()
+            val logic = logic(
+                postNotification = { t, b -> posted += t to b },
+                isDailyWeatherNotificationEnabled = { true },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(1, posted.size)
+        }
+
+    @Test
+    fun `a failing daily weather notifications switch falls back to posting`() =
+        runTest {
+            val posted = mutableListOf<Pair<String, String>>()
+            val logic = logic(
+                postNotification = { t, b -> posted += t to b },
+                isDailyWeatherNotificationEnabled = { throw IllegalStateException("Remote Config unavailable") },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(1, posted.size)
+        }
+
     // --- fetch routing ---
 
     @Test
@@ -330,6 +377,7 @@ class NotificationWorkerLogicTest {
         hasNotificationPermission: () -> Boolean = { true },
         postNotification: (String, String) -> Unit = { _, _ -> },
         todayLabel: String = TODAY_LABEL,
+        isDailyWeatherNotificationEnabled: () -> Boolean = { true },
     ) = NotificationWorkerLogic(
         getSavedLocations = { savedLocations },
         getActiveIndex = { activeIndex },
@@ -338,6 +386,7 @@ class NotificationWorkerLogicTest {
         fetchForecast = fetchForecast,
         hasNotificationPermission = hasNotificationPermission,
         postNotification = postNotification,
+        isDailyWeatherNotificationEnabled = isDailyWeatherNotificationEnabled,
         todayLabel = { _ -> todayLabel },
     )
 

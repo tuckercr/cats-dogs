@@ -32,6 +32,8 @@ internal class NotificationWorkerLogic(
     ) -> kotlin.Result<List<DayForecast>>,
     private val hasNotificationPermission: () -> Boolean,
     private val postNotification: (title: String, body: String) -> Unit,
+    // Remote Config daily_weather_notifications_enabled. Only gates posting: the fetch still runs.
+    private val isDailyWeatherNotificationEnabled: () -> Boolean = { true },
     // Same label format as ForecastAggregator produces, in the city's local date (its UTC offset)
     // so it matches the city-local forecast labels. Overridable so tests are date-independent.
     private val todayLabel: (utcOffsetSeconds: Int) -> String = { offset ->
@@ -65,6 +67,7 @@ internal class NotificationWorkerLogic(
         val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel(weather.offsetSeconds) }
 
         if (!hasNotificationPermission()) return Result.success()
+        if (!runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true)) return Result.success()
 
         val (title, body) = buildContent(weather, todayForecast)
         postNotification(title, body)

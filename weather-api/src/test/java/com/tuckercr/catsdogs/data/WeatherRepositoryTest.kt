@@ -550,6 +550,123 @@ class WeatherRepositoryTest {
             assertEquals("Broken clouds", slot.description)
         }
 
+    // --- open_meteo_enabled (ForecastSourcePolicy) ---
+
+    private val openMeteoBody =
+        """{"utc_offset_seconds":0,"hourly":{"time":[4102444800],"temperature_2m":[21.0],
+        "weather_code":[0],"is_day":[1],"uv_index":[6.5],"shortwave_radiation":[800.0],
+        "precipitation_probability":[10]}}"""
+
+    private fun owmForecast() =
+        ForecastResponse(
+            list = listOf(forecastItem(epochSeconds = 1_704_067_200L, temperature = 8.0, main = "Clouds")),
+            city = null,
+        )
+
+    @Test
+    fun `fetchForecast with coordinates uses Open-Meteo when open_meteo_enabled is on`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastResponse = owmForecast())
+            val repository = WeatherRepository(
+                api,
+                openMeteo(openMeteoBody),
+                "test-key",
+                ZoneOffset.UTC,
+                Json,
+                forecastSourcePolicy = { true },
+            )
+
+            val forecast = repository.fetchForecast(WeatherUnits.METRIC, latitude = 30.27, longitude = -97.74).getOrThrow()
+
+            assertEquals(0, api.forecastCallCount)
+            assertEquals("Clear", forecast.single().conditionMain)
+        }
+
+    @Test
+    fun `fetchForecast with coordinates uses OpenWeatherMap by lat-lon when open_meteo_enabled is off`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastResponse = owmForecast())
+            // Open-Meteo would fail if it were called, so success proves it was skipped.
+            val unreachableOpenMeteo = openMeteo(failure = IOException("Open-Meteo must not be called"))
+            val repository = WeatherRepository(
+                api,
+                unreachableOpenMeteo,
+                " test-key ",
+                ZoneOffset.UTC,
+                Json,
+                forecastSourcePolicy = { false },
+            )
+
+            val forecast = repository
+                .fetchForecast(WeatherUnits.IMPERIAL, cityQuery = "Austin", latitude = 30.27, longitude = -97.74)
+                .getOrThrow()
+
+            assertEquals(1, api.forecastCallCount)
+            assertNull(api.lastForecastCityQuery)
+            assertEquals(30.27, api.lastForecastLatitude ?: 0.0, 0.0001)
+            assertEquals(-97.74, api.lastForecastLongitude ?: 0.0, 0.0001)
+            assertEquals("test-key", api.lastForecastApiKey)
+            assertEquals("imperial", api.lastForecastUnits)
+            assertEquals("Clouds", forecast.single().conditionMain)
+        }
+
+    @Test
+    fun `fetchForecast with open_meteo_enabled off and no api key fails before calling api`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastResponse = owmForecast())
+            val repository = WeatherRepository(
+                api,
+                openMeteo(openMeteoBody),
+                "  ",
+                ZoneOffset.UTC,
+                Json,
+                forecastSourcePolicy = { false },
+            )
+
+            val result = repository.fetchForecast(WeatherUnits.METRIC, latitude = 30.27, longitude = -97.74)
+
+            assertEquals("missing_api_key", result.exceptionOrNull()?.message)
+            assertEquals(0, api.forecastCallCount)
+        }
+
+    @Test
+    fun `fetchForecast without coordinates uses the city query whatever open_meteo_enabled says`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastResponse = owmForecast())
+            val repository = WeatherRepository(
+                api,
+                openMeteo(openMeteoBody),
+                "test-key",
+                ZoneOffset.UTC,
+                Json,
+                forecastSourcePolicy = { true },
+            )
+
+            repository.fetchForecast(WeatherUnits.METRIC, cityQuery = "Denver").getOrThrow()
+
+            assertEquals("Denver", api.lastForecastCityQuery)
+            assertNull(api.lastForecastLatitude)
+        }
+
+    @Test
+    fun `a failing forecast source policy falls back to Open-Meteo`() =
+        runBlocking {
+            val api = FakeOpenWeatherApi(forecastResponse = owmForecast())
+            val repository = WeatherRepository(
+                api,
+                openMeteo(openMeteoBody),
+                "test-key",
+                ZoneOffset.UTC,
+                Json,
+                forecastSourcePolicy = { throw IllegalStateException("Remote Config unavailable") },
+            )
+
+            val forecast = repository.fetchForecast(WeatherUnits.METRIC, latitude = 30.27, longitude = -97.74).getOrThrow()
+
+            assertEquals(0, api.forecastCallCount)
+            assertEquals("Clear", forecast.single().conditionMain)
+        }
+
     private class FakeOpenWeatherApi(
         private val currentResponse: CurrentWeatherResponse = currentWeatherResponse(),
         private val forecastResponse: ForecastResponse = ForecastResponse(
