@@ -25,10 +25,17 @@ class RadarViewModel @Inject constructor(
     /** Delay between animation frames (ms), from Remote Config. */
     val frameIntervalMs: Long = remoteConfigRepository.radarFrameIntervalMs()
 
+    /**
+     * Remote Config `radar_enabled`. When false the radar section is hidden and nothing is
+     * fetched from RainViewer or the OpenStreetMap tile servers.
+     */
+    val enabled: Boolean = remoteConfigRepository.radarEnabled()
+
     private val _timeline = MutableStateFlow<LoadingState<RadarTimeline>>(LoadingState.Idle)
     val timeline: StateFlow<LoadingState<RadarTimeline>> = _timeline.asStateFlow()
 
     fun load() {
+        if (!enabled) return
         if (_timeline.value is LoadingState.Loading || _timeline.value is LoadingState.Success) return
         _timeline.value = LoadingState.Loading
         viewModelScope.launch {

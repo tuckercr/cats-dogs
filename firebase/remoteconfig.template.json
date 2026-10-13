@@ -10,6 +10,16 @@
       "valueType": "NUMBER",
       "description": "Delay between radar animation frames, in milliseconds. Higher is slower. Values outside 100–5000 fall back to 850 in-app."
     },
+    "radar_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Hide the radar card if RainViewer or OpenStreetMap tiles become unavailable"
+    },
+    "open_meteo_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Use Open-Meteo for forecasts of cities with coordinates; off falls back to OpenWeatherMap"
+    },
     "analytics_enabled": {
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",

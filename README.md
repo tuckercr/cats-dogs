@@ -79,7 +79,7 @@ alongside the Play build and report to their own Firebase app.
 | Persistence | DataStore Preferences | Onboarding flags, saved cities, active city, unit override, per-city cache |
 | Analytics | Firebase Analytics, Remote Config, Crashlytics | Optional; no-op without `google-services.json`. No advertising ID; user opt-out and a remote kill switch |
 | Modules | `:app`, `:weather-api` | API DTOs, parsing, and repositories split into `:weather-api` |
-| Data sources | OpenWeatherMap `/weather` & `/forecast` + Geocoding; RainViewer radar frames | Free tiers; RainViewer needs no key |
+| Data sources | OpenWeatherMap `/weather` & `/forecast` + Geocoding; Open-Meteo hourly forecast; RainViewer radar frames | Free tiers; Open-Meteo and RainViewer need no key |
 | CI/CD | GitHub Actions | ktlint, JVM unit tests, and Compose UI tests (emulator) on every push |
 
 ## App flow
@@ -91,8 +91,9 @@ alongside the Play build and report to their own Firebase app.
    precipitation radar, and the upcoming days inline. Swipe between saved cities, or add one by name
    with autocomplete from the [Geocoding API](https://openweathermap.org/api/geocoding-api) (a
    selected suggestion pins exact latitude/longitude so the result is unambiguous).
-4. **Forecast** — uses `data/2.5/forecast` (free tier, 3-hour slots) with the same coordinates.
-   Each calendar day shows the slot closest to local noon, plus the daily high/low and rain chance
+4. **Forecast** — cities with coordinates use [Open-Meteo](https://open-meteo.com) (true hourly,
+   with UV); cities without coordinates, or all cities when the `open_meteo_enabled` Remote Config
+   switch is off, use OpenWeatherMap's `data/2.5/forecast` (free tier, 3-hour slots). Each calendar day shows the slot closest to local noon, plus the daily high/low and rain chance
    derived from all slots; tapping a day opens its full hourly breakdown.
 5. **Radar** — RainViewer radar frames (recent past plus short-range nowcast) are stitched over an
    OpenStreetMap base and animated, with a scrubber and legend. All frame times display in the
@@ -153,6 +154,8 @@ validated — a missing or bad value falls back to the default rather than crash
 |---|---|---|---|
 | `weather_refresh_interval_minutes` | number | `30` | Background weather refresh interval (WorkManager minimum is 15) |
 | `radar_frame_interval_ms` | number | `850` | Delay between radar animation frames; outside 100–5000 falls back to 850 |
+| `radar_enabled` | boolean | `true` | Radar kill switch — false hides the radar section (header and card, phone and tablet layouts) and skips the RainViewer timeline and tile requests, for when RainViewer or the OpenStreetMap tiles become unavailable |
+| `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `analytics_enabled` | boolean | `true` | Analytics kill switch — see [Gates](#gates) |
 
 [`firebase/remoteconfig.template.json`](firebase/remoteconfig.template.json) is the source of truth
@@ -186,9 +189,10 @@ Crashlytics). To build against it, or your own:
 |---|---|
 | `ForecastAggregatorTest` | Noon-slot selection and multi-day grouping |
 | `OpenWeatherParsingTest` | Kotlinx Serialization round-trips for API DTOs |
-| `WeatherRepositoryTest` | Repository contract: coordinate routing, city-query trimming, error mapping |
+| `WeatherRepositoryTest` | Repository contract: coordinate routing (incl. `open_meteo_enabled` on/off), city-query trimming, error mapping |
 | `WeatherUnitsTest` | Locale-to-unit resolution (Android 13 and earlier fallback) |
 | `WeatherForecastViewModelTest` | Cache-first loading, refresh races, and background-refresh staleness guards |
+| `RadarViewModelTest` | `radar_enabled` gating of the radar timeline fetch |
 | `SettingsViewModelTest` | Unit-override selection, *Share usage statistics*, and cache clearing |
 | `AnalyticsRepositoryTest` | Analytics gates: kill switch, user opt-out, both on, and never crashing |
 | `AnalyticsCollectionControllerTest` | SDK collection flag follows the opt-out and kill switch, at start and on change |

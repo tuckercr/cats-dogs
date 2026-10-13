@@ -10,6 +10,18 @@
         <key>radar_frame_interval_ms</key>
         <value>850</value>
     </entry>
+    <!-- Radar kill switch: false hides the radar section and skips RainViewer / OpenStreetMap
+         fetches, for when either becomes unavailable. -->
+    <entry>
+        <key>radar_enabled</key>
+        <value>true</value>
+    </entry>
+    <!-- Forecasts for cities with coordinates: true uses Open-Meteo, false falls back to the
+         OpenWeatherMap 3-hourly forecast by lat/lon. -->
+    <entry>
+        <key>open_meteo_enabled</key>
+        <value>true</value>
+    </entry>
     <!-- Analytics kill switch: false drops every analytics event and turns Firebase Analytics
          collection off on every install, on top of the user's own "Share usage statistics" setting. -->
     <entry>

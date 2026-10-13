@@ -95,6 +95,7 @@ import com.tuckercr.catsdogs.domain.WeatherUnits
 import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
+import com.tuckercr.catsdogs.model.RadarViewModel
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
@@ -114,6 +115,8 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val weatherForecastViewModel =
         hiltViewModel<WeatherForecastViewModel>(viewModelStoreOwner = activity)
     val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
+    // Same owner RadarCard uses, so this is the instance that would load the timeline.
+    val radarEnabled = hiltViewModel<RadarViewModel>().enabled
 
     val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
     val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
@@ -158,6 +161,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         weatherState = weatherState,
         forecastState = forecastState,
         isRefreshing = isRefreshing,
+        radarEnabled = radarEnabled,
         onTabSelected = cityListViewModel::setActiveIndex,
         onOpenSettings = {
             weatherForecastViewModel.logSettingsOpened()
@@ -235,6 +239,7 @@ fun CurrentWeatherScreen(
     weatherState: LoadingState<CurrentWeather>,
     forecastState: LoadingState<List<DayForecast>> = LoadingState.Idle,
     isRefreshing: Boolean = false,
+    radarEnabled: Boolean = true,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
@@ -363,6 +368,7 @@ fun CurrentWeatherScreen(
                             weather = weatherState.data,
                             forecastState = forecastState,
                             location = locations.getOrNull(activeIndex),
+                            radarEnabled = radarEnabled,
                             onForecastRetry = onRetry,
                         )
                     }
@@ -554,6 +560,7 @@ private fun CurrentWeatherContent(
     forecastState: LoadingState<List<DayForecast>>,
     modifier: Modifier = Modifier,
     location: SavedLocation? = null,
+    radarEnabled: Boolean = true,
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
@@ -769,9 +776,12 @@ private fun CurrentWeatherContent(
             }
 
             if (!wide) detailsSection()
-            // Weather radar
-            SectionHeader(R.string.section_radar)
-            RadarCard(location = location, utcOffsetSeconds = weather.offsetSeconds)
+            // Weather radar (shared by the phone and wide layouts). Off via Remote Config
+            // radar_enabled: not composing RadarCard means no RainViewer or tile requests.
+            if (radarEnabled) {
+                SectionHeader(R.string.section_radar)
+                RadarCard(location = location, utcOffsetSeconds = weather.offsetSeconds)
+            }
 
             // Upcoming days section (excludes today)
             if (upcomingDays.isNotEmpty() ||

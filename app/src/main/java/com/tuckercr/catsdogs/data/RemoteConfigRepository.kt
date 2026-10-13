@@ -33,7 +33,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class RemoteConfigRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) {
     // Bumped whenever new values become readable (in-app defaults landed, fetch activated).
     // Declared before remoteConfig: its completion listeners write here.
@@ -49,6 +49,19 @@ class RemoteConfigRepository @Inject constructor(
         long(KEY_RADAR_FRAME_INTERVAL)
             ?.takeIf { it in MIN_RADAR_FRAME_INTERVAL_MS..MAX_RADAR_FRAME_INTERVAL_MS }
             ?: DEFAULT_RADAR_FRAME_INTERVAL_MS
+
+    /**
+     * Radar kill switch. False hides the radar section on the current-weather screen and skips
+     * the RainViewer timeline and tile fetches — for when RainViewer or OpenStreetMap tiles
+     * become unavailable.
+     */
+    fun radarEnabled(): Boolean = boolean(KEY_RADAR_ENABLED) ?: DEFAULT_RADAR_ENABLED
+
+    /**
+     * Forecast provider for cities with coordinates: true uses Open-Meteo, false falls back to
+     * the OpenWeatherMap 3-hourly forecast by lat/lon.
+     */
+    fun openMeteoEnabled(): Boolean = boolean(KEY_OPEN_METEO_ENABLED) ?: DEFAULT_OPEN_METEO_ENABLED
 
     /**
      * Analytics kill switch. False drops every analytics event and turns Firebase Analytics
@@ -114,5 +127,11 @@ class RemoteConfigRepository @Inject constructor(
 
         const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
         const val DEFAULT_ANALYTICS_ENABLED = true
+
+        const val KEY_RADAR_ENABLED = "radar_enabled"
+        const val DEFAULT_RADAR_ENABLED = true
+
+        const val KEY_OPEN_METEO_ENABLED = "open_meteo_enabled"
+        const val DEFAULT_OPEN_METEO_ENABLED = true
     }
 }

@@ -1,6 +1,8 @@
 package com.tuckercr.catsdogs.di
 
 import com.tuckercr.catsdogs.BuildConfig
+import com.tuckercr.catsdogs.data.ForecastSourcePolicy
+import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,4 +23,10 @@ object AppConfigModule {
     @Provides
     @Singleton
     fun provideDefaultZoneId(): ZoneId = ZoneId.systemDefault()
+
+    /** Remote Config `open_meteo_enabled`, read on every forecast fetch (foreground and workers). */
+    @Provides
+    @Singleton
+    fun provideForecastSourcePolicy(remoteConfig: RemoteConfigRepository): ForecastSourcePolicy =
+        ForecastSourcePolicy { remoteConfig.openMeteoEnabled() }
 }
