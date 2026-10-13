@@ -44,6 +44,8 @@ fun WalkCard(
 ) {
     val detail = when {
         advice.rating == WalkRating.GREAT -> stringResource(R.string.walk_now)
+        advice.bestTimeLabel != null && advice.bestTimeIsTomorrow ->
+            stringResource(R.string.walk_around_tomorrow, advice.bestTimeLabel)
         advice.bestTimeLabel != null -> stringResource(R.string.walk_around, advice.bestTimeLabel)
         else -> stringResource(R.string.walk_none)
     }
