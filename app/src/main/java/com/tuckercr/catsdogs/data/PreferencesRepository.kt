@@ -129,6 +129,15 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_UNIT_OVERRIDE] = override.name }
     }
 
+    /** "Share usage statistics" — the user's analytics opt-out. On unless they turn it off. */
+    val shareUsageStatistics: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_SHARE_USAGE_STATISTICS] ?: true
+    }
+
+    suspend fun setShareUsageStatistics(enabled: Boolean) {
+        dataStore.edit { it[KEY_SHARE_USAGE_STATISTICS] = enabled }
+    }
+
     suspend fun clearCache() {
         dataStore.edit {
             it.remove(KEY_WEATHER_CACHE)
@@ -152,5 +161,6 @@ class PreferencesRepository @Inject constructor(
         private val KEY_WEATHER_CACHE = stringPreferencesKey("weather_cache")
         private val KEY_FORECAST_CACHE = stringPreferencesKey("forecast_cache")
         private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
+        private val KEY_SHARE_USAGE_STATISTICS = booleanPreferencesKey("share_usage_statistics")
     }
 }

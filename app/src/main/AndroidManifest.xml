@@ -7,6 +7,21 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- No advertising ID.
+         firebase-analytics merges the Play advertising-ID permissions in by
+         default. Cats & Dogs shows no ads and never reads the ad ID, so strip
+         them: Analytics keeps working on its app-instance id, and the Play Data
+         safety form does not have to declare advertising-ID collection. -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove" />
+
     <application
         android:name=".WeatherApplication"
         android:icon="@mipmap/ic_launcher"
@@ -14,6 +29,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CatsDogs">
+        <!-- Belt and braces with the permission removals above: never collect the
+             advertising ID and never use events for ad personalisation. -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="false" />
+
         <!-- Required when Application implements Configuration.Provider for on-demand WorkManager init. -->
         <provider
             android:name="androidx.startup.InitializationProvider"

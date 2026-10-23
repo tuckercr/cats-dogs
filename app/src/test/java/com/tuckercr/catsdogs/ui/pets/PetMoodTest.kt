@@ -1,5 +1,6 @@
 package com.tuckercr.catsdogs.ui.pets
 
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -25,5 +26,17 @@ class PetMoodTest {
         assertEquals(PetMood.SUNNY, petMoodFor("Clear", "01d", 20.0))
         assertEquals(PetMood.CLOUDY, petMoodFor("Clouds", "03d", 20.0))
         assertEquals(PetMood.CLOUDY, petMoodFor("Mist", "50d", 12.0))
+    }
+
+    @Test
+    fun `remote config thresholds move the hot and cold cut-offs`() {
+        val warmer = PetWeatherThresholds.DEFAULT.copy(petHotC = 25.0, petColdC = 5.0)
+
+        // 26C clear is sunny with the defaults, hot with a 25C threshold.
+        assertEquals(PetMood.SUNNY, petMoodFor("Clear", "01d", 26.0))
+        assertEquals(PetMood.HOT, petMoodFor("Clear", "01d", 26.0, warmer))
+        // 4C cloudy is cloudy with the defaults, cold with a 5C threshold.
+        assertEquals(PetMood.CLOUDY, petMoodFor("Clouds", "04d", 4.0))
+        assertEquals(PetMood.COLD, petMoodFor("Clouds", "04d", 4.0, warmer))
     }
 }

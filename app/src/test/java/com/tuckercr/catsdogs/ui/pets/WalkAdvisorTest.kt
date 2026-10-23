@@ -1,6 +1,7 @@
 package com.tuckercr.catsdogs.ui.pets
 
 import com.tuckercr.catsdogs.domain.HourlySlot
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.WeatherUnits
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -75,6 +76,56 @@ class WalkAdvisorTest {
         // 120F is ~49C: under the 52C paw limit, so a warm afternoon is still walkable.
         val advice = walkAdviceFor(26.0, listOf(slot("2 PM", 79.0, 0, WeatherUnits.IMPERIAL, pavement = 120.0)))
         assertEquals(WalkRating.GREAT, advice?.rating)
+    }
+
+    // --- Remote Config thresholds ---
+
+    private val default = PetWeatherThresholds.DEFAULT
+
+    @Test
+    fun `a higher rain-chance limit makes a damp hour walkable`() {
+        val slots = listOf(slot("3 PM", 18.0, 40))
+
+        assertEquals(WalkRating.POOR, walkAdviceFor(18.0, slots)?.rating)
+        assertEquals(WalkRating.GREAT, walkAdviceFor(18.0, slots, default.copy(maxRainChancePercent = 50))?.rating)
+    }
+
+    @Test
+    fun `a narrower comfort range rules out a warm hour`() {
+        val slots = listOf(slot("3 PM", 24.0, 0))
+
+        assertEquals(WalkRating.GREAT, walkAdviceFor(24.0, slots)?.rating)
+        assertEquals(WalkRating.POOR, walkAdviceFor(24.0, slots, default.copy(comfortMaxC = 22.0))?.rating)
+    }
+
+    @Test
+    fun `a lower pavement limit flags paws hot sooner`() {
+        val slots = listOf(slot("1 PM", 24.0, 0, pavement = 45.0))
+
+        assertEquals(WalkRating.GREAT, walkAdviceFor(24.0, slots)?.rating)
+        assertEquals(WalkRating.PAWS_HOT, walkAdviceFor(24.0, slots, default.copy(hotPavementC = 44.0))?.rating)
+    }
+
+    @Test
+    fun `later walking hours skip an early slot`() {
+        val slots = listOf(slot("7 AM", 15.0, 0), slot("10 AM", 16.0, 0))
+
+        assertEquals(WalkAdvice(WalkRating.GREAT, null), walkAdviceFor(15.0, slots))
+        assertEquals(
+            WalkAdvice(WalkRating.OKAY, "10 AM"),
+            walkAdviceFor(15.0, slots, default.copy(walkHoursStart = 9)),
+        )
+    }
+
+    @Test
+    fun `pet hot and cold thresholds also drive the walk rating`() {
+        val mild = listOf(slot("3 PM", 26.0, 0))
+        val chilly = listOf(slot("3 PM", 4.0, 0))
+
+        assertEquals(WalkRating.GREAT, walkAdviceFor(26.0, mild)?.rating)
+        assertEquals(WalkRating.PAWS_HOT, walkAdviceFor(26.0, mild, default.copy(petHotC = 25.0))?.rating)
+        assertEquals(WalkRating.GREAT, walkAdviceFor(4.0, chilly)?.rating)
+        assertEquals(WalkRating.TOO_COLD, walkAdviceFor(4.0, chilly, default.copy(petColdC = 5.0))?.rating)
     }
 
     // --- tomorrow ---
