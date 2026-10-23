@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Cats & Dogs"
+rootProject.name = "Furcast Weather"
 include(":app")
 include(":weather-api")
  

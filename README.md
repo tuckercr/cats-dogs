@@ -1,4 +1,4 @@
-# Cats & Dogs
+# Furcast Weather
 
 ![Android CI](https://github.com/tuckercr/cats-dogs/actions/workflows/android.yml/badge.svg)
 ![ktlint](https://github.com/tuckercr/cats-dogs/actions/workflows/ktlint.yml/badge.svg)
@@ -107,7 +107,7 @@ alongside the Play build and report to their own Firebase app.
 
 ## Analytics & privacy
 
-Cats & Dogs reports a handful of **anonymous app-usage events** — nothing about where you are,
+Furcast Weather reports a handful of **anonymous app-usage events** — nothing about where you are,
 which cities you save, or what the weather is. The whole catalogue is four functions in
 [`AnalyticsRepository`](app/src/main/java/com/tuckercr/catsdogs/analytics/AnalyticsRepository.kt),
 so the privacy policy can be checked against the code line by line.
