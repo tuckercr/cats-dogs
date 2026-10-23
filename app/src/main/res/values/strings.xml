@@ -1,5 +1,7 @@
 <resources>
-    <string name="app_name">Cats &amp; Dogs</string>
+    <string name="app_name">Furcast Weather</string>
+    <!-- Home-screen label: short, so launchers don't truncate it. -->
+    <string name="app_launcher_name">Furcast</string>
     <string name="action_retry">Retry</string>
     <string name="cd_navigate_back">Back</string>
     <string name="field_city_label">City</string>
@@ -21,7 +23,7 @@
 
     <!-- Location onboarding -->
     <string name="location_onboarding_title">Use your location?</string>
-    <string name="location_onboarding_body">Allow Cats &amp; Dogs to use your device location to show local weather automatically.</string>
+    <string name="location_onboarding_body">Allow Furcast Weather to use your device location to show local weather automatically.</string>
     <string name="location_allow_button">Use my location</string>
     <string name="location_skip_button">Enter a city manually</string>
     <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>
@@ -92,7 +94,7 @@
     <string name="settings_openmeteo_url">https://open-meteo.com</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_share_usage_statistics">Share usage statistics</string>
-    <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Cats &amp; Dogs</string>
+    <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Furcast Weather</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/privacy-policy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
@@ -100,7 +102,7 @@
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay up to date</string>
-    <string name="notif_onboarding_body">Allow Cats &amp; Dogs to send you daily weather updates and severe weather alerts for your saved locations.</string>
+    <string name="notif_onboarding_body">Allow Furcast Weather to send you daily weather updates and severe weather alerts for your saved locations.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 

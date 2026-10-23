@@ -1,6 +1,6 @@
 # Firebase assets
 
-Server-side configuration for Cats & Dogs (Firebase project `cats-dogs-weather`), kept in
+Server-side configuration for Furcast Weather (Firebase project `cats-dogs-weather`), kept in
 the repo so it's versioned alongside the code that depends on it.
 
 | File | What it is |

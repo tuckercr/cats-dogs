@@ -9,7 +9,7 @@
 
     <!-- No advertising ID.
          firebase-analytics merges the Play advertising-ID permissions in by
-         default. Cats & Dogs shows no ads and never reads the ad ID, so strip
+         default. Furcast Weather shows no ads and never reads the ad ID, so strip
          them: Analytics keeps working on its app-instance id, and the Play Data
          safety form does not have to declare advertising-ID collection. -->
     <uses-permission
@@ -25,7 +25,7 @@
     <application
         android:name=".WeatherApplication"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="@string/app_launcher_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.CatsDogs">
