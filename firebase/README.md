@@ -5,7 +5,7 @@ the repo so it's versioned alongside the code that depends on it.
 
 | File | What it is |
 |------|------------|
-| `remoteconfig.template.json` | Remote Config parameters — the server-tunable values. Keys mirror [`RemoteConfigRepository`](../app/src/main/java/com/tuckercr/catsdogs/data/RemoteConfigRepository.kt) and the in-app defaults in [`remote_config_defaults.xml`](../app/src/main/res/xml/remote_config_defaults.xml). |
+| `remoteconfig.template.json` | Remote Config parameters — the 16 server-tunable values. Keys mirror [`RemoteConfigRepository`](../app/src/main/java/com/tuckercr/catsdogs/data/RemoteConfigRepository.kt) and the in-app defaults in [`remote_config_defaults.xml`](../app/src/main/res/xml/remote_config_defaults.xml). |
 
 ## Deploying Remote Config
 
@@ -27,5 +27,7 @@ pick `remoteconfig.template.json`.
 The app never blocks on a fetch. It starts from the in-app defaults, reads the last
 activated values on cold start, and refreshes in the background (at most hourly). Every
 value is validated, so a bad console entry can never break the app — it just falls back to
-the in-app default. When adding a parameter, add it in all three places: this template,
-`remote_config_defaults.xml`, and `RemoteConfigRepository`.
+the in-app default. The parameters are described in the
+[main README](../README.md#remote-config). When adding a parameter, add it in all three places:
+this template, `remote_config_defaults.xml`, and `RemoteConfigRepository`, and add a row to the
+README table.
