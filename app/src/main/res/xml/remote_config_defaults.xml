@@ -27,6 +27,12 @@
         <key>open_meteo_enabled</key>
         <value>true</value>
     </entry>
+    <!-- Replacement OpenWeather API key for rotating a leaked one without an update. Empty uses
+         the key built into the app. -->
+    <entry>
+        <key>openweather_api_key</key>
+        <value></value>
+    </entry>
     <!-- Post the daily 9 / 13 / 19 weather-summary notifications. Other notification types will
          have their own switches. -->
     <entry>
