@@ -43,7 +43,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -91,8 +97,46 @@ fun RadarCard(
     modifier: Modifier = Modifier,
     utcOffsetSeconds: Int = 0,
 ) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        RadarMapCard(location = location, utcOffsetSeconds = utcOffsetSeconds)
+        if (location?.latitude != null && location.longitude != null) {
+            RadarCredits()
+        }
+    }
+}
+
+/**
+ * OpenStreetMap's licence requires visible attribution linking to its copyright page, and
+ * RainViewer asks to be credited for its free radar data.
+ */
+@Composable
+private fun RadarCredits() {
+    val linkStyle = TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant))
+    val osm = stringResource(R.string.radar_credit_osm)
+    val rainViewer = stringResource(R.string.radar_credit_rainviewer)
+    Text(
+        text = buildAnnotatedString {
+            withLink(LinkAnnotation.Url("https://www.openstreetmap.org/copyright", linkStyle)) { append(osm) }
+            append(" · ")
+            withLink(LinkAnnotation.Url("https://www.rainviewer.com", linkStyle)) { append(rainViewer) }
+        },
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.End,
+    )
+}
+
+@Composable
+private fun RadarMapCard(
+    location: SavedLocation?,
+    utcOffsetSeconds: Int,
+) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .height(340.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
