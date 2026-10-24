@@ -51,6 +51,8 @@
     <string name="radar_pause">Pause radar animation</string>
     <string name="radar_legend_light">Light</string>
     <string name="radar_legend_heavy">Heavy</string>
+    <string name="radar_credit_osm">© OpenStreetMap contributors</string>
+    <string name="radar_credit_rainviewer">Radar by RainViewer</string>
 
     <!-- Day detail / upcoming forecast -->
     <string name="section_hourly">HOURLY</string>
