@@ -95,7 +95,7 @@
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_share_usage_statistics">Share usage statistics</string>
     <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Furcast Weather</string>
-    <string name="settings_privacy_policy_url">https://fangjet.com/privacy-policy</string>
+    <string name="settings_privacy_policy_url">https://fangjet.com/weather</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
