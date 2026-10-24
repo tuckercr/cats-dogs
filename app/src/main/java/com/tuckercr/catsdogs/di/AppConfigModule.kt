@@ -15,10 +15,20 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppConfigModule {
 
+    /**
+     * Remote Config `openweather_api_key` when set, otherwise the key built into the app. Read once
+     * per process, so a rotated key takes effect from the next app start.
+     */
     @Provides
     @Singleton
     @Named(WeatherNetworkModule.OWM_API_KEY)
-    fun provideOwmApiKey(): String = BuildConfig.OWM_API_KEY.trim()
+    fun provideOwmApiKey(remoteConfig: RemoteConfigRepository): String =
+        resolveOwmApiKey(remoteConfig.openWeatherApiKey(), BuildConfig.OWM_API_KEY)
+
+    internal fun resolveOwmApiKey(
+        remoteKey: String?,
+        bundledKey: String,
+    ): String = remoteKey?.trim()?.takeIf { it.isNotEmpty() } ?: bundledKey.trim()
 
     @Provides
     @Singleton

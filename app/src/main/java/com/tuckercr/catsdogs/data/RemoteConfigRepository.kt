@@ -68,6 +68,17 @@ class RemoteConfigRepository @Inject constructor(
     fun openMeteoEnabled(): Boolean = boolean(KEY_OPEN_METEO_ENABLED) ?: DEFAULT_OPEN_METEO_ENABLED
 
     /**
+     * Replacement OpenWeather API key, so a leaked key can be rotated without an app update.
+     * Null when unset or blank; the key built into the app is used then. Not a secret: Remote
+     * Config values reach every device.
+     */
+    fun openWeatherApiKey(): String? =
+        value(KEY_OPENWEATHER_API_KEY)
+            ?.let { runCatching { it.asString() }.getOrNull() }
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
+    /**
      * Daily 9 / 13 / 19 weather-summary notifications. False skips posting them (the scheduled
      * work still runs). Other notification types will have their own switches.
      */
@@ -195,6 +206,8 @@ class RemoteConfigRepository @Inject constructor(
         const val DEFAULT_WALK_CARD_ENABLED = true
 
         const val KEY_OPEN_METEO_ENABLED = "open_meteo_enabled"
+
+        const val KEY_OPENWEATHER_API_KEY = "openweather_api_key"
         const val DEFAULT_OPEN_METEO_ENABLED = true
     }
 }
