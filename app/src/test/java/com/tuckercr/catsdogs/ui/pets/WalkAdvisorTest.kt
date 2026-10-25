@@ -192,6 +192,32 @@ class WalkAdvisorTest {
         assertEquals(WalkAdvice(WalkRating.POOR, null), advice)
     }
 
+    @Test
+    fun `a slot before sunrise is not a walk time, even inside the walking hours`() {
+        // 7 AM is within 7 AM..8 PM, but on a winter morning it can still be dark (a night icon).
+        val advice = walkAdviceFor(12.0, listOf(slot("7 AM", 12.0, 5, icon = "03n"), slot("8 AM", 12.0, 5, icon = "03d")))
+        assertEquals(WalkAdvice(WalkRating.OKAY, "8 AM"), advice)
+    }
+
+    @Test
+    fun `raining now means now is not the walk time, even if the forecast hour looks dry`() {
+        val slots = listOf(slot("3 PM", 18.0, 10), slot("4 PM", 18.0, 10))
+        assertEquals(WalkAdvice(WalkRating.GREAT, null), walkAdviceFor(18.0, slots))
+        assertEquals(WalkAdvice(WalkRating.OKAY, "4 PM"), walkAdviceFor(18.0, slots, precipitatingNow = true))
+    }
+
+    @Test
+    fun `raining now with no dry window later is poor`() {
+        val advice = walkAdviceFor(18.0, listOf(slot("3 PM", 18.0, 10), slot("4 PM", 18.0, 90)), precipitatingNow = true)
+        assertEquals(WalkAdvice(WalkRating.POOR, null), advice)
+    }
+
+    @Test
+    fun `precipitation is read from the condition`() {
+        listOf("Rain", "drizzle", "Snow", "Thunderstorm").forEach { assertEquals(it, true, isPrecipitating(it)) }
+        listOf("Clear", "Clouds", "Mist", "Fog").forEach { assertEquals(it, false, isPrecipitating(it)) }
+    }
+
     private fun slot(
         label: String,
         temp: Double,
@@ -200,9 +226,10 @@ class WalkAdvisorTest {
         pavement: Double? = null,
         hour: Int? = hourOf(label),
         epoch: Long? = null,
+        icon: String = "01d",
     ) = HourlySlot(
         timeLabel = label,
-        iconCode = "01d",
+        iconCode = icon,
         description = "clear",
         temperature = temp,
         feelsLike = temp,

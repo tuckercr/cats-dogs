@@ -159,7 +159,7 @@
     <string name="walk_now">Now is a great time</string>
     <string name="walk_around">Around %1$s</string>
     <string name="walk_around_tomorrow">Tomorrow around %1$s</string>
-    <string name="walk_none">No good window soon</string>
+    <string name="walk_none">Not a good day for walkies</string>
     <string name="walk_rating_great">Great</string>
     <string name="walk_rating_okay">Okay</string>
     <string name="walk_rating_poor">Stay in</string>
