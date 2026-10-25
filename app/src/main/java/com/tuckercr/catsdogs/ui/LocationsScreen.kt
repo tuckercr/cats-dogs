@@ -1,6 +1,7 @@
 package com.tuckercr.catsdogs.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -149,7 +154,7 @@ fun LocationsRoute(
 }
 
 @Composable
-private fun DraggableLocationList(
+internal fun DraggableLocationList(
     locations: List<SavedLocation>,
     activeIndex: Int,
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
@@ -219,18 +224,12 @@ private fun DraggableLocationList(
                                 modifier = Modifier.weight(1f),
                             )
                             IconButton(
-                                onClick = { onSetActive(index) },
-                                enabled = index != activeIndex,
-                            ) {
-                                // Invisible but tappable area — tapping row body also works
-                            }
-                            IconButton(
                                 onClick = { onRemove(index) },
                                 enabled = locations.size > 1,
                             ) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Delete",
+                                    contentDescription = "Delete ${location.label}",
                                 )
                             }
                         }
@@ -238,7 +237,8 @@ private fun DraggableLocationList(
                     leadingContent = {
                         Icon(
                             Icons.Default.DragHandle,
-                            contentDescription = "Drag to reorder",
+                            // The row's Move up / Move down actions do this for accessibility services.
+                            contentDescription = null,
                             modifier = Modifier.pointerInput(index) {
                                 detectDragGestures(
                                     onDragStart = {
@@ -267,9 +267,39 @@ private fun DraggableLocationList(
                             },
                         )
                     },
+                    // ListItem merges its children into one accessibility node, so the tap and the
+                    // actions go here, on the node that also carries the city name. Tapping an
+                    // inactive row makes that city active. Reordering is drag-only on screen, so
+                    // TalkBack and Switch Access get Move up / Move down actions instead.
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(4.dp),
+                        .then(
+                            if (index == activeIndex) {
+                                Modifier
+                            } else {
+                                Modifier.clickable(onClickLabel = "Make active") { onSetActive(index) }
+                            },
+                        ).semantics {
+                            selected = index == activeIndex
+                            customActions = listOfNotNull(
+                                if (index > 0) {
+                                    CustomAccessibilityAction("Move up") {
+                                        onReorder(index, index - 1)
+                                        true
+                                    }
+                                } else {
+                                    null
+                                },
+                                if (index < locations.size - 1) {
+                                    CustomAccessibilityAction("Move down") {
+                                        onReorder(index, index + 1)
+                                        true
+                                    }
+                                } else {
+                                    null
+                                },
+                            )
+                        }.padding(4.dp),
                     colors = androidx.compose.material3.ListItemDefaults.colors(
                         containerColor = androidx.compose.ui.graphics.Color.Transparent,
                     ),

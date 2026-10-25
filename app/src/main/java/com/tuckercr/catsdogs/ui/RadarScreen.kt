@@ -4,16 +4,20 @@ import android.graphics.Bitmap
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
@@ -21,10 +25,12 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,6 +49,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -50,6 +59,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -262,21 +272,24 @@ private fun RadarView(
     }
 
     val currentOverlay = frames.getOrNull(frameIndex)?.let { overlays[it.path] }
+    val frameLabel = frames.getOrNull(frameIndex)?.let { frame ->
+        frameTimeLabel(
+            epochSeconds = frame.timeEpochSeconds,
+            utcOffsetSeconds = utcOffsetSeconds,
+            isNow = frameIndex == nowIndex,
+            isForecast = frame.isForecast,
+        )
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         RadarCanvas(tileInfo = tileInfo, baseMap = baseMap, overlay = currentOverlay)
 
         // Timestamp chip (top-start), rendered in the selected city's local time (via its UTC
         // offset) rather than the device's timezone.
-        frames.getOrNull(frameIndex)?.let { frame ->
+        frameLabel?.let { label ->
             OverlayChip(modifier = Modifier.align(Alignment.TopStart)) {
                 Text(
-                    text = frameTimeLabel(
-                        epochSeconds = frame.timeEpochSeconds,
-                        utcOffsetSeconds = utcOffsetSeconds,
-                        isNow = frameIndex == nowIndex,
-                        isForecast = frame.isForecast,
-                    ),
+                    text = label,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -294,6 +307,7 @@ private fun RadarView(
                     playing = playing,
                     frameIndex = frameIndex,
                     frameCount = frames.size,
+                    frameLabel = frameLabel,
                     onTogglePlay = { playing = !playing },
                     onScrub = {
                         playing = false
@@ -376,11 +390,13 @@ private fun OverlayChip(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class) // the Slider overload with a custom thumb
 @Composable
 private fun RadarControls(
     playing: Boolean,
     frameIndex: Int,
     frameCount: Int,
+    frameLabel: String?,
     onTogglePlay: () -> Unit,
     onScrub: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -394,7 +410,10 @@ private fun RadarControls(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onTogglePlay) {
+        val sliderDescription = stringResource(R.string.radar_frame)
+        // A full 48dp layout: the default 40dp one relies on overflow for its touch area, and the
+        // slider beside it would take part of that.
+        IconButton(onClick = onTogglePlay, modifier = Modifier.size(48.dp)) {
             Icon(
                 imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = stringResource(
@@ -402,42 +421,57 @@ private fun RadarControls(
                 ),
             )
         }
+        // The slider is as tall as its thumb; the default 44dp one leaves it short of the 48dp
+        // minimum touch target.
+        val interactionSource = remember { MutableInteractionSource() }
         Slider(
             value = frameIndex.toFloat(),
             onValueChange = { onScrub(it.roundToInt().coerceIn(0, (frameCount - 1).coerceAtLeast(0))) },
             valueRange = 0f..(frameCount - 1).coerceAtLeast(1).toFloat(),
+            interactionSource = interactionSource,
+            thumb = {
+                SliderDefaults.Thumb(interactionSource = interactionSource, thumbSize = DpSize(4.dp, 48.dp))
+            },
             modifier = Modifier
                 .weight(1f)
-                .padding(end = 12.dp),
+                .padding(end = 12.dp)
+                .semantics {
+                    contentDescription = sliderDescription
+                    frameLabel?.let { stateDescription = it }
+                },
         )
     }
 }
 
 @Composable
 private fun RadarLegend(modifier: Modifier = Modifier) {
+    // At least 96dp wide, wider when large text makes the labels need it (they'd wrap mid-word).
     Column(
         modifier = modifier
             .padding(8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .width(IntrinsicSize.Max),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
-                .width(96.dp)
+                .widthIn(min = 96.dp)
+                .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(Brush.horizontalGradient(RadarLegendColors)),
         )
         Row(
             modifier = Modifier
-                .width(96.dp)
+                .fillMaxWidth()
                 .padding(top = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(stringResource(R.string.radar_legend_light), style = MaterialTheme.typography.labelSmall)
-            Text(stringResource(R.string.radar_legend_heavy), style = MaterialTheme.typography.labelSmall)
+            Text(stringResource(R.string.radar_legend_light), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            Spacer(modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.radar_legend_heavy), style = MaterialTheme.typography.labelSmall, maxLines = 1)
         }
     }
 }

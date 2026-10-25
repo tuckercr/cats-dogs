@@ -6,14 +6,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -123,16 +128,18 @@ fun SettingsRoute(
         ) {
             SettingsSectionHeader(stringResource(R.string.settings_section_units))
 
-            UnitOverride.entries.forEach { option ->
-                UnitOptionRow(
-                    label = when (option) {
-                        UnitOverride.SYSTEM -> stringResource(R.string.settings_unit_system)
-                        UnitOverride.METRIC -> stringResource(R.string.settings_unit_metric)
-                        UnitOverride.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
-                    },
-                    selected = unitOverride == option,
-                    onClick = { viewModel.setUnitOverride(option) },
-                )
+            Column(modifier = Modifier.selectableGroup()) {
+                UnitOverride.entries.forEach { option ->
+                    UnitOptionRow(
+                        label = when (option) {
+                            UnitOverride.SYSTEM -> stringResource(R.string.settings_unit_system)
+                            UnitOverride.METRIC -> stringResource(R.string.settings_unit_metric)
+                            UnitOverride.IMPERIAL -> stringResource(R.string.settings_unit_imperial)
+                        },
+                        selected = unitOverride == option,
+                        onClick = { viewModel.setUnitOverride(option) },
+                    )
+                }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -273,14 +280,19 @@ private fun UnitOptionRow(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    // The whole row is one radio item, so TalkBack reads the label with the state. The button
+    // itself takes no clicks, or it would be a second, unlabelled focus stop.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            // Same size and positions as before, when the button carried its own 48dp touch area.
+            .heightIn(min = 56.dp)
+            .padding(start = 22.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(selected = selected, onClick = null)
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -297,7 +309,9 @@ private fun SettingsLinkRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .heightIn(min = 48.dp)
+            .wrapContentHeight(Alignment.CenterVertically)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }
 
