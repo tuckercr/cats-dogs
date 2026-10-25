@@ -160,11 +160,8 @@
     <string name="walk_around">Around %1$s</string>
     <string name="walk_around_tomorrow">Tomorrow around %1$s</string>
     <string name="walk_none">Not a good day for walkies</string>
-    <string name="walk_rating_great">Great</string>
-    <string name="walk_rating_okay">Okay</string>
-    <string name="walk_rating_poor">Stay in</string>
-    <string name="walk_rating_hot">Paws hot</string>
-    <string name="walk_rating_cold">Too cold</string>
+    <string name="walk_too_hot">Too hot for paws.</string>
+    <string name="walk_too_cold">Too cold for paws.</string>
 
     <!-- UV index -->
     <string name="label_uv_index">UV index</string>
