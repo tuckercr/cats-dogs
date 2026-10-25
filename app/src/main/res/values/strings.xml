@@ -49,6 +49,7 @@
     <string name="radar_loading">Loading radar…</string>
     <string name="radar_play">Play radar animation</string>
     <string name="radar_pause">Pause radar animation</string>
+    <string name="radar_frame">Radar frame</string>
     <string name="radar_legend_light">Light</string>
     <string name="radar_legend_heavy">Heavy</string>
     <string name="radar_credit_osm">© OpenStreetMap contributors</string>
@@ -104,7 +105,7 @@
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay up to date</string>
-    <string name="notif_onboarding_body">Allow Furcast Weather to send you daily weather updates and severe weather alerts for your saved locations.</string>
+    <string name="notif_onboarding_body">Allow Furcast Weather to send you daily weather updates for your saved locations.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 

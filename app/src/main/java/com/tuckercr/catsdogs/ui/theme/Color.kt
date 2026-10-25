@@ -2,8 +2,9 @@ package com.tuckercr.catsdogs.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light scheme
-val SkyBlue = Color(0xFF0288D1)
+// Light scheme. The brand blue (#0288D1, still used for the splash and launcher background) is
+// only 3.7:1 on the light surface, short of WCAG AA for text, so the light theme's primary is the
+// darker SkyBlueDark: 7.1:1 on the surface, 5.1:1 on SkyBlueSurface cards, 7.6:1 under white.
 val SkyBlueDark = Color(0xFF01579B)
 val SkyBlueContainer = Color(0xFF81C7EC)
 val SkyBlueSurface = Color(0xFFB3DDF2)
