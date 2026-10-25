@@ -34,7 +34,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -203,20 +202,13 @@ fun SettingsRoute(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_cache))
 
-            TextButton(
+            SettingsLinkRow(
+                label = stringResource(R.string.settings_clear_cache),
                 onClick = {
                     viewModel.clearCache()
                     scope.launch { snackbarHostState.showSnackbar(cacheClearedMessage) }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_clear_cache),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_about))
