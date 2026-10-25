@@ -103,6 +103,7 @@ import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
 import com.tuckercr.catsdogs.ui.pets.inkColor
+import com.tuckercr.catsdogs.ui.pets.isPrecipitating
 import com.tuckercr.catsdogs.ui.pets.petCaption
 import com.tuckercr.catsdogs.ui.pets.petMoodFor
 import com.tuckercr.catsdogs.ui.pets.skyColor
@@ -607,15 +608,17 @@ private fun CurrentWeatherContent(
     val currentSlots = remember(forecastDays, nowEpochSeconds) {
         forecastDays.flatMap { it.hourlySlots }.fromCurrentSlot(nowEpochSeconds)
     }
-    val walkAdvice = remember(currentSlots, currentTempC, weather.offsetSeconds, nowEpochSeconds, petWeatherThresholds) {
-        walkAdviceFor(
-            currentTempC,
-            currentSlots,
-            thresholds = petWeatherThresholds,
-            utcOffsetSeconds = weather.offsetSeconds,
-            nowEpochSeconds = nowEpochSeconds,
-        )
-    }
+    val walkAdvice =
+        remember(currentSlots, currentTempC, weather.conditionMain, weather.offsetSeconds, nowEpochSeconds, petWeatherThresholds) {
+            walkAdviceFor(
+                currentTempC,
+                currentSlots,
+                precipitatingNow = isPrecipitating(weather.conditionMain),
+                thresholds = petWeatherThresholds,
+                utcOffsetSeconds = weather.offsetSeconds,
+                nowEpochSeconds = nowEpochSeconds,
+            )
+        }
 
     // Landscape phones and tablets put the hero beside today's details instead of stacking
     // everything in one stretched column.
