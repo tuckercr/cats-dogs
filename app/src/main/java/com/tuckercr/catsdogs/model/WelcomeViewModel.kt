@@ -65,8 +65,8 @@ class WelcomeViewModel internal constructor(
         }
     }
 
-    /** "Who's at home?": the walk card only shows when there's a dog. */
-    fun chooseHousehold(hasDog: Boolean) {
+    /** "Is there a dog at home?": the walk card only shows when there is. */
+    fun answerHasDog(hasDog: Boolean) {
         viewModelScope.launch { setShowWalkCard(hasDog) }
     }
 

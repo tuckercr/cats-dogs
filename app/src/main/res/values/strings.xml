@@ -30,13 +30,11 @@
     <string name="welcome_misty_body">Prefers the window seat, and will tell you when it\'s a day for staying in.</string>
     <string name="welcome_together">Together they check the sky so you know what to expect, for you and your pets.</string>
 
-    <!-- Household onboarding -->
-    <string name="household_title">Who\'s at home?</string>
-    <string name="household_body">If there\'s a dog, Sunny will suggest the best time for a walk. You can change this later in Settings.</string>
-    <string name="household_dog">A dog</string>
-    <string name="household_cat">A cat</string>
-    <string name="household_both">A dog and a cat</string>
-    <string name="household_neither">No pets</string>
+    <!-- "Is there a dog at home?" onboarding -->
+    <string name="dog_question_title">Is there a dog at home?</string>
+    <string name="dog_question_body">If there is, Sunny will suggest the best time for a walk. You can change this later in Settings.</string>
+    <string name="dog_question_yes">Yes</string>
+    <string name="dog_question_no">No</string>
     <string name="get_started">Get started</string>
 
     <!-- Location onboarding -->

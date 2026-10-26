@@ -106,13 +106,13 @@ class WelcomeViewModelTest {
         }
 
     @Test
-    fun `choosing a household without a dog turns the walk card off`() =
+    fun `answering no dog turns the walk card off, and yes turns it on`() =
         runTest {
             val saved = mutableListOf<Boolean>()
             val vm = viewModel(setShowWalkCard = { saved += it })
 
-            vm.chooseHousehold(hasDog = false)
-            vm.chooseHousehold(hasDog = true)
+            vm.answerHasDog(hasDog = false)
+            vm.answerHasDog(hasDog = true)
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
 
             assertEquals(listOf(false, true), saved)

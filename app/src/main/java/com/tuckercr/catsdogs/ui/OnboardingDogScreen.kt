@@ -6,9 +6,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -26,24 +26,13 @@ import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.skyColor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 
-/** Who lives with the user. Only a dog makes the "Best walk time" card worth showing. */
-enum class Household(
-    val labelRes: Int,
-    val hasDog: Boolean,
-) {
-    DOG(R.string.household_dog, hasDog = true),
-    CAT(R.string.household_cat, hasDog = false),
-    BOTH(R.string.household_both, hasDog = true),
-    NEITHER(R.string.household_neither, hasDog = false),
-}
-
 /**
  * Onboarding step after the welcome screen. The answer sets the "Best walk time" switch in
  * Settings, so a home without a dog never sees the walk card.
  */
 @Composable
-fun OnboardingHouseholdScreen(
-    onChosen: (Household) -> Unit,
+fun OnboardingDogScreen(
+    onAnswered: (hasDog: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     OnboardingLayout(modifier = modifier) {
@@ -56,32 +45,31 @@ fun OnboardingHouseholdScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = stringResource(R.string.household_title),
+            text = stringResource(R.string.dog_question_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.semantics { heading() },
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = stringResource(R.string.household_body),
+            text = stringResource(R.string.dog_question_body),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Household.entries.forEach { household ->
-                OutlinedButton(
-                    onClick = { onChosen(household) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 52.dp),
-                ) {
-                    Text(
-                        text = stringResource(household.labelRes),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+            Button(
+                onClick = { onAnswered(true) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.dog_question_yes))
+            }
+            OutlinedButton(
+                onClick = { onAnswered(false) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.dog_question_no))
             }
         }
     }
@@ -89,8 +77,8 @@ fun OnboardingHouseholdScreen(
 
 @Preview(showBackground = true)
 @Composable
-private fun OnboardingHouseholdScreenPreview() {
+private fun OnboardingDogScreenPreview() {
     CatsDogsTheme {
-        OnboardingHouseholdScreen(onChosen = {})
+        OnboardingDogScreen(onAnswered = {})
     }
 }
