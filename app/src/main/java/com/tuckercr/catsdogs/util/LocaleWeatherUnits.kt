@@ -66,11 +66,7 @@ internal fun usesMilesForDistance(
         UnitOverride.SYSTEM -> systemUsesMiles()
     }
 
-private fun measurementSystemUsesMiles(locale: Locale): Boolean =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-        val system = LocaleData.getMeasurementSystem(ULocale.forLocale(locale))
-        system == LocaleData.MeasurementSystem.US || system == LocaleData.MeasurementSystem.UK
-    } else {
-        // No measurement-system API before 28: the same country rule as the temperature units.
-        WeatherUnits.fromLocale(locale) == WeatherUnits.IMPERIAL
-    }
+private fun measurementSystemUsesMiles(locale: Locale): Boolean {
+    val system = LocaleData.getMeasurementSystem(ULocale.forLocale(locale))
+    return system == LocaleData.MeasurementSystem.US || system == LocaleData.MeasurementSystem.UK
+}
