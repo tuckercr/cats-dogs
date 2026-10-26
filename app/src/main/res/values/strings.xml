@@ -23,12 +23,23 @@
     <string name="format_visibility_mi">%.1f mi</string>
     <string name="format_visibility_m">%d m</string>
     <string name="visibility_clear">Clear</string>
-    <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
+    <string name="welcome_title">Meet Sunny &amp; Misty</string>
+    <string name="welcome_sunny_name">Sunny</string>
+    <string name="welcome_sunny_body">Loves a walk in almost any weather, and always knows the best time to head out.</string>
+    <string name="welcome_misty_name">Misty</string>
+    <string name="welcome_misty_body">Prefers the window seat, and will tell you when it\'s a day for staying in.</string>
+    <string name="welcome_together">Together they check the sky so you know what to expect, for you and your pets.</string>
+
+    <!-- "Is there a dog at home?" onboarding -->
+    <string name="dog_question_title">Is there a dog at home?</string>
+    <string name="dog_question_body">If there is, Sunny will suggest the best time for a walk. You can change this later in Settings.</string>
+    <string name="dog_question_yes">Yes</string>
+    <string name="dog_question_no">No</string>
     <string name="get_started">Get started</string>
 
     <!-- Location onboarding -->
     <string name="location_onboarding_title">Use your location?</string>
-    <string name="location_onboarding_body">Allow Sunny &amp; Misty to use your device location to show local weather automatically.</string>
+    <string name="location_onboarding_body">Misty likes to know which window she\'s looking out of. Allow your location to see the weather where you are.</string>
     <string name="location_allow_button">Use my location</string>
     <string name="location_skip_button">Enter a city manually</string>
     <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>
@@ -77,8 +88,14 @@
     <!-- Lead-in to the error message on the banner over cached weather, e.g. "Showing weather from 7:45 AM." -->
     <string name="stale_weather_from">Showing weather from %1$s.</string>
     <string name="stale_weather_saved">Showing saved weather.</string>
+    <!-- Past the 3-hour cutoff the screen shows the forecast for this hour instead of the old reading. -->
+    <string name="stale_forecast_from">Showing the forecast from %1$s.</string>
+    <!-- When a reading was taken, after "from" or "Last updated": e.g. "yesterday at 10:10 AM", "Sat at 10:10 AM". -->
+    <string name="reading_time_yesterday">yesterday at %1$s</string>
+    <string name="reading_time_day">%1$s at %2$s</string>
+    <string name="error_last_updated">Last updated %1$s.</string>
     <string name="error_offline">Misty knocked the Wi-Fi off the shelf. Pull to try again.</string>
-    <string name="error_city_not_found">City not found. Try a different name or check the spelling.</string>
+    <string name="error_city_not_found">We couldn\'t find that city. Try a different search.</string>
     <string name="error_bad_api_key">Invalid API key. Rebuild the app with a valid OWM_API_KEY.</string>
     <string name="error_rate_limited">Too many requests. Please wait a moment and try again.</string>
     <string name="error_server">The weather service is napping. Try again in a few minutes.</string>
@@ -116,7 +133,7 @@
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
 
     <!-- Notification onboarding -->
-    <string name="notif_onboarding_title">Stay up to date</string>
+    <string name="notif_onboarding_title">Stay in the loop</string>
     <string name="notif_onboarding_body">Allow Sunny &amp; Misty to send you daily weather updates for your saved locations.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>

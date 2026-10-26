@@ -105,6 +105,19 @@ class WelcomeViewModelTest {
             assertEquals(1, persisted.size)
         }
 
+    @Test
+    fun `answering no dog turns the walk card off, and yes turns it on`() =
+        runTest {
+            val saved = mutableListOf<Boolean>()
+            val vm = viewModel(setShowWalkCard = { saved += it })
+
+            vm.answerHasDog(hasDog = false)
+            vm.answerHasDog(hasDog = true)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(listOf(false, true), saved)
+        }
+
     private fun viewModel(
         hasSeenWelcomeOnce: suspend () -> Boolean = { false },
         notificationOnboardingDoneOnce: suspend () -> Boolean = { false },
@@ -112,6 +125,7 @@ class WelcomeViewModelTest {
         setHasSeenWelcome: suspend (Boolean) -> Unit = {},
         setNotificationOnboardingDone: suspend () -> Unit = {},
         setLocationOnboardingDone: suspend () -> Unit = {},
+        setShowWalkCard: suspend (Boolean) -> Unit = {},
     ) = WelcomeViewModel(
         hasSeenWelcomeOnce = hasSeenWelcomeOnce,
         notificationOnboardingDoneOnce = notificationOnboardingDoneOnce,
@@ -119,6 +133,7 @@ class WelcomeViewModelTest {
         setHasSeenWelcome = setHasSeenWelcome,
         setNotificationOnboardingDone = setNotificationOnboardingDone,
         setLocationOnboardingDone = setLocationOnboardingDone,
+        setShowWalkCard = setShowWalkCard,
     )
 
     class MainDispatcherRule(

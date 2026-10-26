@@ -25,6 +25,7 @@ class WelcomeViewModel internal constructor(
     private val setHasSeenWelcome: suspend (Boolean) -> Unit,
     private val setNotificationOnboardingDone: suspend () -> Unit,
     private val setLocationOnboardingDone: suspend () -> Unit,
+    private val setShowWalkCard: suspend (Boolean) -> Unit = {},
     private val onOnboardingComplete: () -> Unit = {},
 ) : ViewModel() {
 
@@ -39,6 +40,7 @@ class WelcomeViewModel internal constructor(
         setHasSeenWelcome = preferencesRepository::setHasSeenWelcome,
         setNotificationOnboardingDone = preferencesRepository::setNotificationOnboardingDone,
         setLocationOnboardingDone = preferencesRepository::setLocationOnboardingDone,
+        setShowWalkCard = preferencesRepository::setShowWalkCard,
         onOnboardingComplete = analyticsRepository::logOnboardingComplete,
     )
 
@@ -61,6 +63,11 @@ class WelcomeViewModel internal constructor(
             setHasSeenWelcome(true)
             _onboardingState.value = _onboardingState.value?.copy(hasSeenWelcome = true)
         }
+    }
+
+    /** "Is there a dog at home?": the walk card only shows when there is. */
+    fun answerHasDog(hasDog: Boolean) {
+        viewModelScope.launch { setShowWalkCard(hasDog) }
     }
 
     fun completeNotificationOnboarding() {

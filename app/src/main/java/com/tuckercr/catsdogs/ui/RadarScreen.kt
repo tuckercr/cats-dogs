@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -121,10 +122,13 @@ fun RadarCard(
 
 /**
  * OpenStreetMap's licence requires visible attribution linking to its copyright page, and
- * RainViewer asks to be credited for its free radar data.
+ * RainViewer asks to be credited for its free radar data. Kept at labelSmall's default 11sp
+ * whatever the system font size, so the credit stays a small footnote under the map.
  */
 @Composable
 private fun RadarCredits() {
+    // dp converted to sp at the current font scale renders the same size at every scale.
+    val (fontSize, lineHeight) = with(LocalDensity.current) { 11.dp.toSp() to 16.dp.toSp() }
     val linkStyle = TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant))
     val osm = stringResource(R.string.radar_credit_osm)
     val rainViewer = stringResource(R.string.radar_credit_rainviewer)
@@ -134,7 +138,7 @@ private fun RadarCredits() {
             append(" · ")
             withLink(LinkAnnotation.Url("https://www.rainviewer.com", linkStyle)) { append(rainViewer) }
         },
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = fontSize, lineHeight = lineHeight),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.End,
     )

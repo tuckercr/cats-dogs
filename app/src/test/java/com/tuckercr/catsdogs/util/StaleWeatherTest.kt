@@ -1,0 +1,141 @@
+package com.tuckercr.catsdogs.util
+
+import com.tuckercr.catsdogs.domain.CurrentWeather
+import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.HourlySlot
+import com.tuckercr.catsdogs.domain.WeatherUnits
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class StaleWeatherTest {
+
+    // 2026-01-01T12:00:00Z
+    private val noon = 1_767_268_800L
+    private val hour = 3_600L
+
+    @Test
+    fun `a reading up to three hours old still counts as now`() {
+        val reading = weather(observedAt = noon)
+
+        assertFalse(reading.isTooOldToShowAsNow(noon + 3 * hour))
+        assertTrue(reading.isTooOldToShowAsNow(noon + 3 * hour + 1))
+    }
+
+    @Test
+    fun `a reading of unknown age counts as now`() {
+        assertFalse(weather(observedAt = null).isTooOldToShowAsNow(noon + 48 * hour))
+    }
+
+    @Test
+    fun `the forecast hour in progress stands in for an old reading`() {
+        val forecast = listOf(
+            day(tempMin = 2.0, tempMax = 9.0, slots = listOf(slot(noon, 5.0, "04d"), slot(noon + hour, 7.0, "10d"))),
+        )
+
+        val now = weather(observedAt = noon - 20 * hour)
+        val shown = forecastAsCurrent(now, forecast, nowEpochSeconds = noon + hour + 10 * 60)!!
+
+        assertEquals(7.0, shown.temperature, 0.0)
+        assertEquals("10d", shown.iconCode)
+        assertEquals("Rain", shown.conditionMain)
+        assertEquals(2.0, shown.tempMin, 0.0)
+        assertEquals(9.0, shown.tempMax, 0.0)
+        assertNull("Visibility isn't forecast", shown.visibilityMeters)
+        assertEquals("Austin", shown.cityName)
+        assertEquals(now.observedAtEpochSeconds, shown.observedAtEpochSeconds)
+    }
+
+    @Test
+    fun `a three-hourly forecast covers the hours inside its slots`() {
+        val forecast = listOf(day(slots = listOf(slot(noon, 5.0), slot(noon + 3 * hour, 8.0))))
+
+        assertEquals(5.0, forecastAsCurrent(weather(noon), forecast, noon + 2 * hour)!!.temperature, 0.0)
+    }
+
+    @Test
+    fun `no stand-in once the forecast has run out, or before it starts`() {
+        val forecast = listOf(day(slots = listOf(slot(noon, 5.0), slot(noon + hour, 6.0))))
+
+        assertNull(forecastAsCurrent(weather(noon), forecast, noon + 4 * hour + 1))
+        assertNull(forecastAsCurrent(weather(noon), forecast, noon - 1))
+        assertNull(forecastAsCurrent(weather(noon), emptyList(), noon))
+    }
+
+    @Test
+    fun `icon codes map to OpenWeather condition groups`() {
+        assertEquals("Clear", conditionMainForIcon("01n"))
+        assertEquals("Clouds", conditionMainForIcon("03d"))
+        assertEquals("Rain", conditionMainForIcon("09d"))
+        assertEquals("Thunderstorm", conditionMainForIcon("11d"))
+        assertEquals("Snow", conditionMainForIcon("13n"))
+        assertEquals("Mist", conditionMainForIcon("50d"))
+    }
+
+    @Test
+    fun `reading day is today, yesterday or the day's name, in the city's own date`() {
+        // 2026-01-01 is a Thursday. 23:30 UTC on the 1st is already the 2nd in Tokyo (UTC+9).
+        assertEquals(ReadingDay.Today, readingDay(noon, 0, noon + 2 * hour))
+        assertEquals(ReadingDay.Yesterday, readingDay(noon, 0, noon + 24 * hour))
+        assertEquals(ReadingDay.Earlier("Thu"), readingDay(noon, 0, noon + 72 * hour))
+        assertEquals(ReadingDay.Yesterday, readingDay(noon, 9 * 3600, noon + 11 * hour + 30 * 60 + 9 * hour))
+    }
+
+    private fun weather(observedAt: Long?) =
+        CurrentWeather(
+            cityName = "Austin",
+            conditionMain = "Clear",
+            description = "Clear sky",
+            iconCode = "01d",
+            temperature = 20.0,
+            feelsLike = 20.0,
+            tempMin = 15.0,
+            tempMax = 25.0,
+            humidityPercent = 40,
+            pressureHpa = 1013,
+            windSpeed = 3.0,
+            windDeg = 90,
+            visibilityMeters = 10000,
+            cloudPercent = 10,
+            units = WeatherUnits.METRIC,
+            utcOffsetSeconds = 0,
+            observedAtEpochSeconds = observedAt,
+        )
+
+    private fun day(
+        tempMin: Double = 0.0,
+        tempMax: Double = 10.0,
+        slots: List<HourlySlot>,
+    ) = DayForecast(
+        dateLabel = "Thu, Jan 1",
+        conditionMain = "Clouds",
+        description = "cloudy",
+        iconCode = "03d",
+        temperature = 5.0,
+        feelsLike = 5.0,
+        tempMin = tempMin,
+        tempMax = tempMax,
+        units = WeatherUnits.METRIC,
+        hourlySlots = slots,
+    )
+
+    private fun slot(
+        epochSeconds: Long,
+        temperature: Double,
+        iconCode: String = "01d",
+    ) = HourlySlot(
+        timeLabel = epochSeconds.toString(),
+        iconCode = iconCode,
+        description = "forecast",
+        temperature = temperature,
+        feelsLike = temperature,
+        windSpeed = 2.0,
+        windDeg = 0,
+        humidity = 60,
+        pressure = 1010,
+        units = WeatherUnits.METRIC,
+        epochSeconds = epochSeconds,
+    )
+}
