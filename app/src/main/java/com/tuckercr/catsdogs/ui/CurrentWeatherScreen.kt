@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -100,6 +101,7 @@ import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.RadarViewModel
+import com.tuckercr.catsdogs.model.SettingsViewModel
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
@@ -111,6 +113,7 @@ import com.tuckercr.catsdogs.ui.pets.skyColor
 import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import com.tuckercr.catsdogs.util.fromCurrentSlot
+import com.tuckercr.catsdogs.util.usesMilesForDistance
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,6 +126,10 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
     // Same owner RadarCard uses, so this is the instance that would load the timeline.
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
+    val unitOverride by hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
+        .unitOverride
+        .collectAsStateWithLifecycle()
+    val distanceInMiles = LocalContext.current.usesMilesForDistance(unitOverride)
 
     val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
     val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
@@ -161,31 +168,33 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
 
     var showAddSheet by remember { mutableStateOf(false) }
 
-    CurrentWeatherScreen(
-        locations = locations,
-        activeIndex = activeIndex,
-        weatherState = weatherState,
-        forecastState = forecastState,
-        isRefreshing = isRefreshing,
-        radarEnabled = radarEnabled,
-        walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
-        petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
-        onTabSelected = cityListViewModel::setActiveIndex,
-        onOpenSettings = {
-            weatherForecastViewModel.logSettingsOpened()
-            onOpenSettings()
-        },
-        onAddCityClick = { showAddSheet = true },
-        onRefresh = {
+    CompositionLocalProvider(LocalDistanceInMiles provides distanceInMiles) {
+        CurrentWeatherScreen(
+            locations = locations,
+            activeIndex = activeIndex,
+            weatherState = weatherState,
+            forecastState = forecastState,
+            isRefreshing = isRefreshing,
+            radarEnabled = radarEnabled,
+            walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
+            petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
+            onTabSelected = cityListViewModel::setActiveIndex,
+            onOpenSettings = {
+                weatherForecastViewModel.logSettingsOpened()
+                onOpenSettings()
+            },
+            onAddCityClick = { showAddSheet = true },
+            onRefresh = {
+                activeLocation?.let {
+                    weatherForecastViewModel.refreshCurrent(it)
+                    weatherForecastViewModel.refreshForecast(it)
+                }
+            },
+        ) {
             activeLocation?.let {
                 weatherForecastViewModel.refreshCurrent(it)
                 weatherForecastViewModel.refreshForecast(it)
             }
-        },
-    ) {
-        activeLocation?.let {
-            weatherForecastViewModel.refreshCurrent(it)
-            weatherForecastViewModel.refreshForecast(it)
         }
     }
 
@@ -1018,9 +1027,13 @@ private fun formatWind(
 /** A speed that would show as "0.0": written as a plain 0, with no direction. */
 internal fun isCalmWind(speed: Double): Boolean = speed < 0.05
 
+private const val METERS_PER_MILE = 1609.344
+
 @Composable
 private fun formatVisibility(meters: Int): String =
-    if (meters >= 1000) {
+    if (LocalDistanceInMiles.current) {
+        stringResource(R.string.format_visibility_mi, meters / METERS_PER_MILE)
+    } else if (meters >= 1000) {
         stringResource(R.string.format_visibility_km, meters / 1000.0)
     } else {
         stringResource(R.string.format_visibility_m, meters)
