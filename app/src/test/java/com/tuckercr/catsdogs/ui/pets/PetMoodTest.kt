@@ -39,4 +39,14 @@ class PetMoodTest {
         assertEquals(PetMood.CLOUDY, petMoodFor("Clouds", "04d", 4.0))
         assertEquals(PetMood.COLD, petMoodFor("Clouds", "04d", 4.0, warmer))
     }
+
+    @Test
+    fun `night is split by the city's local hour`() {
+        assertEquals(NightPart.EVENING, nightPartAt(19))
+        assertEquals(NightPart.EVENING, nightPartAt(22))
+        assertEquals(NightPart.LATE_NIGHT, nightPartAt(23))
+        assertEquals(NightPart.LATE_NIGHT, nightPartAt(3))
+        assertEquals(NightPart.BEFORE_DAWN, nightPartAt(5))
+        assertEquals(NightPart.BEFORE_DAWN, nightPartAt(7))
+    }
 }

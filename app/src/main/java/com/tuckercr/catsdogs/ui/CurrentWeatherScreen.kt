@@ -715,7 +715,7 @@ private fun CurrentWeatherContent(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = petCaption(mood),
+                        text = petCaption(mood, weather.offsetSeconds),
                         style = MaterialTheme.typography.titleMedium,
                         color = ink,
                         textAlign = TextAlign.Center,

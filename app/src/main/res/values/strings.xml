@@ -155,9 +155,18 @@
         <item>Brrr. Short walks and warm blankets.</item>
         <item>Coat weather for small dogs today.</item>
     </string-array>
-    <string-array name="pet_caption_night">
-        <item>Both are curled up asleep. Shh.</item>
+    <!-- Night is split by the city's local hour, so a 3 AM caption doesn't suggest an evening stroll. -->
+    <string-array name="pet_caption_night_evening">
         <item>Quiet night. Time for one last stroll before bed?</item>
+        <item>The dog thinks there\'s time for one more lap of the block.</item>
+    </string-array>
+    <string-array name="pet_caption_night_late">
+        <item>Both are curled up asleep. Shh.</item>
+        <item>Lights out. The cat has claimed the warm spot.</item>
+    </string-array>
+    <string-array name="pet_caption_night_before_dawn">
+        <item>Still dark out. The dog is already waiting by the door.</item>
+        <item>Not quite morning. The cat is pretending to be asleep.</item>
     </string-array>
     <string name="cd_pet_scene">The cat and dog reacting to the weather</string>
 
