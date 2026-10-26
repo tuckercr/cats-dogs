@@ -89,6 +89,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.domain.CitySuggestion
 import com.tuckercr.catsdogs.domain.CurrentWeather
@@ -114,7 +115,12 @@ import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import com.tuckercr.catsdogs.util.fromCurrentSlot
 import com.tuckercr.catsdogs.util.usesMilesForDistance
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.minutes
+
+/** How often an open screen re-reads the clock and quietly refreshes the weather. */
+private val AUTO_REFRESH_INTERVAL = 30.minutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -165,6 +171,20 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // And the same quiet refresh every half hour while the screen stays open (left on a stand
+    // overnight, say), which also moves the hourly strip and captions on.
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(AUTO_REFRESH_INTERVAL)
+                currentActiveLocation?.let {
+                    weatherForecastViewModel.backgroundRefreshCurrent(it)
+                    weatherForecastViewModel.backgroundRefreshForecast(it)
+                }
+            }
+        }
     }
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -609,13 +629,22 @@ private fun CurrentWeatherContent(
     val currentTempC = weather.units.toCelsius(weather.temperature)
     val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC, petWeatherThresholds)
     val ink = mood.inkColor
-    // Slots from the one in progress onwards. "Now" is re-read whenever the forecast changes and
-    // whenever the screen resumes, so a cached forecast, a failed refresh or an app left open for
-    // hours never shows (or advises on) hours that have already passed.
+    // Slots from the one in progress onwards. "Now" is re-read whenever the forecast changes,
+    // whenever the screen resumes and every half hour while it stays open, so a cached forecast,
+    // a failed refresh or an app left open for hours never shows (or advises on) past hours.
     var resumeCount by remember { mutableIntStateOf(0) }
     LifecycleResumeEffect(Unit) {
         resumeCount++
         onPauseOrDispose { }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (true) {
+                delay(AUTO_REFRESH_INTERVAL)
+                resumeCount++
+            }
+        }
     }
     val nowEpochSeconds = remember(forecastDays, resumeCount) {
         java.time.Instant
