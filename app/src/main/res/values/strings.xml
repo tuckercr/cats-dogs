@@ -165,7 +165,7 @@
     </string-array>
     <string-array name="pet_caption_night_before_dawn">
         <item>Still dark out. Sunny is already waiting by the door.</item>
-        <item>Not quite morning. Misty is pretending to be asleep.</item>
+        <item>Too dark to get up, says Misty. She\'s pretending to be asleep.</item>
     </string-array>
     <string name="cd_pet_scene">Sunny the dog and Misty the cat reacting to the weather</string>
 
