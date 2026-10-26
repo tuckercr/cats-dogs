@@ -292,6 +292,8 @@ private fun DrawScope.drawDog(
     p: (Float, Float) -> Offset,
 ) {
     oval(PetDogFur, 160f, 110f, 28f, 28f, s)
+    // A rim of body fur round the face, so it doesn't vanish into the sunny sky (the same colour).
+    drawCircle(PetDogFur, 25.5f * s, p(160f, 76f))
     drawCircle(PetDogFace, 23f * s, p(160f, 76f))
     oval(PetDogEar, 139f, 80f, 8f, 15f, s)
     oval(PetDogEar, 181f, 80f, 8f, 15f, s)
