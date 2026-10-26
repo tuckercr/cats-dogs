@@ -74,7 +74,7 @@
     <string name="error_offline">No internet connection. Check your network and try again.</string>
     <string name="error_city_not_found">City not found. Try a different name or check the spelling.</string>
     <string name="error_bad_api_key">Invalid API key. Rebuild the app with a valid OWM_API_KEY.</string>
-    <string name="error_rate_limited">Too many requests — please wait a moment and try again.</string>
+    <string name="error_rate_limited">Too many requests. Please wait a moment and try again.</string>
     <string name="error_server">OpenWeather\'s servers are having issues. Please try again later.</string>
     <string name="error_generic">Weather data is not available right now. Please try again later.</string>
 
@@ -115,10 +115,10 @@
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 
-    <!-- Settings — notifications section -->
+    <!-- Settings: notifications section -->
     <string name="settings_section_notifications">NOTIFICATIONS</string>
     <string name="settings_notifications_enabled">Notifications are enabled</string>
-    <string name="settings_notifications_disabled">Notifications are disabled — tap to open Settings</string>
+    <string name="settings_notifications_disabled">Notifications are disabled. Tap to open Settings.</string>
     <string name="settings_section_locations">LOCATIONS</string>
     <string name="settings_manage_locations">Manage Locations</string>
 
