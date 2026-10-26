@@ -21,6 +21,7 @@
     <string name="format_visibility_km">%.1f km</string>
     <string name="format_visibility_mi">%.1f mi</string>
     <string name="format_visibility_m">%d m</string>
+    <string name="visibility_clear">Clear</string>
     <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
     <string name="get_started">Get started</string>
 

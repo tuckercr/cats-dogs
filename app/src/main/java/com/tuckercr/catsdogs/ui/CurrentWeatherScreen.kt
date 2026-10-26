@@ -1029,9 +1029,17 @@ internal fun isCalmWind(speed: Double): Boolean = speed < 0.05
 
 private const val METERS_PER_MILE = 1609.344
 
+/**
+ * OpenWeather reports visibility up to 10 km and no further, so 10 km means "at least 10 km".
+ * Converted, that read as a precise and poor-looking 6.2 mi (US sources cap at 10 mi instead).
+ */
+internal fun isClearVisibility(meters: Int): Boolean = meters >= 10_000
+
 @Composable
 private fun formatVisibility(meters: Int): String =
-    if (LocalDistanceInMiles.current) {
+    if (isClearVisibility(meters)) {
+        stringResource(R.string.visibility_clear)
+    } else if (LocalDistanceInMiles.current) {
         stringResource(R.string.format_visibility_mi, meters / METERS_PER_MILE)
     } else if (meters >= 1000) {
         stringResource(R.string.format_visibility_km, meters / 1000.0)

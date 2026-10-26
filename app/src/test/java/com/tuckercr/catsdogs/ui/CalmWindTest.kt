@@ -17,4 +17,11 @@ class CalmWindTest {
         assertFalse(isCalmWind(0.05))
         assertFalse(isCalmWind(3.2))
     }
+
+    @Test
+    fun `visibility at OpenWeather's 10 km cap reads as clear`() {
+        assertTrue(isClearVisibility(10_000))
+        assertFalse(isClearVisibility(9_999))
+        assertFalse(isClearVisibility(800))
+    }
 }
