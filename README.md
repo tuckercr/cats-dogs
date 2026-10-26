@@ -96,7 +96,7 @@ See [Firebase setup](#firebase-setup) to wire it up.
 Debug builds install as `com.tuckercr.catsdogs.debug` (version name suffixed `-debug`), so they sit
 alongside the Play build and report to their own Firebase app.
 
-The app supports Android 8.0+ (minSdk 26) and targets SDK 37. From the command line:
+The app supports Android 10+ (minSdk 29) and targets SDK 37. From the command line:
 
 ```bash
 ./gradlew assembleDebug                   # debug APK
