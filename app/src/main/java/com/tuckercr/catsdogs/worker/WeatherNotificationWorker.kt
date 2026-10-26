@@ -18,6 +18,7 @@ import com.tuckercr.catsdogs.WeatherApplication.Companion.NOTIF_CHANNEL_ID
 import com.tuckercr.catsdogs.data.PreferencesRepository
 import com.tuckercr.catsdogs.data.RemoteConfigRepository
 import com.tuckercr.catsdogs.data.WeatherRepository
+import com.tuckercr.catsdogs.ui.pets.petSceneIcon
 import com.tuckercr.catsdogs.util.resolveWeatherUnits
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -60,16 +61,14 @@ class WeatherNotificationWorker @AssistedInject constructor(
                     Manifest.permission.POST_NOTIFICATIONS,
                 ) == PackageManager.PERMISSION_GRANTED
         },
-        postNotification = { title, body -> post(title, body) },
+        postNotification = ::post,
         isDailyWeatherNotificationEnabled = remoteConfigRepository::dailyWeatherNotificationsEnabled,
+        petWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
     )
 
     override suspend fun doWork() = logic.doWork()
 
-    private fun post(
-        title: String,
-        body: String,
-    ) {
+    private fun post(notification: WeatherNotification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
@@ -86,15 +85,20 @@ class WeatherNotificationWorker @AssistedInject constructor(
             tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat
+        val iconSize = context.resources.getDimensionPixelSize(android.R.dimen.notification_large_icon_width)
+        val built = NotificationCompat
             .Builder(context, NOTIF_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_weather)
-            .setContentTitle(title)
-            .setContentText(body)
+            // Brand look: the accent blue, the pets in today's mood, and the full text when expanded.
+            .setColor(ContextCompat.getColor(context, R.color.notification_accent))
+            .setLargeIcon(petSceneIcon(notification.mood, iconSize, notification.southernHemisphere))
+            .setContentTitle(notification.title)
+            .setContentText(notification.body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(notification.body))
             .setContentIntent(tapPendingIntent)
             .setAutoCancel(true)
             .build()
-        NotificationManagerCompat.from(context).notify(NOTIF_ID, notification)
+        NotificationManagerCompat.from(context).notify(NOTIF_ID, built)
     }
 
     companion object {

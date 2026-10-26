@@ -3,8 +3,11 @@ package com.tuckercr.catsdogs.worker
 import androidx.work.ListenableWorker.Result
 import com.tuckercr.catsdogs.domain.CurrentWeather
 import com.tuckercr.catsdogs.domain.DayForecast
+import com.tuckercr.catsdogs.domain.PetWeatherThresholds
 import com.tuckercr.catsdogs.domain.SavedLocation
 import com.tuckercr.catsdogs.domain.WeatherUnits
+import com.tuckercr.catsdogs.ui.pets.PetMood
+import com.tuckercr.catsdogs.ui.pets.petMoodFor
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -31,9 +34,11 @@ internal class NotificationWorkerLogic(
         longitude: Double?,
     ) -> kotlin.Result<List<DayForecast>>,
     private val hasNotificationPermission: () -> Boolean,
-    private val postNotification: (title: String, body: String) -> Unit,
+    private val postNotification: (WeatherNotification) -> Unit,
     // Remote Config daily_weather_notifications_enabled. Only gates posting: the fetch still runs.
     private val isDailyWeatherNotificationEnabled: () -> Boolean = { true },
+    // Remote Config pet-mood thresholds, for the pets picture: the same mood as the app's top card.
+    private val petWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
     // Same label format as ForecastAggregator produces, in the city's local date (its UTC offset)
     // so it matches the city-local forecast labels. Overridable so tests are date-independent.
     private val todayLabel: (utcOffsetSeconds: Int) -> String = { offset ->
@@ -51,7 +56,9 @@ internal class NotificationWorkerLogic(
 
         val weather = fetchCurrentWeather(
             units,
-            location.label,
+            // "My Location" has no city name of its own: an empty label lets the API's name for
+            // the place show ("57° in Mountain View"), as on the app's own screen.
+            if (location.isCurrentLocation) "" else location.label,
             location.latitude,
             location.longitude,
         ).getOrNull() ?: return Result.retry()
@@ -70,7 +77,13 @@ internal class NotificationWorkerLogic(
         if (!runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true)) return Result.success()
 
         val (title, body) = buildContent(weather, todayForecast)
-        postNotification(title, body)
+        val mood = petMoodFor(
+            weather.conditionMain,
+            weather.iconCode,
+            weather.units.toCelsius(weather.temperature),
+            runCatching { petWeatherThresholds() }.getOrDefault(PetWeatherThresholds.DEFAULT),
+        )
+        postNotification(WeatherNotification(title, body, mood, southernHemisphere = (location.latitude ?: 0.0) < 0))
         return Result.success()
     }
 
@@ -78,6 +91,14 @@ internal class NotificationWorkerLogic(
         val DAY_LABEL_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, MMM d")
     }
 }
+
+/** A daily weather notification: its text, and the pets' mood for its picture. */
+internal data class WeatherNotification(
+    val title: String,
+    val body: String,
+    val mood: PetMood,
+    val southernHemisphere: Boolean,
+)
 
 internal fun buildNotificationContent(
     weather: CurrentWeather,

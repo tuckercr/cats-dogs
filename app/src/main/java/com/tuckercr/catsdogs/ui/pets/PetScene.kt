@@ -1,5 +1,6 @@
 package com.tuckercr.catsdogs.ui.pets
 
+import android.graphics.Bitmap
 import androidx.annotation.ArrayRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
@@ -9,17 +10,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.ui.LocalSouthernHemisphere
 import com.tuckercr.catsdogs.ui.MoonPhase
@@ -146,25 +154,68 @@ fun PetScene(
             .aspectRatio(SCENE_W / SCENE_H)
             .semantics { contentDescription = description },
     ) {
-        val s = size.width / SCENE_W
-
-        fun p(
-            x: Float,
-            y: Float,
-        ) = Offset(x * s, y * s)
-
-        drawSky(mood, s, ::p, moonPhase, southernHemisphere)
-        drawOval(PetGround, topLeft = p(20f, 132f), size = Size(220f * s, 16f * s))
-        // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the left,
-        // matching the name. The sky stays put, and the ground shadow is symmetrical.
-        scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2, 0f)) {
-            drawCat(mood, s, ::p)
-            drawDog(mood, s, ::p)
-            drawProps(mood, s, ::p)
-        }
-        if (knockedOverRouter) drawKnockedOverRouter(s, ::p)
+        drawPetScene(mood, size.width / SCENE_W, moonPhase, southernHemisphere, knockedOverRouter)
     }
 }
+
+/**
+ * The scene, drawn at [s] pixels per scene unit with its top-left at the current origin. Shared by
+ * [PetScene] and [petSceneIcon]. The sky's background colour is left to the caller.
+ */
+private fun DrawScope.drawPetScene(
+    mood: PetMood,
+    s: Float,
+    moonPhase: MoonPhase,
+    southernHemisphere: Boolean,
+    knockedOverRouter: Boolean = false,
+) {
+    fun p(
+        x: Float,
+        y: Float,
+    ) = Offset(x * s, y * s)
+
+    drawSky(mood, s, ::p, moonPhase, southernHemisphere)
+    drawOval(PetGround, topLeft = p(20f, 132f), size = Size(220f * s, 16f * s))
+    // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the left,
+    // matching the name. The sky stays put, and the ground shadow is symmetrical.
+    scale(scaleX = -1f, scaleY = 1f, pivot = Offset(SCENE_W / 2 * s, 0f)) {
+        drawCat(mood, s, ::p)
+        drawDog(mood, s, ::p)
+        drawProps(mood, s, ::p)
+    }
+    if (knockedOverRouter) drawKnockedOverRouter(s, ::p)
+}
+
+/**
+ * The pets in [mood] on their sky colour, as a square bitmap: a notification's large icon. A square
+ * cut from the middle of the scene, around the pets, so they stay recognisable at 64 dp.
+ */
+fun petSceneIcon(
+    mood: PetMood,
+    sizePx: Int,
+    southernHemisphere: Boolean,
+    moonPhase: MoonPhase = moonPhaseAt(
+        java.time.Instant
+            .now()
+            .epochSecond,
+    ),
+): Bitmap {
+    val image = ImageBitmap(sizePx, sizePx)
+    val s = sizePx / ICON_SIDE
+    CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(image), Size(sizePx.toFloat(), sizePx.toFloat())) {
+        drawRect(mood.skyColor)
+        translate(left = -ICON_LEFT * s, top = -ICON_TOP * s) {
+            drawPetScene(mood, s, moonPhase, southernHemisphere)
+        }
+    }
+    return image.asAndroidBitmap()
+}
+
+// The icon's square, in scene units: tight round the pets (x 66..194, ears to ground y 40..148), so
+// they fill the 64 dp icon. The sun and moon fall outside it; the pets' props still show the mood.
+private const val ICON_SIDE = 134f
+private const val ICON_LEFT = 63f
+private const val ICON_TOP = 24f
 
 private fun DrawScope.drawKnockedOverRouter(
     s: Float,
