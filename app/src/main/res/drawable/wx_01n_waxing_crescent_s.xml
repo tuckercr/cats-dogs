@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Furcast weather icon, drawn in the pet scene style (generated from wx_01n_waxing_crescent_s.svg). -->
+<!-- Weather icon, drawn in the pet scene style (generated from wx_01n_waxing_crescent_s.svg). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
     android:height="48dp"
