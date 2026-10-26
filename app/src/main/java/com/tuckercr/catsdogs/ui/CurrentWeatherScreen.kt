@@ -1184,7 +1184,13 @@ private fun StaleWeatherBanner(
             modifier = Modifier.size(20.dp),
         )
         Text(
-            text = "$lead ${weatherErrorMessage(errorKey)}",
+            text = listOfNotNull(
+                lead,
+                weatherErrorMessage(errorKey),
+                // The banner has no button, so the offline message says how to retry; the other
+                // messages already say when to try again.
+                stringResource(R.string.error_pull_to_retry).takeIf { errorKey == "offline" },
+            ).joinToString(" "),
             style = MaterialTheme.typography.bodyMedium,
             color = StaleBannerText,
         )
