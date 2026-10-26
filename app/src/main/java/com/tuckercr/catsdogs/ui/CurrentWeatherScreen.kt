@@ -286,6 +286,9 @@ fun CurrentWeatherScreen(
     onRefresh: () -> Unit = {},
     onRetry: () -> Unit,
 ) {
+    // Each pull also re-reads the clock, so the hourly strip and captions move on even when the
+    // weather itself hasn't changed.
+    var pullCount by remember { mutableIntStateOf(0) }
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -368,7 +371,10 @@ fun CurrentWeatherScreen(
         } else {
             PullToRefreshBox(
                 isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
+                onRefresh = {
+                    pullCount++
+                    onRefresh()
+                },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
@@ -415,6 +421,7 @@ fun CurrentWeatherScreen(
                                     radarEnabled = radarEnabled,
                                     walkCardEnabled = walkCardEnabled,
                                     petWeatherThresholds = petWeatherThresholds,
+                                    refreshCount = pullCount,
                                     onForecastRetry = onRetry,
                                 )
                             }
@@ -611,6 +618,7 @@ private fun CurrentWeatherContent(
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
+    refreshCount: Int = 0,
     onForecastRetry: () -> Unit = {},
 ) {
     val forecastDays = (forecastState as? LoadingState.Success)?.data.orEmpty()
@@ -646,7 +654,7 @@ private fun CurrentWeatherContent(
             }
         }
     }
-    val nowEpochSeconds = remember(forecastDays, resumeCount) {
+    val nowEpochSeconds = remember(forecastDays, resumeCount, refreshCount) {
         java.time.Instant
             .now()
             .epochSecond
