@@ -19,6 +19,10 @@ import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 class CurrentWeatherScreenTest {
 
@@ -74,14 +78,15 @@ class CurrentWeatherScreenTest {
 
     @Test
     fun staleCachedWeatherShowsWhenItIsFromAndWhy() {
+        // An hour ago, shown in London's local time (UTC+0 here).
+        val observedAt = Instant.now().epochSecond - 3_600
         composeRule.setContent {
             CatsDogsTheme {
                 CurrentWeatherScreen(
                     locations = listOf(london),
                     activeIndex = 0,
                     weatherState = LoadingState.Success(
-                        // 07:45 UTC, shown in London's local time (UTC+0 here).
-                        weather().copy(observedAtEpochSeconds = 1_761_464_700L, utcOffsetSeconds = 0),
+                        weather().copy(observedAtEpochSeconds = observedAt, utcOffsetSeconds = 0),
                     ),
                     staleErrorKey = "offline",
                     onTabSelected = {},
@@ -92,9 +97,76 @@ class CurrentWeatherScreenTest {
         }
 
         composeRule
-            .onNodeWithText("Showing weather from 7:45 AM. " + string(R.string.error_offline))
+            .onNodeWithText("Showing weather from ${utcTime(observedAt)}. " + string(R.string.error_offline))
             .assertIsDisplayed()
     }
+
+    @Test
+    fun weatherPastTheCutoffGivesWayToTheForecastForThisHour() {
+        val now = Instant.now().epochSecond
+        val observedAt = yesterdayNoonUtc()
+        val thisHour = hourlySlot(timeLabel = "Now").copy(epochSeconds = now - 600, temperature = 21.0)
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(
+                        weather().copy(observedAtEpochSeconds = observedAt, utcOffsetSeconds = 0),
+                    ),
+                    forecastState = LoadingState.Success(listOf(dayForecast("Today", listOf(thisHour)))),
+                    staleErrorKey = "offline",
+                    radarEnabled = false,
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText(
+                "Showing the forecast from yesterday at ${utcTime(observedAt)}. " + string(R.string.error_offline),
+            ).assertIsDisplayed()
+        composeRule.onNodeWithText("21.0 °C").assertIsDisplayed()
+    }
+
+    @Test
+    fun weatherPastTheCutoffWithNoForecastShowsTheErrorAndWhenItWasLastUpdated() {
+        val observedAt = yesterdayNoonUtc()
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(
+                        weather().copy(observedAtEpochSeconds = observedAt, utcOffsetSeconds = 0),
+                    ),
+                    staleErrorKey = "offline",
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(string(R.string.error_title_offline)).assertIsDisplayed()
+        composeRule.onNodeWithText("Last updated yesterday at ${utcTime(observedAt)}.").performScrollTo().assertIsDisplayed()
+    }
+
+    // Always "yesterday" in UTC and always past the 3-hour cutoff, whatever the time of day.
+    private fun yesterdayNoonUtc(): Long =
+        LocalDate
+            .now(ZoneOffset.UTC)
+            .minusDays(1)
+            .atTime(12, 0)
+            .toEpochSecond(ZoneOffset.UTC)
+
+    private fun utcTime(epochSeconds: Long): String =
+        Instant
+            .ofEpochSecond(epochSeconds)
+            .atOffset(ZoneOffset.UTC)
+            .format(DateTimeFormatter.ofPattern("h:mm a"))
 
     @Test
     fun forecastErrorIsSurfacedInUpcomingSectionWithRetry() {

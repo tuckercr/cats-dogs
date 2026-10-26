@@ -70,6 +70,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -125,14 +126,22 @@ import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import com.tuckercr.catsdogs.ui.theme.StaleBannerBg
 import com.tuckercr.catsdogs.ui.theme.StaleBannerText
+import com.tuckercr.catsdogs.util.ReadingDay
+import com.tuckercr.catsdogs.util.forecastAsCurrent
 import com.tuckercr.catsdogs.util.fromCurrentSlot
+import com.tuckercr.catsdogs.util.isTooOldToShowAsNow
+import com.tuckercr.catsdogs.util.readingDay
 import com.tuckercr.catsdogs.util.usesMilesForDistance
 import kotlinx.coroutines.delay
+import java.time.Instant
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.minutes
 
 /** How often an open screen re-reads the clock and quietly refreshes the weather. */
 private val AUTO_REFRESH_INTERVAL = 30.minutes
+
+/** How often old weather is re-checked against the cutoff while a refresh keeps failing. */
+private val STALE_RECHECK_INTERVAL = 5.minutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -420,22 +429,55 @@ fun CurrentWeatherScreen(
                         )
 
                         is LoadingState.Success -> {
-                            if (staleErrorKey != null) {
-                                StaleWeatherBanner(weather = weatherState.data, errorKey = staleErrorKey)
+                            val cached = weatherState.data
+                            // Re-read on each pull, and every few minutes while the data is old, so a
+                            // reading that passes the cutoff gives way to the forecast for this hour.
+                            val nowEpoch by produceState(Instant.now().epochSecond, pullCount, staleErrorKey) {
+                                while (true) {
+                                    value = Instant.now().epochSecond
+                                    if (staleErrorKey == null) break
+                                    delay(STALE_RECHECK_INTERVAL)
+                                }
                             }
-                            val location = locations.getOrNull(activeIndex)
-                            // The moon (hero scene and night icons) is lit from the other side down south.
-                            CompositionLocalProvider(LocalSouthernHemisphere provides ((location?.latitude ?: 0.0) < 0)) {
-                                CurrentWeatherContent(
-                                    weather = weatherState.data,
-                                    forecastState = forecastState,
-                                    location = location,
-                                    radarEnabled = radarEnabled,
-                                    walkCardEnabled = walkCardEnabled,
-                                    petWeatherThresholds = petWeatherThresholds,
-                                    refreshCount = pullCount,
-                                    onForecastRetry = onRetry,
+                            // Past the cutoff, the old reading isn't shown as "now": the cached
+                            // forecast's current hour stands in, or the error if it doesn't cover now.
+                            val tooOld = staleErrorKey != null && cached.isTooOldToShowAsNow(nowEpoch)
+                            val forecastNow = if (tooOld) {
+                                (forecastState as? LoadingState.Success)?.data?.let { forecastAsCurrent(cached, it, nowEpoch) }
+                            } else {
+                                null
+                            }
+                            if (tooOld && forecastNow == null) {
+                                WeatherErrorState(
+                                    errorKey = staleErrorKey.orEmpty(),
+                                    canRetry = true,
+                                    onRetry = onRetry,
+                                    lastUpdated = readingTimeText(cached, nowEpoch),
                                 )
+                            } else {
+                                if (staleErrorKey != null) {
+                                    StaleWeatherBanner(
+                                        weather = cached,
+                                        errorKey = staleErrorKey,
+                                        showingForecast = forecastNow != null,
+                                        nowEpochSeconds = nowEpoch,
+                                    )
+                                }
+                                val location = locations.getOrNull(activeIndex)
+                                // The moon (hero scene and night icons) is lit from the other side down south.
+                                CompositionLocalProvider(LocalSouthernHemisphere provides ((location?.latitude ?: 0.0) < 0)) {
+                                    CurrentWeatherContent(
+                                        weather = forecastNow ?: cached,
+                                        showingForecast = forecastNow != null,
+                                        forecastState = forecastState,
+                                        location = location,
+                                        radarEnabled = radarEnabled,
+                                        walkCardEnabled = walkCardEnabled,
+                                        petWeatherThresholds = petWeatherThresholds,
+                                        refreshCount = pullCount,
+                                        onForecastRetry = onRetry,
+                                    )
+                                }
                             }
                         }
                     }
@@ -625,6 +667,9 @@ fun AddCitySheetContent(
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
     forecastState: LoadingState<List<DayForecast>>,
+    // True when [weather] is the cached forecast's current hour standing in for an old reading:
+    // there's no cloud cover (or visibility) to show.
+    showingForecast: Boolean = false,
     modifier: Modifier = Modifier,
     location: SavedLocation? = null,
     radarEnabled: Boolean = true,
@@ -814,12 +859,14 @@ private fun CurrentWeatherContent(
                             value = formatVisibility(visibilityMeters),
                         )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.WbCloudy,
-                        label = stringResource(R.string.label_cloud_cover),
-                        value = stringResource(R.string.format_percent, weather.cloudPercent),
-                    )
+                    if (!showingForecast) {
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        MetricIconRow(
+                            icon = Icons.Default.WbCloudy,
+                            label = stringResource(R.string.label_cloud_cover),
+                            value = stringResource(R.string.format_percent, weather.cloudPercent),
+                        )
+                    }
                     // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
                     val isNight = weather.iconCode.endsWith("n")
                     forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.takeUnless { isNight }?.let { uv ->
@@ -1050,6 +1097,8 @@ private fun WeatherErrorState(
     errorKey: String,
     canRetry: Boolean,
     onRetry: () -> Unit,
+    // When the weather on file is too old to show: "yesterday at 10:10 AM".
+    lastUpdated: String? = null,
 ) {
     val offline = errorKey == "offline"
     Column(
@@ -1082,6 +1131,14 @@ private fun WeatherErrorState(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (lastUpdated != null) {
+            Text(
+                text = stringResource(R.string.error_last_updated, lastUpdated),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (canRetry) {
             Button(
                 onClick = onRetry,
@@ -1103,12 +1160,13 @@ private fun WeatherErrorState(
 private fun StaleWeatherBanner(
     weather: CurrentWeather,
     errorKey: String,
+    // The reading is past the cutoff and the screen shows the cached forecast for this hour.
+    showingForecast: Boolean,
+    nowEpochSeconds: Long,
 ) {
-    val observedAt = weather.observedAtEpochSeconds
-    val lead = if (observedAt != null) {
-        stringResource(R.string.stale_weather_from, formatEpochTime(observedAt, weather.offsetSeconds))
-    } else {
-        stringResource(R.string.stale_weather_saved)
+    val lead = when (val readingTime = readingTimeText(weather, nowEpochSeconds)) {
+        null -> stringResource(R.string.stale_weather_saved)
+        else -> stringResource(if (showingForecast) R.string.stale_forecast_from else R.string.stale_weather_from, readingTime)
     }
     Row(
         modifier = Modifier
@@ -1130,6 +1188,21 @@ private fun StaleWeatherBanner(
             style = MaterialTheme.typography.bodyMedium,
             color = StaleBannerText,
         )
+    }
+}
+
+/** When [weather] was observed: "10:10 AM" today, "yesterday at 10:10 AM", or "Sat at 10:10 AM". */
+@Composable
+private fun readingTimeText(
+    weather: CurrentWeather,
+    nowEpochSeconds: Long,
+): String? {
+    val observedAt = weather.observedAtEpochSeconds ?: return null
+    val time = formatEpochTime(observedAt, weather.offsetSeconds)
+    return when (val day = readingDay(observedAt, weather.offsetSeconds, nowEpochSeconds)) {
+        ReadingDay.Today -> time
+        ReadingDay.Yesterday -> stringResource(R.string.reading_time_yesterday, time)
+        is ReadingDay.Earlier -> stringResource(R.string.reading_time_day, day.dayName, time)
     }
 }
 

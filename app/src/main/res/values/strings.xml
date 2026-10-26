@@ -88,6 +88,12 @@
     <!-- Lead-in to the error message on the banner over cached weather, e.g. "Showing weather from 7:45 AM." -->
     <string name="stale_weather_from">Showing weather from %1$s.</string>
     <string name="stale_weather_saved">Showing saved weather.</string>
+    <!-- Past the 3-hour cutoff the screen shows the forecast for this hour instead of the old reading. -->
+    <string name="stale_forecast_from">Showing the forecast from %1$s.</string>
+    <!-- When a reading was taken, after "from" or "Last updated": e.g. "yesterday at 10:10 AM", "Sat at 10:10 AM". -->
+    <string name="reading_time_yesterday">yesterday at %1$s</string>
+    <string name="reading_time_day">%1$s at %2$s</string>
+    <string name="error_last_updated">Last updated %1$s.</string>
     <string name="error_offline">Misty knocked the Wi-Fi off the shelf. Pull to try again.</string>
     <string name="error_city_not_found">We couldn\'t find that city. Try a different search.</string>
     <string name="error_bad_api_key">Invalid API key. Rebuild the app with a valid OWM_API_KEY.</string>
