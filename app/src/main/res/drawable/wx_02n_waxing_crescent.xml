@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Furcast weather icon, drawn in the pet scene style (generated from wx_02n_waxing_crescent.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M8,17a9,9 0 1,0 18,0a9,9 0 1,0 -18,0Z"
+        android:fillColor="#FF4A5878" />
+    <path
+        android:pathData="M17 8 A9 9 0 0 1 17 26 A4.50 9 0 0 0 17 8 Z"
+        android:fillColor="#FFF1EFE8" />
+    <path
+        android:pathData="M8,17a9,9 0 1,0 18,0a9,9 0 1,0 -18,0Z"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="2.5" />
+    <group
+        android:translateX="7"
+        android:translateY="7"
+        android:scaleX="0.82"
+        android:scaleY="0.82">
+        <path
+            android:pathData="M13 36 H35 A7 7 0 0 0 36 22.1 A10 10 0 0 0 17 20.5 A8 8 0 0 0 13 36 Z"
+            android:fillColor="#FFFFFFFF"
+            android:strokeColor="#FF10324A"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

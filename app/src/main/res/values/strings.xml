@@ -16,8 +16,12 @@
     <string name="format_percent">%d%%</string>
     <string name="format_wind_ms">%.1f m/s</string>
     <string name="format_wind_mph">%.1f mph</string>
+    <string name="format_wind_calm_ms">0 m/s</string>
+    <string name="format_wind_calm_mph">0 mph</string>
     <string name="format_visibility_km">%.1f km</string>
+    <string name="format_visibility_mi">%.1f mi</string>
     <string name="format_visibility_m">%d m</string>
+    <string name="visibility_clear">Clear</string>
     <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
     <string name="get_started">Get started</string>
 
@@ -82,6 +86,9 @@
     <string name="screen_settings">Settings</string>
     <string name="cd_open_settings">Open settings</string>
     <string name="settings_section_units">UNITS</string>
+    <string name="settings_section_main_screen">MAIN SCREEN</string>
+    <string name="settings_show_walk_card">Best walk time</string>
+    <string name="settings_show_walk_card_summary">When to take the dog out. Turn it off if you don\'t have a dog.</string>
     <string name="settings_unit_system">System default</string>
     <string name="settings_unit_metric">Celsius (°C)</string>
     <string name="settings_unit_imperial">Fahrenheit (°F)</string>
@@ -148,9 +155,18 @@
         <item>Brrr. Short walks and warm blankets.</item>
         <item>Coat weather for small dogs today.</item>
     </string-array>
-    <string-array name="pet_caption_night">
-        <item>Both are curled up asleep. Shh.</item>
+    <!-- Night is split by the city's local hour, so a 3 AM caption doesn't suggest an evening stroll. -->
+    <string-array name="pet_caption_night_evening">
         <item>Quiet night. Time for one last stroll before bed?</item>
+        <item>The dog thinks there\'s time for one more lap of the block.</item>
+    </string-array>
+    <string-array name="pet_caption_night_late">
+        <item>Both are curled up asleep. Shh.</item>
+        <item>Lights out. The cat has claimed the warm spot.</item>
+    </string-array>
+    <string-array name="pet_caption_night_before_dawn">
+        <item>Still dark out. The dog is already waiting by the door.</item>
+        <item>Not quite morning. The cat is pretending to be asleep.</item>
     </string-array>
     <string name="cd_pet_scene">The cat and dog reacting to the weather</string>
 
@@ -160,11 +176,8 @@
     <string name="walk_around">Around %1$s</string>
     <string name="walk_around_tomorrow">Tomorrow around %1$s</string>
     <string name="walk_none">Not a good day for walkies</string>
-    <string name="walk_rating_great">Great</string>
-    <string name="walk_rating_okay">Okay</string>
-    <string name="walk_rating_poor">Stay in</string>
-    <string name="walk_rating_hot">Paws hot</string>
-    <string name="walk_rating_cold">Too cold</string>
+    <string name="walk_too_hot">Too hot for paws.</string>
+    <string name="walk_too_cold">Too cold for paws.</string>
 
     <!-- UV index -->
     <string name="label_uv_index">UV index</string>

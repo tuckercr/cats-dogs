@@ -186,7 +186,7 @@ private fun HourlySlotColumn(slot: HourlySlot) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(text = slot.timeLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28)
+        WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28, epochSeconds = slot.epochSeconds)
         Text(
             text = formatHourlyTemp(slot.temperature, slot.units),
             style = MaterialTheme.typography.bodyMedium,
@@ -239,6 +239,7 @@ private fun HourlySlotRow(
             iconCode = slot.iconCode,
             contentDescription = slot.description,
             sizeDp = 28,
+            epochSeconds = slot.epochSeconds,
         )
         Text(
             text = formatHourlyTemp(slot.temperature, slot.units),
@@ -305,9 +306,11 @@ private fun formatHourlyWind(
     speed: Double,
     units: WeatherUnits,
 ): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
+    when {
+        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
+        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
+        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
+        else -> stringResource(R.string.format_wind_mph, speed)
     }
 
 // --- Previews ---

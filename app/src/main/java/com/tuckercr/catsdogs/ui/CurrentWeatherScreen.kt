@@ -61,6 +61,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -99,6 +101,7 @@ import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.GeoLocationViewModel
 import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.RadarViewModel
+import com.tuckercr.catsdogs.model.SettingsViewModel
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
@@ -110,6 +113,7 @@ import com.tuckercr.catsdogs.ui.pets.skyColor
 import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import com.tuckercr.catsdogs.util.fromCurrentSlot
+import com.tuckercr.catsdogs.util.usesMilesForDistance
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,6 +126,11 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
     // Same owner RadarCard uses, so this is the instance that would load the timeline.
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
+    val settingsViewModel = hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
+    val unitOverride by settingsViewModel.unitOverride.collectAsStateWithLifecycle()
+    // The user's Settings choice; Remote Config walk_card_enabled can also hide it for everyone.
+    val showWalkCard by settingsViewModel.showWalkCard.collectAsStateWithLifecycle()
+    val distanceInMiles = LocalContext.current.usesMilesForDistance(unitOverride)
 
     val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
     val activeIndex by cityListViewModel.activeIndex.collectAsStateWithLifecycle()
@@ -160,31 +169,33 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
 
     var showAddSheet by remember { mutableStateOf(false) }
 
-    CurrentWeatherScreen(
-        locations = locations,
-        activeIndex = activeIndex,
-        weatherState = weatherState,
-        forecastState = forecastState,
-        isRefreshing = isRefreshing,
-        radarEnabled = radarEnabled,
-        walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
-        petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
-        onTabSelected = cityListViewModel::setActiveIndex,
-        onOpenSettings = {
-            weatherForecastViewModel.logSettingsOpened()
-            onOpenSettings()
-        },
-        onAddCityClick = { showAddSheet = true },
-        onRefresh = {
+    CompositionLocalProvider(LocalDistanceInMiles provides distanceInMiles) {
+        CurrentWeatherScreen(
+            locations = locations,
+            activeIndex = activeIndex,
+            weatherState = weatherState,
+            forecastState = forecastState,
+            isRefreshing = isRefreshing,
+            radarEnabled = radarEnabled,
+            walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
+            petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
+            onTabSelected = cityListViewModel::setActiveIndex,
+            onOpenSettings = {
+                weatherForecastViewModel.logSettingsOpened()
+                onOpenSettings()
+            },
+            onAddCityClick = { showAddSheet = true },
+            onRefresh = {
+                activeLocation?.let {
+                    weatherForecastViewModel.refreshCurrent(it)
+                    weatherForecastViewModel.refreshForecast(it)
+                }
+            },
+        ) {
             activeLocation?.let {
                 weatherForecastViewModel.refreshCurrent(it)
                 weatherForecastViewModel.refreshForecast(it)
             }
-        },
-    ) {
-        activeLocation?.let {
-            weatherForecastViewModel.refreshCurrent(it)
-            weatherForecastViewModel.refreshForecast(it)
         }
     }
 
@@ -373,15 +384,21 @@ fun CurrentWeatherScreen(
                             }
                         }
 
-                        is LoadingState.Success -> CurrentWeatherContent(
-                            weather = weatherState.data,
-                            forecastState = forecastState,
-                            location = locations.getOrNull(activeIndex),
-                            radarEnabled = radarEnabled,
-                            walkCardEnabled = walkCardEnabled,
-                            petWeatherThresholds = petWeatherThresholds,
-                            onForecastRetry = onRetry,
-                        )
+                        is LoadingState.Success -> {
+                            val location = locations.getOrNull(activeIndex)
+                            // The moon (hero scene and night icons) is lit from the other side down south.
+                            CompositionLocalProvider(LocalSouthernHemisphere provides ((location?.latitude ?: 0.0) < 0)) {
+                                CurrentWeatherContent(
+                                    weather = weatherState.data,
+                                    forecastState = forecastState,
+                                    location = location,
+                                    radarEnabled = radarEnabled,
+                                    walkCardEnabled = walkCardEnabled,
+                                    petWeatherThresholds = petWeatherThresholds,
+                                    onForecastRetry = onRetry,
+                                )
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -698,7 +715,7 @@ private fun CurrentWeatherContent(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = petCaption(mood),
+                        text = petCaption(mood, weather.offsetSeconds),
                         style = MaterialTheme.typography.titleMedium,
                         color = ink,
                         textAlign = TextAlign.Center,
@@ -733,9 +750,12 @@ private fun CurrentWeatherContent(
                     MetricIconRow(
                         icon = Icons.Default.Air,
                         label = stringResource(R.string.label_wind),
-                        value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
-                            weather.windDeg,
-                        ),
+                        // No direction when it's calm: "0 mph N" means nothing.
+                        value = if (isCalmWind(weather.windSpeed)) {
+                            formatWind(weather.windSpeed, weather.units)
+                        } else {
+                            formatWind(weather.windSpeed, weather.units) + "  " + windDirection(weather.windDeg)
+                        },
                     )
                     weather.visibilityMeters?.let { visibilityMeters ->
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -921,6 +941,7 @@ private fun HourlyCell(
             iconCode = slot.iconCode,
             contentDescription = slot.description,
             sizeDp = 32,
+            epochSeconds = slot.epochSeconds,
         )
         Text(
             text = "${slot.temperature.roundToInt()}°",
@@ -997,14 +1018,31 @@ private fun formatWind(
     speed: Double,
     units: WeatherUnits,
 ): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
+    when {
+        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
+        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
+        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
+        else -> stringResource(R.string.format_wind_mph, speed)
     }
+
+/** A speed that would show as "0.0": written as a plain 0, with no direction. */
+internal fun isCalmWind(speed: Double): Boolean = speed < 0.05
+
+private const val METERS_PER_MILE = 1609.344
+
+/**
+ * OpenWeather reports visibility up to 10 km and no further, so 10 km means "at least 10 km".
+ * Converted, that read as a precise and poor-looking 6.2 mi (US sources cap at 10 mi instead).
+ */
+internal fun isClearVisibility(meters: Int): Boolean = meters >= 10_000
 
 @Composable
 private fun formatVisibility(meters: Int): String =
-    if (meters >= 1000) {
+    if (isClearVisibility(meters)) {
+        stringResource(R.string.visibility_clear)
+    } else if (LocalDistanceInMiles.current) {
+        stringResource(R.string.format_visibility_mi, meters / METERS_PER_MILE)
+    } else if (meters >= 1000) {
         stringResource(R.string.format_visibility_km, meters / 1000.0)
     } else {
         stringResource(R.string.format_visibility_m, meters)

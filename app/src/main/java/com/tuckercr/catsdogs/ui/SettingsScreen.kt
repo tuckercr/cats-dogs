@@ -69,6 +69,7 @@ fun SettingsRoute(
     val viewModel = hiltViewModel<SettingsViewModel>()
     val unitOverride by viewModel.unitOverride.collectAsStateWithLifecycle()
     val shareUsageStatistics by viewModel.shareUsageStatistics.collectAsStateWithLifecycle()
+    val showWalkCard by viewModel.showWalkCard.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -140,6 +141,15 @@ fun SettingsRoute(
                     )
                 }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsSectionHeader(stringResource(R.string.settings_section_main_screen))
+            SettingsSwitchRow(
+                label = stringResource(R.string.settings_show_walk_card),
+                summary = stringResource(R.string.settings_show_walk_card_summary),
+                checked = showWalkCard,
+                onCheckedChange = viewModel::setShowWalkCard,
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_location))
