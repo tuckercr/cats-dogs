@@ -38,6 +38,7 @@ class OpenWeatherParsingTest {
         assertNull(parsed.wind.gust)
         assertNull(parsed.visibility)
         assertNull(parsed.clouds)
+        assertNull(parsed.dt)
     }
 
     @Test
@@ -59,7 +60,8 @@ class OpenWeatherParsingTest {
               },
               "wind": { "speed": 3.6, "deg": 200, "gust": 6.1 },
               "visibility": 8000,
-              "clouds": { "all": 90 }
+              "clouds": { "all": 90 },
+              "dt": 1761480000
             }
             """.trimIndent()
 
@@ -73,6 +75,7 @@ class OpenWeatherParsingTest {
         assertEquals(200, parsed.wind.deg)
         assertEquals(6.1, parsed.wind.gust ?: 0.0, 0.0001)
         assertEquals(8000, parsed.visibility)
+        assertEquals(1761480000L, parsed.dt)
         assertEquals(90, parsed.clouds?.all)
     }
 

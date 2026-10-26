@@ -3,6 +3,7 @@ package com.tuckercr.catsdogs.ui
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +41,8 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbCloudy
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -71,12 +75,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -104,6 +113,7 @@ import com.tuckercr.catsdogs.model.LoadingState
 import com.tuckercr.catsdogs.model.RadarViewModel
 import com.tuckercr.catsdogs.model.SettingsViewModel
 import com.tuckercr.catsdogs.model.WeatherForecastViewModel
+import com.tuckercr.catsdogs.ui.pets.PetMood
 import com.tuckercr.catsdogs.ui.pets.PetScene
 import com.tuckercr.catsdogs.ui.pets.WalkCard
 import com.tuckercr.catsdogs.ui.pets.inkColor
@@ -113,6 +123,8 @@ import com.tuckercr.catsdogs.ui.pets.petMoodFor
 import com.tuckercr.catsdogs.ui.pets.skyColor
 import com.tuckercr.catsdogs.ui.pets.walkAdviceFor
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
+import com.tuckercr.catsdogs.ui.theme.StaleBannerBg
+import com.tuckercr.catsdogs.ui.theme.StaleBannerText
 import com.tuckercr.catsdogs.util.fromCurrentSlot
 import com.tuckercr.catsdogs.util.usesMilesForDistance
 import kotlinx.coroutines.delay
@@ -144,6 +156,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val weatherState by weatherForecastViewModel.currentWeather.collectAsStateWithLifecycle()
     val forecastState by weatherForecastViewModel.forecast.collectAsStateWithLifecycle()
     val isRefreshing by weatherForecastViewModel.isRefreshing.collectAsStateWithLifecycle()
+    val staleErrorKey by weatherForecastViewModel.staleErrorKey.collectAsStateWithLifecycle()
     val cityInput by geoViewModel.cityInput.collectAsStateWithLifecycle()
     val suggestions by geoViewModel.citySuggestions.collectAsStateWithLifecycle()
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
@@ -196,6 +209,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             weatherState = weatherState,
             forecastState = forecastState,
             isRefreshing = isRefreshing,
+            staleErrorKey = staleErrorKey,
             radarEnabled = radarEnabled,
             walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
             petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
@@ -277,6 +291,8 @@ fun CurrentWeatherScreen(
     weatherState: LoadingState<CurrentWeather>,
     forecastState: LoadingState<List<DayForecast>> = LoadingState.Idle,
     isRefreshing: Boolean = false,
+    // Set when the last refresh failed and the weather shown is cached; see StaleWeatherBanner.
+    staleErrorKey: String? = null,
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
@@ -397,20 +413,16 @@ fun CurrentWeatherScreen(
                             CircularProgressIndicator()
                         }
 
-                        is LoadingState.Error -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = weatherErrorMessage(weatherState.errorKey),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                            if (weatherState.canRetry) {
-                                TextButton(onClick = onRetry) {
-                                    Text(stringResource(R.string.action_retry))
-                                }
-                            }
-                        }
+                        is LoadingState.Error -> WeatherErrorState(
+                            errorKey = weatherState.errorKey,
+                            canRetry = weatherState.canRetry,
+                            onRetry = onRetry,
+                        )
 
                         is LoadingState.Success -> {
+                            if (staleErrorKey != null) {
+                                StaleWeatherBanner(weather = weatherState.data, errorKey = staleErrorKey)
+                            }
                             val location = locations.getOrNull(activeIndex)
                             // The moon (hero scene and night icons) is lit from the other side down south.
                             CompositionLocalProvider(LocalSouthernHemisphere provides ((location?.latitude ?: 0.0) < 0)) {
@@ -1027,6 +1039,98 @@ private fun uvLabel(uv: Double): String {
         else -> R.string.uv_extreme
     }
     return stringResource(R.string.format_uv, value, stringResource(level))
+}
+
+/**
+ * Shown in place of the weather when a fetch fails and there's nothing cached to fall back to: the
+ * pets (with the router knocked over when offline), what went wrong, and a way to try again.
+ */
+@Composable
+private fun WeatherErrorState(
+    errorKey: String,
+    canRetry: Boolean,
+    onRetry: () -> Unit,
+) {
+    val offline = errorKey == "offline"
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        PetScene(
+            mood = PetMood.CLOUDY,
+            knockedOverRouter = offline,
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(PetMood.CLOUDY.skyColor)
+                .padding(horizontal = 12.dp, vertical = 16.dp),
+        )
+        Text(
+            text = stringResource(if (offline) R.string.error_title_offline else R.string.error_title_generic),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .semantics { heading() },
+        )
+        Text(
+            text = weatherErrorMessage(errorKey),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        if (canRetry) {
+            Button(
+                onClick = onRetry,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.action_try_again))
+            }
+        }
+    }
+}
+
+/**
+ * Above cached weather when the last refresh failed: when the data is from, and why it's old.
+ * Pull to refresh tries again, and the banner goes once a refresh succeeds.
+ */
+@Composable
+private fun StaleWeatherBanner(
+    weather: CurrentWeather,
+    errorKey: String,
+) {
+    val observedAt = weather.observedAtEpochSeconds
+    val lead = if (observedAt != null) {
+        stringResource(R.string.stale_weather_from, formatEpochTime(observedAt, weather.offsetSeconds))
+    } else {
+        stringResource(R.string.stale_weather_saved)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(StaleBannerBg)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = if (errorKey == "offline") Icons.Outlined.WifiOff else Icons.Outlined.History,
+            contentDescription = null,
+            tint = StaleBannerText,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(
+            text = "$lead ${weatherErrorMessage(errorKey)}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = StaleBannerText,
+        )
+    }
 }
 
 @Composable

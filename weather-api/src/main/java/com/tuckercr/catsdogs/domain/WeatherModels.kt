@@ -29,6 +29,11 @@ data class CurrentWeather(
      * Read [offsetSeconds] instead, which falls back sensibly.
      */
     val utcOffsetSeconds: Int? = null,
+    /**
+     * When OpenWeather took this reading, in epoch seconds; null in data cached before it was
+     * recorded. Shown as "Showing weather from ..." when a refresh fails and cached data stays up.
+     */
+    val observedAtEpochSeconds: Long? = null,
 ) {
     /**
      * Offset for rendering the location's local time. Unknown offsets use the device's own zone,

@@ -16,6 +16,8 @@ data class CurrentWeatherResponse(
     @SerialName("sys") val sys: SysDto? = null,
     // Shift in seconds from UTC for the location's local time.
     @SerialName("timezone") val timezone: Int = 0,
+    // When the reading was taken, in epoch seconds.
+    @SerialName("dt") val dt: Long? = null,
 )
 
 @Serializable

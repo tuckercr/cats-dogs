@@ -168,6 +168,7 @@ class WeatherRepository @Inject constructor(
             sunriseEpoch = response.sys?.sunrise?.takeIf { it > 0L },
             sunsetEpoch = response.sys?.sunset?.takeIf { it > 0L },
             utcOffsetSeconds = response.timezone,
+            observedAtEpochSeconds = response.dt?.takeIf { it > 0L },
         )
     }
 
