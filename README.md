@@ -1,7 +1,7 @@
 # Sunny & Misty
 
-![Android CI](https://github.com/tuckercr/cats-dogs/actions/workflows/android.yml/badge.svg)
-![ktlint](https://github.com/tuckercr/cats-dogs/actions/workflows/ktlint.yml/badge.svg)
+![Android CI](https://github.com/tuckercr/weather-android/actions/workflows/android.yml/badge.svg)
+![ktlint](https://github.com/tuckercr/weather-android/actions/workflows/ktlint.yml/badge.svg)
 
 A clean, modern Android weather app, where Sunny the dog and Misty the cat act out the forecast.
 Track current conditions, an hourly and multi-day forecast, and an animated precipitation radar for
@@ -9,7 +9,7 @@ any number of saved cities, see when to walk the dog, get daily notification bri
 between metric and imperial units. Built with Jetpack Compose and Material 3.
 
 There is also a native iOS version of the same product, built in Swift and SwiftUI:
-[tuckercr/cats-dogs-iOS](https://github.com/tuckercr/cats-dogs-iOS). The two apps share one design,
+[tuckercr/weather-iOS](https://github.com/tuckercr/weather-iOS). The two apps share one design,
 one Firebase project and the same Remote Config keys, and new features ship on both.
 
 Originally a coding-challenge project, the app has since been extended as a personal showcase of
