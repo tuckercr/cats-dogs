@@ -1,4 +1,4 @@
-# Furcast Weather
+# Sunny & Misty
 
 ![Android CI](https://github.com/tuckercr/cats-dogs/actions/workflows/android.yml/badge.svg)
 ![ktlint](https://github.com/tuckercr/cats-dogs/actions/workflows/ktlint.yml/badge.svg)
@@ -20,7 +20,7 @@ WorkManager, and CI on GitHub Actions.
 - **Current conditions** for any city: temperature, feels-like, daily min/max, humidity, wind
   speed & direction, visibility, cloud cover, UV index (daytime, from Open-Meteo), and
   sunrise/sunset.
-- **Pets that react to the weather**: a cat and dog, drawn in Compose, whose scene and caption
+- **Pets that react to the weather**: Sunny the dog and Misty the cat, drawn in Compose, whose scene and caption
   follow the conditions (sunny, cloudy, rain, storm, snow, hot, cold, night).
 - **Best walk time** card: rates walking now (Great, Okay, Stay in, Paws hot, Too cold) and suggests
   the first walkable hour within the next 24 hours, using rain chance, a comfortable temperature
@@ -56,7 +56,7 @@ WorkManager, and CI on GitHub Actions.
 
 | Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
 |---|---|---|---|
-| ![The cat and dog react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
 
 On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -152,7 +152,7 @@ build artifacts.
 
 ## Analytics & privacy
 
-Furcast Weather reports a handful of **anonymous app-usage events** — nothing about where you are,
+Sunny & Misty reports a handful of **anonymous app-usage events** — nothing about where you are,
 which cities you save, or what the weather is. The whole catalogue is four functions in
 [`AnalyticsRepository`](app/src/main/java/com/tuckercr/catsdogs/analytics/AnalyticsRepository.kt),
 so the privacy policy can be checked against the code line by line.
