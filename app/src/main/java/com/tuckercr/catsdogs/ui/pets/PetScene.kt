@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -148,9 +149,13 @@ fun PetScene(
 
         drawSky(mood, s, ::p, moonPhase, southernHemisphere)
         drawOval(PetGround, topLeft = p(20f, 132f), size = Size(220f * s, 16f * s))
-        drawCat(mood, s, ::p)
-        drawDog(mood, s, ::p)
-        drawProps(mood, s, ::p)
+        // The pets are authored cat-left, dog-right; mirrored so Sunny (the dog) stands on the left,
+        // matching the name. The sky stays put, and the ground shadow is symmetrical.
+        scale(scaleX = -1f, scaleY = 1f, pivot = Offset(size.width / 2, 0f)) {
+            drawCat(mood, s, ::p)
+            drawDog(mood, s, ::p)
+            drawProps(mood, s, ::p)
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">Furcast Weather</string>
+    <string name="app_name">Sunny &amp; Misty</string>
     <!-- Home-screen label: short, so launchers don't truncate it. -->
-    <string name="app_launcher_name">Furcast</string>
+    <string name="app_launcher_name">Sunny &amp; Misty</string>
     <string name="action_retry">Retry</string>
     <string name="cd_navigate_back">Back</string>
     <string name="field_city_label">City</string>
@@ -27,7 +27,7 @@
 
     <!-- Location onboarding -->
     <string name="location_onboarding_title">Use your location?</string>
-    <string name="location_onboarding_body">Allow Furcast Weather to use your device location to show local weather automatically.</string>
+    <string name="location_onboarding_body">Allow Sunny &amp; Misty to use your device location to show local weather automatically.</string>
     <string name="location_allow_button">Use my location</string>
     <string name="location_skip_button">Enter a city manually</string>
     <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>
@@ -88,7 +88,6 @@
     <string name="settings_section_units">UNITS</string>
     <string name="settings_section_main_screen">MAIN SCREEN</string>
     <string name="settings_show_walk_card">Best walk time</string>
-    <string name="settings_show_walk_card_summary">When to take the dog out. Turn it off if you don\'t have a dog.</string>
     <string name="settings_unit_system">System default</string>
     <string name="settings_unit_metric">Celsius (°C)</string>
     <string name="settings_unit_imperial">Fahrenheit (°F)</string>
@@ -104,7 +103,7 @@
     <string name="settings_openmeteo_url">https://open-meteo.com</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_share_usage_statistics">Share usage statistics</string>
-    <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Furcast Weather</string>
+    <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Sunny &amp; Misty</string>
     <string name="settings_privacy_policy_url">https://fangjet.com/weather</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
@@ -112,7 +111,7 @@
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay up to date</string>
-    <string name="notif_onboarding_body">Allow Furcast Weather to send you daily weather updates for your saved locations.</string>
+    <string name="notif_onboarding_body">Allow Sunny &amp; Misty to send you daily weather updates for your saved locations.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 
@@ -123,24 +122,24 @@
     <string name="settings_section_locations">LOCATIONS</string>
     <string name="settings_manage_locations">Manage Locations</string>
 
-    <!-- Pet scene captions, in the pets' voice. One is picked per day. -->
+    <!-- Pet scene captions, in the pets' voice: Sunny is the dog, Misty the cat. One is picked per day. -->
     <string-array name="pet_caption_sunny">
         <item>Perfect walkies weather! Off we go.</item>
-        <item>The cat has claimed the sunniest windowsill.</item>
+        <item>Misty has claimed the sunniest windowsill.</item>
         <item>Sunshine and tail wags all round.</item>
     </string-array>
     <string-array name="pet_caption_cloudy">
-        <item>A bit grey, but the dog is still keen for a walk.</item>
-        <item>Nap weather, says the cat.</item>
+        <item>A bit grey, but Sunny is still keen for a walk.</item>
+        <item>Nap weather, says Misty.</item>
         <item>No sun, no problem. Still time for a stroll.</item>
     </string-array>
     <string-array name="pet_caption_rain">
-        <item>The dog wants puddles. The cat wants a towel.</item>
-        <item>Grab a raincoat. The cat is NOT going out in this.</item>
+        <item>Sunny wants puddles. Misty wants a towel.</item>
+        <item>Grab a raincoat. Misty is NOT going out in this.</item>
         <item>Wet paws ahead. Keep a towel by the door.</item>
     </string-array>
     <string-array name="pet_caption_storm">
-        <item>Thunder! The cat is under the bed. Keep pets inside.</item>
+        <item>Thunder! Misty is under the bed. Keep pets inside.</item>
         <item>Stormy out there. Sofa cuddles today.</item>
     </string-array>
     <string-array name="pet_caption_snow">
@@ -158,17 +157,17 @@
     <!-- Night is split by the city's local hour, so a 3 AM caption doesn't suggest an evening stroll. -->
     <string-array name="pet_caption_night_evening">
         <item>Quiet night. Time for one last stroll before bed?</item>
-        <item>The dog thinks there\'s time for one more lap of the block.</item>
+        <item>Sunny thinks there\'s time for one more lap of the block.</item>
     </string-array>
     <string-array name="pet_caption_night_late">
-        <item>Both are curled up asleep. Shh.</item>
-        <item>Lights out. The cat has claimed the warm spot.</item>
+        <item>Sunny and Misty are curled up asleep. Shh.</item>
+        <item>Lights out. Misty has claimed the warm spot.</item>
     </string-array>
     <string-array name="pet_caption_night_before_dawn">
-        <item>Still dark out. The dog is already waiting by the door.</item>
-        <item>Not quite morning. The cat is pretending to be asleep.</item>
+        <item>Still dark out. Sunny is already waiting by the door.</item>
+        <item>Too dark to get up, says Misty. She\'s pretending to be asleep.</item>
     </string-array>
-    <string name="cd_pet_scene">The cat and dog reacting to the weather</string>
+    <string name="cd_pet_scene">Sunny the dog and Misty the cat reacting to the weather</string>
 
     <!-- Walk advice -->
     <string name="walk_title">Best walk time</string>

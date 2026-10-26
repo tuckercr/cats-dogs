@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.tuckercr.catsdogs.R
 
-// Rounded display face that echoes the "Furcast Weather" wordmark. Bundled variable font (weights
+// Rounded display face that echoes the "Sunny & Misty" wordmark. Bundled variable font (weights
 // selected via FontVariation, minSdk 26+). Used for headings only; body stays on the default face.
 private val Baloo2 = FontFamily(
     Font(

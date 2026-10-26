@@ -146,7 +146,6 @@ fun SettingsRoute(
             SettingsSectionHeader(stringResource(R.string.settings_section_main_screen))
             SettingsSwitchRow(
                 label = stringResource(R.string.settings_show_walk_card),
-                summary = stringResource(R.string.settings_show_walk_card_summary),
                 checked = showWalkCard,
                 onCheckedChange = viewModel::setShowWalkCard,
             )
@@ -320,7 +319,7 @@ private fun SettingsLinkRow(
 @Composable
 private fun SettingsSwitchRow(
     label: String,
-    summary: String,
+    summary: String? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -333,11 +332,13 @@ private fun SettingsSwitchRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = label, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (summary != null) {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         // The whole row is the toggle target; the Switch itself is display-only.
         Switch(checked = checked, onCheckedChange = null, modifier = Modifier.padding(start = 16.dp))

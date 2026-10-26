@@ -9,7 +9,7 @@
 
     <!-- No advertising ID.
          firebase-analytics merges the Play advertising-ID permissions in by
-         default. Furcast Weather shows no ads and never reads the ad ID, so strip
+         default. Sunny & Misty shows no ads and never reads the ad ID, so strip
          them: Analytics keeps working on its app-instance id, and the Play Data
          safety form does not have to declare advertising-ID collection. -->
     <uses-permission
