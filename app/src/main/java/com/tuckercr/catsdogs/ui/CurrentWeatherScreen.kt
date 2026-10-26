@@ -740,9 +740,12 @@ private fun CurrentWeatherContent(
                     MetricIconRow(
                         icon = Icons.Default.Air,
                         label = stringResource(R.string.label_wind),
-                        value = formatWind(weather.windSpeed, weather.units) + "  " + windDirection(
-                            weather.windDeg,
-                        ),
+                        // No direction when it's calm: "0 mph N" means nothing.
+                        value = if (isCalmWind(weather.windSpeed)) {
+                            formatWind(weather.windSpeed, weather.units)
+                        } else {
+                            formatWind(weather.windSpeed, weather.units) + "  " + windDirection(weather.windDeg)
+                        },
                     )
                     weather.visibilityMeters?.let { visibilityMeters ->
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -1005,10 +1008,15 @@ private fun formatWind(
     speed: Double,
     units: WeatherUnits,
 ): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
+    when {
+        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
+        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
+        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
+        else -> stringResource(R.string.format_wind_mph, speed)
     }
+
+/** A speed that would show as "0.0": written as a plain 0, with no direction. */
+internal fun isCalmWind(speed: Double): Boolean = speed < 0.05
 
 @Composable
 private fun formatVisibility(meters: Int): String =

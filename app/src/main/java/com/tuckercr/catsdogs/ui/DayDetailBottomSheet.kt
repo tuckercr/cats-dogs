@@ -306,9 +306,11 @@ private fun formatHourlyWind(
     speed: Double,
     units: WeatherUnits,
 ): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_wind_mph, speed)
+    when {
+        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
+        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
+        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
+        else -> stringResource(R.string.format_wind_mph, speed)
     }
 
 // --- Previews ---
