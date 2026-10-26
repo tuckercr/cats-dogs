@@ -297,6 +297,61 @@ class WeatherForecastViewModelTest {
         }
 
     @Test
+    fun `failed refresh over cached weather flags it as stale until a refresh succeeds`() =
+        runTest {
+            val cached = currentWeather(cityName = "Austin")
+            var result: Result<CurrentWeather> = Result.failure(Exception("offline"))
+            val viewModel = viewModel(
+                getCachedCurrentWeather = { cached },
+                fetchCurrentWeather = { _, _, _, _, _ -> result },
+            )
+            val austin = SavedLocation(label = "Austin", latitude = null, longitude = null)
+
+            viewModel.refreshCurrent(austin)
+            settle()
+            assertEquals("offline", viewModel.staleErrorKey.value)
+
+            result = Result.success(currentWeather(cityName = "Austin"))
+            viewModel.refreshCurrent(austin)
+            settle()
+            assertEquals(null, viewModel.staleErrorKey.value)
+        }
+
+    @Test
+    fun `failed refresh with nothing cached shows the error, not the stale banner`() =
+        runTest {
+            val viewModel = viewModel(
+                fetchCurrentWeather = { _, _, _, _, _ -> Result.failure(Exception("offline")) },
+            )
+
+            viewModel.refreshCurrent(SavedLocation(label = "Austin", latitude = null, longitude = null))
+            settle()
+
+            assertEquals(LoadingState.Error("offline", canRetry = true), viewModel.currentWeather.value)
+            assertEquals(null, viewModel.staleErrorKey.value)
+        }
+
+    @Test
+    fun `failed background refresh flags shown weather as stale, and switching city clears it`() =
+        runTest {
+            var result: Result<CurrentWeather> = Result.success(currentWeather(cityName = "Austin"))
+            val viewModel = viewModel(fetchCurrentWeather = { _, _, _, _, _ -> result })
+            val austin = SavedLocation(label = "Austin", latitude = 30.27, longitude = -97.74)
+
+            viewModel.refreshCurrent(austin)
+            settle()
+            result = Result.failure(Exception("server_error"))
+            viewModel.backgroundRefreshCurrent(austin)
+            settle()
+            assertEquals("server_error", viewModel.staleErrorKey.value)
+
+            result = Result.failure(Exception("offline"))
+            viewModel.refreshCurrent(SavedLocation(label = "Tokyo", latitude = 35.68, longitude = 139.65))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            assertEquals(null, viewModel.staleErrorKey.value)
+        }
+
+    @Test
     fun `network error is suppressed when cached forecast is available`() =
         runTest {
             val cached = listOf(dayForecast())

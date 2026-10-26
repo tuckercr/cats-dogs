@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -13,6 +14,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -35,6 +37,8 @@ import com.tuckercr.catsdogs.ui.theme.PetInkOnNight
 import com.tuckercr.catsdogs.ui.theme.PetMoon
 import com.tuckercr.catsdogs.ui.theme.PetMoonUnlit
 import com.tuckercr.catsdogs.ui.theme.PetOutline
+import com.tuckercr.catsdogs.ui.theme.PetRouter
+import com.tuckercr.catsdogs.ui.theme.PetRouterLight
 import com.tuckercr.catsdogs.ui.theme.PetScarf
 import com.tuckercr.catsdogs.ui.theme.PetScarfAlt
 import com.tuckercr.catsdogs.ui.theme.PetSkyCloudy
@@ -131,6 +135,8 @@ fun PetScene(
             .now()
             .epochSecond,
     ),
+    // The offline error: the Wi-Fi router lies on its side next to Misty.
+    knockedOverRouter: Boolean = false,
 ) {
     val description = stringResource(R.string.cd_pet_scene)
     val southernHemisphere = LocalSouthernHemisphere.current
@@ -156,6 +162,20 @@ fun PetScene(
             drawDog(mood, s, ::p)
             drawProps(mood, s, ::p)
         }
+        if (knockedOverRouter) drawKnockedOverRouter(s, ::p)
+    }
+}
+
+private fun DrawScope.drawKnockedOverRouter(
+    s: Float,
+    p: (Float, Float) -> Offset,
+) {
+    // Tipped back on the ground to Misty's right, antennas splayed.
+    rotate(degrees = -18f, pivot = p(216f, 128f)) {
+        drawLine(PetOutline, p(202f, 122f), p(196f, 104f), strokeWidth = 2.5f * s)
+        drawLine(PetOutline, p(230f, 122f), p(236f, 106f), strokeWidth = 2.5f * s)
+        drawRoundRect(PetRouter, p(196f, 120f), Size(40f * s, 14f * s), CornerRadius(3f * s))
+        listOf(206f, 214f, 222f).forEach { x -> drawCircle(PetRouterLight, 1.8f * s, p(x, 127f)) }
     }
 }
 

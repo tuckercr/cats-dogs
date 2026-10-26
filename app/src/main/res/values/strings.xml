@@ -3,6 +3,7 @@
     <!-- Home-screen label: short, so launchers don't truncate it. -->
     <string name="app_launcher_name">Sunny &amp; Misty</string>
     <string name="action_retry">Retry</string>
+    <string name="action_try_again">Try again</string>
     <string name="cd_navigate_back">Back</string>
     <string name="field_city_label">City</string>
     <string name="label_feels_like">Feels like</string>
@@ -71,7 +72,12 @@
     <string name="detail_humidity_label">HUM</string>
 
     <!-- Error messages -->
-    <string name="error_offline">No internet connection. Check your network and try again.</string>
+    <string name="error_title_offline">No connection</string>
+    <string name="error_title_generic">Weather unavailable</string>
+    <!-- Lead-in to the error message on the banner over cached weather, e.g. "Showing weather from 7:45 AM." -->
+    <string name="stale_weather_from">Showing weather from %1$s.</string>
+    <string name="stale_weather_saved">Showing saved weather.</string>
+    <string name="error_offline">Misty knocked the Wi-Fi off the shelf. Pull to try again.</string>
     <string name="error_city_not_found">City not found. Try a different name or check the spelling.</string>
     <string name="error_bad_api_key">Invalid API key. Rebuild the app with a valid OWM_API_KEY.</string>
     <string name="error_rate_limited">Too many requests. Please wait a moment and try again.</string>

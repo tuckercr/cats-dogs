@@ -65,10 +65,35 @@ class CurrentWeatherScreenTest {
             }
         }
 
+        composeRule.onNodeWithText(string(R.string.error_title_offline)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.error_offline)).assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.action_retry)).performClick()
+        composeRule.onNodeWithText(string(R.string.action_try_again)).performClick()
 
         assertEquals(1, retries)
+    }
+
+    @Test
+    fun staleCachedWeatherShowsWhenItIsFromAndWhy() {
+        composeRule.setContent {
+            CatsDogsTheme {
+                CurrentWeatherScreen(
+                    locations = listOf(london),
+                    activeIndex = 0,
+                    weatherState = LoadingState.Success(
+                        // 07:45 UTC, shown in London's local time (UTC+0 here).
+                        weather().copy(observedAtEpochSeconds = 1_761_464_700L, utcOffsetSeconds = 0),
+                    ),
+                    staleErrorKey = "offline",
+                    onTabSelected = {},
+                    onAddCityClick = {},
+                    onRetry = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Showing weather from 7:45 AM. " + string(R.string.error_offline))
+            .assertIsDisplayed()
     }
 
     @Test

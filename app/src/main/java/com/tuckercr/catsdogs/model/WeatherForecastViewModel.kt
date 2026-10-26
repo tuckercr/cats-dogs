@@ -133,6 +133,11 @@ class WeatherForecastViewModel internal constructor(
     private val _forecast = MutableStateFlow<LoadingState<List<DayForecast>>>(LoadingState.Idle)
     val forecast: StateFlow<LoadingState<List<DayForecast>>> = _forecast.asStateFlow()
 
+    // Set when a refresh fails while weather is already on screen, so the screen can say the data is
+    // old and why; null once a refresh succeeds or the user moves to another city.
+    private val _staleErrorKey = MutableStateFlow<String?>(null)
+    val staleErrorKey: StateFlow<String?> = _staleErrorKey.asStateFlow()
+
     private val currentRefreshing = MutableStateFlow(false)
     private val forecastRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> =
@@ -169,6 +174,7 @@ class WeatherForecastViewModel internal constructor(
             result.onSuccess { weather ->
                 lastCurrentFetchMillis[location.cacheKey] = nowMillis()
                 _currentWeather.value = LoadingState.Success(weather)
+                _staleErrorKey.value = null
                 setLastCity(weather.cityName)
                 viewModelScope.launch {
                     setCachedCurrentWeather(
@@ -176,6 +182,9 @@ class WeatherForecastViewModel internal constructor(
                         json.encodeToString(CurrentWeather.serializer(), weather),
                     )
                 }
+            }
+            result.onFailure { e ->
+                if (_currentWeather.value is LoadingState.Success) _staleErrorKey.value = resolveErrorKey(e)
             }
         }
     }
@@ -206,6 +215,7 @@ class WeatherForecastViewModel internal constructor(
      * replaces with fresh data. Shows an error only when there is no cached data to fall back to.
      */
     fun refreshCurrent(location: SavedLocation) {
+        if (currentTargetKey.value != location.cacheKey) _staleErrorKey.value = null
         currentTargetKey.value = location.cacheKey
         val fetchId = currentWeatherFetchGeneration.incrementAndGet()
         currentRefreshing.value = true
@@ -231,13 +241,17 @@ class WeatherForecastViewModel internal constructor(
                         )
                     }
                     _currentWeather.value = LoadingState.Success(weather)
+                    _staleErrorKey.value = null
                 },
                 onFailure = { e ->
                     val key = resolveErrorKey(e)
                     onError(key)
-                    // Keep cached data visible if available; only surface error when there's nothing to show.
+                    // Keep cached data visible if available, flagged as old; only surface the error
+                    // on its own when there's nothing to show.
                     if (cached == null) {
                         _currentWeather.value = LoadingState.Error(key, canRetry = resolveCanRetry(e))
+                    } else {
+                        _staleErrorKey.value = key
                     }
                 },
             )

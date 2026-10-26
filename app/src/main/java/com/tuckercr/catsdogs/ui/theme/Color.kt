@@ -64,6 +64,13 @@ val PetMoon = Color(0xFFF1EFE8)
 // The moon's unlit part on the night sky: just darker than PetSkyNight, so the disc shows faintly.
 val PetMoonUnlit = Color(0xFF34416E)
 val PetGround = Color(0x33000000)
+val PetRouter = Color(0xFF4A5A6A)
+val PetRouterLight = Color(0xFF97C459)
+
+// "Showing weather from ..." banner over cached data (background, text: 8.9:1). Fixed in both
+// themes, like the hero card it sits above.
+val StaleBannerBg = Color(0xFFFAEEDA)
+val StaleBannerText = Color(0xFF633806)
 
 // Walk-rating chips (background, text).
 val WalkGreatBg = Color(0xFFC0DD97)
