@@ -97,8 +97,10 @@ class CurrentWeatherScreenTest {
         }
 
         composeRule
-            .onNodeWithText("Showing weather from ${utcTime(observedAt)}. " + string(R.string.error_offline))
-            .assertIsDisplayed()
+            .onNodeWithText(
+                "Showing weather from ${utcTime(observedAt)}. " + string(R.string.error_offline) + " " +
+                    string(R.string.error_pull_to_retry),
+            ).assertIsDisplayed()
     }
 
     @Test
@@ -126,7 +128,8 @@ class CurrentWeatherScreenTest {
 
         composeRule
             .onNodeWithText(
-                "Showing the forecast from yesterday at ${utcTime(observedAt)}. " + string(R.string.error_offline),
+                "Showing the forecast from yesterday at ${utcTime(observedAt)}. " + string(R.string.error_offline) + " " +
+                    string(R.string.error_pull_to_retry),
             ).assertIsDisplayed()
         composeRule.onNodeWithText("21.0 °C").assertIsDisplayed()
     }
