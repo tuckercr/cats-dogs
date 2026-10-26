@@ -7,11 +7,20 @@ import org.junit.Test
 class WeatherIconTest {
 
     @Test
-    fun `clear, few clouds and rain have night versions`() {
-        assertEquals(R.drawable.wx_01d, weatherIconRes("01d"))
-        assertEquals(R.drawable.wx_01n, weatherIconRes("01n"))
-        assertEquals(R.drawable.wx_02n, weatherIconRes("02n"))
-        assertEquals(R.drawable.wx_10n, weatherIconRes("10n"))
+    fun `night icons show the moon's phase`() {
+        assertEquals(R.drawable.wx_01d, weatherIconRes("01d", MoonPhase.NEW))
+        assertEquals(R.drawable.wx_01n_full, weatherIconRes("01n", MoonPhase.FULL))
+        assertEquals(R.drawable.wx_01n_new, weatherIconRes("01n", MoonPhase.NEW))
+        assertEquals(R.drawable.wx_02n_first_quarter, weatherIconRes("02n", MoonPhase.FIRST_QUARTER))
+        assertEquals(R.drawable.wx_10n_waning_crescent, weatherIconRes("10n", MoonPhase.WANING_CRESCENT))
+    }
+
+    @Test
+    fun `the southern hemisphere's moon is lit from the other side, except new and full`() {
+        assertEquals(R.drawable.wx_01n_waxing_crescent_s, weatherIconRes("01n", MoonPhase.WAXING_CRESCENT, southernHemisphere = true))
+        assertEquals(R.drawable.wx_10n_last_quarter_s, weatherIconRes("10n", MoonPhase.LAST_QUARTER, southernHemisphere = true))
+        assertEquals(R.drawable.wx_01n_full, weatherIconRes("01n", MoonPhase.FULL, southernHemisphere = true))
+        assertEquals(R.drawable.wx_02n_new, weatherIconRes("02n", MoonPhase.NEW, southernHemisphere = true))
     }
 
     @Test

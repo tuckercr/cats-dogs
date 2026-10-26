@@ -186,7 +186,7 @@ private fun HourlySlotColumn(slot: HourlySlot) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(text = slot.timeLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-        WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28)
+        WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28, epochSeconds = slot.epochSeconds)
         Text(
             text = formatHourlyTemp(slot.temperature, slot.units),
             style = MaterialTheme.typography.bodyMedium,
@@ -239,6 +239,7 @@ private fun HourlySlotRow(
             iconCode = slot.iconCode,
             contentDescription = slot.description,
             sizeDp = 28,
+            epochSeconds = slot.epochSeconds,
         )
         Text(
             text = formatHourlyTemp(slot.temperature, slot.units),

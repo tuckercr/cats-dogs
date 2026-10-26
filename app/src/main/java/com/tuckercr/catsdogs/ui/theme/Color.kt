@@ -60,6 +60,9 @@ val PetCloud = Color(0xFFFFFFFF)
 val PetStormCloud = Color(0xFF5F6B7A)
 val PetBolt = Color(0xFFFAC775)
 val PetMoon = Color(0xFFF1EFE8)
+
+// The moon's unlit part on the night sky: just darker than PetSkyNight, so the disc shows faintly.
+val PetMoonUnlit = Color(0xFF34416E)
 val PetGround = Color(0x33000000)
 
 // Walk-rating chips (background, text).

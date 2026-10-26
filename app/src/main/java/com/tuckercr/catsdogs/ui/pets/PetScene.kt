@@ -12,11 +12,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.tuckercr.catsdogs.R
+import com.tuckercr.catsdogs.ui.LocalSouthernHemisphere
+import com.tuckercr.catsdogs.ui.MoonPhase
+import com.tuckercr.catsdogs.ui.moonPhaseAt
 import com.tuckercr.catsdogs.ui.theme.PetBolt
 import com.tuckercr.catsdogs.ui.theme.PetCatBelly
 import com.tuckercr.catsdogs.ui.theme.PetCatFur
@@ -28,6 +32,7 @@ import com.tuckercr.catsdogs.ui.theme.PetGround
 import com.tuckercr.catsdogs.ui.theme.PetInk
 import com.tuckercr.catsdogs.ui.theme.PetInkOnNight
 import com.tuckercr.catsdogs.ui.theme.PetMoon
+import com.tuckercr.catsdogs.ui.theme.PetMoonUnlit
 import com.tuckercr.catsdogs.ui.theme.PetOutline
 import com.tuckercr.catsdogs.ui.theme.PetScarf
 import com.tuckercr.catsdogs.ui.theme.PetScarfAlt
@@ -45,6 +50,8 @@ import com.tuckercr.catsdogs.ui.theme.PetSunHot
 import com.tuckercr.catsdogs.ui.theme.PetTongue
 import com.tuckercr.catsdogs.ui.theme.PetUmbrella
 import java.time.LocalDate
+import kotlin.math.abs
+import kotlin.math.cos
 
 // The scene is authored on a 260 x 150 grid and scaled to fit.
 private const val SCENE_W = 260f
@@ -93,8 +100,14 @@ fun petCaption(mood: PetMood): String {
 fun PetScene(
     mood: PetMood,
     modifier: Modifier = Modifier,
+    moonPhase: MoonPhase = moonPhaseAt(
+        java.time.Instant
+            .now()
+            .epochSecond,
+    ),
 ) {
     val description = stringResource(R.string.cd_pet_scene)
+    val southernHemisphere = LocalSouthernHemisphere.current
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -108,7 +121,7 @@ fun PetScene(
             y: Float,
         ) = Offset(x * s, y * s)
 
-        drawSky(mood, s, ::p)
+        drawSky(mood, s, ::p, moonPhase, southernHemisphere)
         drawOval(PetGround, topLeft = p(20f, 132f), size = Size(220f * s, 16f * s))
         drawCat(mood, s, ::p)
         drawDog(mood, s, ::p)
@@ -142,14 +155,13 @@ private fun DrawScope.drawSky(
     mood: PetMood,
     s: Float,
     p: (Float, Float) -> Offset,
+    moonPhase: MoonPhase,
+    southernHemisphere: Boolean,
 ) {
     when (mood) {
         PetMood.SUNNY -> drawCircle(PetSun, 18f * s, p(220f, 32f))
         PetMood.HOT -> drawCircle(PetSunHot, 24f * s, p(220f, 32f))
-        PetMood.NIGHT -> {
-            drawCircle(PetMoon, 16f * s, p(215f, 30f))
-            drawCircle(PetSkyNight, 14f * s, p(223f, 25f))
-        }
+        PetMood.NIGHT -> drawMoon(moonPhase, southernHemisphere, p(215f, 30f), 16f * s)
         PetMood.CLOUDY -> cloud(PetCloud, 210f, 30f, s)
         PetMood.RAIN -> listOf(30f to 14f, 60f to 36f, 200f to 58f, 232f to 20f, 45f to 70f, 245f to 44f)
             .forEach { (x, y) -> drawRoundRect(PetUmbrella, p(x, y), Size(3f * s, 11f * s)) }
@@ -160,6 +172,41 @@ private fun DrawScope.drawSky(
         PetMood.SNOW, PetMood.COLD -> listOf(30f to 18f, 70f to 44f, 200f to 22f, 240f to 50f, 110f to 12f, 180f to 40f)
             .forEach { (x, y) -> drawCircle(PetCloud, 4f * s, p(x, y)) }
     }
+}
+
+/**
+ * The moon at [phase]: the unlit disc, the lit half, then the terminator, an ellipse that adds to
+ * the lit half (gibbous) or cuts into it (crescent). Waxing is lit on the right in the north and
+ * on the left in the south.
+ */
+private fun DrawScope.drawMoon(
+    phase: MoonPhase,
+    southernHemisphere: Boolean,
+    centre: Offset,
+    radius: Float,
+) {
+    drawCircle(PetMoonUnlit, radius, centre)
+    when (phase) {
+        MoonPhase.NEW -> return
+        MoonPhase.FULL -> {
+            drawCircle(PetMoon, radius, centre)
+            return
+        }
+        else -> Unit
+    }
+    val litOnRight = phase.isWaxing != southernHemisphere
+    clipRect(
+        left = if (litOnRight) centre.x else centre.x - radius,
+        top = centre.y - radius,
+        right = if (litOnRight) centre.x + radius else centre.x,
+        bottom = centre.y + radius,
+    ) { drawCircle(PetMoon, radius, centre) }
+    val rx = abs(cos(Math.toRadians(phase.drawAngleDegrees.toDouble()))).toFloat() * radius
+    drawOval(
+        if (phase.isGibbous) PetMoon else PetMoonUnlit,
+        topLeft = Offset(centre.x - rx, centre.y - radius),
+        size = Size(rx * 2, radius * 2),
+    )
 }
 
 private fun DrawScope.cloud(

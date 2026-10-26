@@ -61,6 +61,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -373,15 +374,21 @@ fun CurrentWeatherScreen(
                             }
                         }
 
-                        is LoadingState.Success -> CurrentWeatherContent(
-                            weather = weatherState.data,
-                            forecastState = forecastState,
-                            location = locations.getOrNull(activeIndex),
-                            radarEnabled = radarEnabled,
-                            walkCardEnabled = walkCardEnabled,
-                            petWeatherThresholds = petWeatherThresholds,
-                            onForecastRetry = onRetry,
-                        )
+                        is LoadingState.Success -> {
+                            val location = locations.getOrNull(activeIndex)
+                            // The moon (hero scene and night icons) is lit from the other side down south.
+                            CompositionLocalProvider(LocalSouthernHemisphere provides ((location?.latitude ?: 0.0) < 0)) {
+                                CurrentWeatherContent(
+                                    weather = weatherState.data,
+                                    forecastState = forecastState,
+                                    location = location,
+                                    radarEnabled = radarEnabled,
+                                    walkCardEnabled = walkCardEnabled,
+                                    petWeatherThresholds = petWeatherThresholds,
+                                    onForecastRetry = onRetry,
+                                )
+                            }
+                        }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -921,6 +928,7 @@ private fun HourlyCell(
             iconCode = slot.iconCode,
             contentDescription = slot.description,
             sizeDp = 32,
+            epochSeconds = slot.epochSeconds,
         )
         Text(
             text = "${slot.temperature.roundToInt()}°",
