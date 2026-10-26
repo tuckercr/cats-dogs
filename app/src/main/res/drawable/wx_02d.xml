@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Furcast weather icon, drawn in the pet scene style (generated from wx_02d.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M27.00,17.00L31.00,17.00"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M27.00,17.00L31.00,17.00"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M24.07,24.07L26.90,26.90"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M24.07,24.07L26.90,26.90"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17.00,27.00L17.00,31.00"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17.00,27.00L17.00,31.00"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M9.93,24.07L7.10,26.90"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M9.93,24.07L7.10,26.90"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M7.00,17.00L3.00,17.00"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M7.00,17.00L3.00,17.00"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M9.93,9.93L7.10,7.10"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M9.93,9.93L7.10,7.10"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17.00,7.00L17.00,3.00"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17.00,7.00L17.00,3.00"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M24.07,9.93L26.90,7.10"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M24.07,9.93L26.90,7.10"
+        android:strokeColor="#FFEF9F27"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M10.5,17a6.5,6.5 0 1,0 13,0a6.5,6.5 0 1,0 -13,0Z"
+        android:fillColor="#FFEF9F27"
+        android:strokeColor="#FF10324A"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <group
+        android:translateX="7"
+        android:translateY="7"
+        android:scaleX="0.82"
+        android:scaleY="0.82">
+        <path
+            android:pathData="M13 36 H35 A7 7 0 0 0 36 22.1 A10 10 0 0 0 17 20.5 A8 8 0 0 0 13 36 Z"
+            android:fillColor="#FFFFFFFF"
+            android:strokeColor="#FF10324A"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>
