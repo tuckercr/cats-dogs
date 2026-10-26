@@ -45,6 +45,7 @@ class SettingsViewModelTest {
             val repo = mockk<PreferencesRepository>(relaxed = true)
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
+            every { repo.showWalkCard } returns flowOf(true)
             val viewModel = SettingsViewModel(repo)
 
             viewModel.setUnitOverride(UnitOverride.METRIC)
@@ -59,6 +60,7 @@ class SettingsViewModelTest {
             val repo = mockk<PreferencesRepository>(relaxed = true)
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
+            every { repo.showWalkCard } returns flowOf(true)
             val viewModel = SettingsViewModel(repo)
 
             viewModel.clearCache()
@@ -86,6 +88,7 @@ class SettingsViewModelTest {
             val repo = mockk<PreferencesRepository>(relaxed = true)
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
+            every { repo.showWalkCard } returns flowOf(true)
             val viewModel = SettingsViewModel(repo)
 
             viewModel.setShareUsageStatistics(false)
@@ -94,13 +97,43 @@ class SettingsViewModelTest {
             coVerify { repo.setShareUsageStatistics(false) }
         }
 
+    @Test
+    fun `showWalkCard reflects value from repository`() =
+        runTest {
+            val viewModel = viewModel(showWalkCard = false)
+            val collected = mutableListOf<Boolean>()
+            val job = backgroundScope.launch { viewModel.showWalkCard.collect { collected += it } }
+
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(false, collected.last())
+            job.cancel()
+        }
+
+    @Test
+    fun `setShowWalkCard delegates to repository`() =
+        runTest {
+            val repo = mockk<PreferencesRepository>(relaxed = true)
+            every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
+            every { repo.shareUsageStatistics } returns flowOf(true)
+            every { repo.showWalkCard } returns flowOf(true)
+            val viewModel = SettingsViewModel(repo)
+
+            viewModel.setShowWalkCard(false)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify { repo.setShowWalkCard(false) }
+        }
+
     private fun viewModel(
         unitOverride: UnitOverride = UnitOverride.SYSTEM,
         shareUsageStatistics: Boolean = true,
+        showWalkCard: Boolean = true,
     ): SettingsViewModel {
         val repo = mockk<PreferencesRepository>(relaxed = true)
         every { repo.unitOverride } returns flowOf(unitOverride)
         every { repo.shareUsageStatistics } returns flowOf(shareUsageStatistics)
+        every { repo.showWalkCard } returns flowOf(showWalkCard)
         return SettingsViewModel(repo)
     }
 

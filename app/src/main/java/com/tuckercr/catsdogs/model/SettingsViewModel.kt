@@ -30,6 +30,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.setShareUsageStatistics(enabled) }
     }
 
+    /** "Best walk time" on the main screen. */
+    val showWalkCard = preferencesRepository.showWalkCard
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setShowWalkCard(show: Boolean) {
+        viewModelScope.launch { preferencesRepository.setShowWalkCard(show) }
+    }
+
     fun clearCache() {
         viewModelScope.launch { preferencesRepository.clearCache() }
     }

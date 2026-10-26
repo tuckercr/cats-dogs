@@ -138,6 +138,15 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_SHARE_USAGE_STATISTICS] = enabled }
     }
 
+    /** Whether the main screen shows "Best walk time". On unless they turn it off (no dog, say). */
+    val showWalkCard: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_SHOW_WALK_CARD] ?: true
+    }
+
+    suspend fun setShowWalkCard(show: Boolean) {
+        dataStore.edit { it[KEY_SHOW_WALK_CARD] = show }
+    }
+
     suspend fun clearCache() {
         dataStore.edit {
             it.remove(KEY_WEATHER_CACHE)
@@ -162,5 +171,6 @@ class PreferencesRepository @Inject constructor(
         private val KEY_FORECAST_CACHE = stringPreferencesKey("forecast_cache")
         private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
         private val KEY_SHARE_USAGE_STATISTICS = booleanPreferencesKey("share_usage_statistics")
+        private val KEY_SHOW_WALK_CARD = booleanPreferencesKey("show_walk_card")
     }
 }

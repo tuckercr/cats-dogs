@@ -126,9 +126,10 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val geoViewModel = hiltViewModel<GeoLocationViewModel>(viewModelStoreOwner = activity)
     // Same owner RadarCard uses, so this is the instance that would load the timeline.
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
-    val unitOverride by hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
-        .unitOverride
-        .collectAsStateWithLifecycle()
+    val settingsViewModel = hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
+    val unitOverride by settingsViewModel.unitOverride.collectAsStateWithLifecycle()
+    // The user's Settings choice; Remote Config walk_card_enabled can also hide it for everyone.
+    val showWalkCard by settingsViewModel.showWalkCard.collectAsStateWithLifecycle()
     val distanceInMiles = LocalContext.current.usesMilesForDistance(unitOverride)
 
     val locations by cityListViewModel.locations.collectAsStateWithLifecycle()
@@ -176,7 +177,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             forecastState = forecastState,
             isRefreshing = isRefreshing,
             radarEnabled = radarEnabled,
-            walkCardEnabled = weatherForecastViewModel.walkCardEnabled,
+            walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
             petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
             onTabSelected = cityListViewModel::setActiveIndex,
             onOpenSettings = {

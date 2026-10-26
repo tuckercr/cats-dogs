@@ -86,6 +86,9 @@
     <string name="screen_settings">Settings</string>
     <string name="cd_open_settings">Open settings</string>
     <string name="settings_section_units">UNITS</string>
+    <string name="settings_section_main_screen">MAIN SCREEN</string>
+    <string name="settings_show_walk_card">Best walk time</string>
+    <string name="settings_show_walk_card_summary">When to take the dog out. Turn it off if you don\'t have a dog.</string>
     <string name="settings_unit_system">System default</string>
     <string name="settings_unit_metric">Celsius (°C)</string>
     <string name="settings_unit_imperial">Fahrenheit (°F)</string>
