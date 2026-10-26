@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.tuckercr.catsdogs.R
 import com.tuckercr.catsdogs.ui.theme.CatsDogsTheme
 import org.junit.Assert.assertEquals
@@ -24,8 +25,10 @@ class WelcomeScreenTest {
             CatsDogsTheme { WelcomeScreen(onGetStarted = {}) }
         }
 
-        composeRule.onNodeWithText(string(R.string.welcome_message)).assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.get_started)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.welcome_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.welcome_sunny_body)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.welcome_misty_body)).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(string(R.string.get_started)).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -35,7 +38,7 @@ class WelcomeScreenTest {
             CatsDogsTheme { WelcomeScreen(onGetStarted = { started++ }) }
         }
 
-        composeRule.onNodeWithText(string(R.string.get_started)).performClick()
+        composeRule.onNodeWithText(string(R.string.get_started)).performScrollTo().performClick()
 
         assertEquals(1, started)
     }

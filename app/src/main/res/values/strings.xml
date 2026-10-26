@@ -23,12 +23,25 @@
     <string name="format_visibility_mi">%.1f mi</string>
     <string name="format_visibility_m">%d m</string>
     <string name="visibility_clear">Clear</string>
-    <string name="welcome_message">Check current conditions and a multi-day forecast for any city.</string>
+    <string name="welcome_title">Meet Sunny &amp; Misty</string>
+    <string name="welcome_sunny_name">Sunny</string>
+    <string name="welcome_sunny_body">Loves a walk in almost any weather, and always knows the best time to head out.</string>
+    <string name="welcome_misty_name">Misty</string>
+    <string name="welcome_misty_body">Prefers the window seat, and will tell you when it\'s a day for staying in.</string>
+    <string name="welcome_together">Together they check the sky so you know what to expect, for you and your pets.</string>
+
+    <!-- Household onboarding -->
+    <string name="household_title">Who\'s at home?</string>
+    <string name="household_body">If there\'s a dog, Sunny will suggest the best time for a walk. You can change this later in Settings.</string>
+    <string name="household_dog">A dog</string>
+    <string name="household_cat">A cat</string>
+    <string name="household_both">A dog and a cat</string>
+    <string name="household_neither">No pets</string>
     <string name="get_started">Get started</string>
 
     <!-- Location onboarding -->
     <string name="location_onboarding_title">Use your location?</string>
-    <string name="location_onboarding_body">Allow Sunny &amp; Misty to use your device location to show local weather automatically.</string>
+    <string name="location_onboarding_body">Misty likes to know which window she\'s looking out of. Allow your location to see the weather where you are.</string>
     <string name="location_allow_button">Use my location</string>
     <string name="location_skip_button">Enter a city manually</string>
     <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>

@@ -20,6 +20,7 @@ import com.tuckercr.catsdogs.model.CityListViewModel
 import com.tuckercr.catsdogs.model.WelcomeViewModel
 import com.tuckercr.catsdogs.ui.CurrentWeatherRoute
 import com.tuckercr.catsdogs.ui.LocationsRoute
+import com.tuckercr.catsdogs.ui.OnboardingHouseholdScreen
 import com.tuckercr.catsdogs.ui.OnboardingLocationScreen
 import com.tuckercr.catsdogs.ui.OnboardingNotificationScreen
 import com.tuckercr.catsdogs.ui.SettingsRoute
@@ -28,6 +29,7 @@ import com.tuckercr.catsdogs.ui.WelcomeScreen
 object WeatherDestinations {
     const val LOADING = "loading"
     const val WELCOME = "welcome"
+    const val HOUSEHOLD = "household"
     const val NOTIFICATION_PERMISSION = "notification_permission"
     const val LOCATION_PERMISSION = "location_permission"
     const val CURRENT = "current"
@@ -73,8 +75,22 @@ fun WeatherNavHost(
             WelcomeScreen(
                 onGetStarted = {
                     welcomeViewModel.completeWelcome()
-                    navController.navigate(WeatherDestinations.NOTIFICATION_PERMISSION) {
+                    navController.navigate(WeatherDestinations.HOUSEHOLD) {
                         popUpTo(WeatherDestinations.WELCOME) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        // Part of a new user's first run only: not resumed on a later launch, and existing users
+        // aren't asked after an update (they have the switch in Settings).
+        composable(WeatherDestinations.HOUSEHOLD) {
+            OnboardingHouseholdScreen(
+                onChosen = { household ->
+                    welcomeViewModel.chooseHousehold(household.hasDog)
+                    navController.navigate(WeatherDestinations.NOTIFICATION_PERMISSION) {
+                        popUpTo(WeatherDestinations.HOUSEHOLD) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
