@@ -34,8 +34,8 @@ android {
         applicationId = "com.fangjet.weather"
         minSdk = 29
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 1
+        versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "OWM_API_KEY", "\"${owmApiKey.replace("\"", "\\\"")}\"")
