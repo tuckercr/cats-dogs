@@ -1,0 +1,52 @@
+package com.fangjet.weather.ui.pets
+
+import com.fangjet.weather.domain.PetWeatherThresholds
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class PetMoodTest {
+
+    @Test
+    fun `precipitation and storms map to their moods regardless of temperature`() {
+        assertEquals(PetMood.STORM, petMoodFor("Thunderstorm", "11d", 35.0))
+        assertEquals(PetMood.SNOW, petMoodFor("Snow", "13d", -5.0))
+        assertEquals(PetMood.RAIN, petMoodFor("Rain", "10d", 32.0))
+        assertEquals(PetMood.RAIN, petMoodFor("Drizzle", "09n", 12.0))
+    }
+
+    @Test
+    fun `temperature extremes win over sky and time of day`() {
+        assertEquals(PetMood.HOT, petMoodFor("Clear", "01d", 30.0))
+        assertEquals(PetMood.COLD, petMoodFor("Clouds", "04n", 0.0))
+    }
+
+    @Test
+    fun `night icon means night, otherwise clear is sunny and anything else is cloudy`() {
+        assertEquals(PetMood.NIGHT, petMoodFor("Clear", "01n", 15.0))
+        assertEquals(PetMood.SUNNY, petMoodFor("Clear", "01d", 20.0))
+        assertEquals(PetMood.CLOUDY, petMoodFor("Clouds", "03d", 20.0))
+        assertEquals(PetMood.CLOUDY, petMoodFor("Mist", "50d", 12.0))
+    }
+
+    @Test
+    fun `remote config thresholds move the hot and cold cut-offs`() {
+        val warmer = PetWeatherThresholds.DEFAULT.copy(petHotC = 25.0, petColdC = 5.0)
+
+        // 26C clear is sunny with the defaults, hot with a 25C threshold.
+        assertEquals(PetMood.SUNNY, petMoodFor("Clear", "01d", 26.0))
+        assertEquals(PetMood.HOT, petMoodFor("Clear", "01d", 26.0, warmer))
+        // 4C cloudy is cloudy with the defaults, cold with a 5C threshold.
+        assertEquals(PetMood.CLOUDY, petMoodFor("Clouds", "04d", 4.0))
+        assertEquals(PetMood.COLD, petMoodFor("Clouds", "04d", 4.0, warmer))
+    }
+
+    @Test
+    fun `night is split by the city's local hour`() {
+        assertEquals(NightPart.EVENING, nightPartAt(19))
+        assertEquals(NightPart.EVENING, nightPartAt(22))
+        assertEquals(NightPart.LATE_NIGHT, nightPartAt(23))
+        assertEquals(NightPart.LATE_NIGHT, nightPartAt(3))
+        assertEquals(NightPart.BEFORE_DAWN, nightPartAt(5))
+        assertEquals(NightPart.BEFORE_DAWN, nightPartAt(7))
+    }
+}

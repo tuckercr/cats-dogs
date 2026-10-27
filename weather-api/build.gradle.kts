@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.tuckercr.catsdogs.weatherapi"
+    namespace = "com.fangjet.weather.weatherapi"
     compileSdk = 37
 
     defaultConfig {

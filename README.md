@@ -93,7 +93,7 @@ Firebase is optional: without `app/google-services.json` the app builds and runs
 Remote Config falling back to its in-app defaults and analytics and crash reporting doing nothing.
 See [Firebase setup](#firebase-setup) to wire it up.
 
-Debug builds install as `com.tuckercr.catsdogs.debug` (version name suffixed `-debug`), so they sit
+Debug builds install as `com.fangjet.weather.debug` (version name suffixed `-debug`), so they sit
 alongside the Play build and report to their own Firebase app.
 
 The app supports Android 10+ (minSdk 29) and targets SDK 37. From the command line:
@@ -167,7 +167,7 @@ build artifacts.
 
 Sunny & Misty reports a handful of **anonymous app-usage events**: nothing about where you are,
 which cities you save, or what the weather is. The whole catalogue is four functions in
-[`AnalyticsRepository`](app/src/main/java/com/tuckercr/catsdogs/analytics/AnalyticsRepository.kt),
+[`AnalyticsRepository`](app/src/main/java/com/fangjet/weather/analytics/AnalyticsRepository.kt),
 so the privacy policy can be checked against the code line by line.
 
 | Event | Parameters | When |
@@ -190,7 +190,7 @@ An event is sent only if every gate passes:
 3. **Firebase configured**: without `google-services.json` there is no Firebase app and nothing is
    sent.
 
-Debug builds do send, but to their own `com.tuckercr.catsdogs.debug` app stream, so development
+Debug builds do send, but to their own `com.fangjet.weather.debug` app stream, so development
 never pollutes the production numbers. Every analytics call is wrapped so it can never crash the
 app; a failure just drops the event.
 
@@ -235,11 +235,11 @@ The walk and pet-mood thresholds are always Celsius, whatever units the user pic
 its valid range (or a fractional value for a whole-number key) falls back to its default, and so
 does any pair that isn't strictly ordered (comfort min/max, walk hours start/end, pet cold/hot):
 both values of the pair revert together. Validation lives in
-[`PetWeatherThresholds`](app/src/main/java/com/tuckercr/catsdogs/domain/PetWeatherThresholds.kt).
+[`PetWeatherThresholds`](app/src/main/java/com/fangjet/weather/domain/PetWeatherThresholds.kt).
 
 [`firebase/remoteconfig.template.json`](firebase/remoteconfig.template.json) is the source of truth
 for the console parameters; keep it, `remote_config_defaults.xml`, and
-[`RemoteConfigRepository`](app/src/main/java/com/tuckercr/catsdogs/data/RemoteConfigRepository.kt)
+[`RemoteConfigRepository`](app/src/main/java/com/fangjet/weather/data/RemoteConfigRepository.kt)
 in step.
 
 ## Firebase setup
@@ -250,7 +250,7 @@ Crashlytics). To build against it, or your own:
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) **with
    Google Analytics enabled**, as events silently no-op if the project has no linked Analytics
    property.
-2. Register **two** Android apps under it: `com.tuckercr.catsdogs` and `com.tuckercr.catsdogs.debug`.
+2. Register **two** Android apps under it: `com.fangjet.weather` and `com.fangjet.weather.debug`.
    Debug builds use an `applicationIdSuffix`, and the `google-services` plugin matches package
    names exactly.
 3. Download the merged `google-services.json` to `app/`. It is git-ignored; each developer
