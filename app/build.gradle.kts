@@ -27,11 +27,11 @@ val localProps = Properties().also { props ->
 val owmApiKey: String = localProps.getProperty("OWM_API_KEY") ?: ""
 
 android {
-    namespace = "com.tuckercr.catsdogs"
+    namespace = "com.fangjet.weather"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.tuckercr.catsdogs"
+        applicationId = "com.fangjet.weather"
         minSdk = 29
         targetSdk = 37
         versionCode = 2
@@ -55,7 +55,7 @@ android {
     buildTypes {
         debug {
             // Installs side by side with the Play build and reports to its own Firebase app
-            // (com.tuckercr.catsdogs.debug is registered in google-services.json).
+            // (com.fangjet.weather.debug is registered in google-services.json).
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
