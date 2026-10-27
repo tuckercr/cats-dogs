@@ -155,7 +155,7 @@ build artifacts.
 6. **Settings**: choose temperature units (System default / Celsius / Fahrenheit), turn the *Best
    walk time* card on or off, see location and notification permission status, manage saved locations, clear cached data, open the
    OpenWeather and Open-Meteo attributions, turn *Share usage statistics* off, and open the
-   [privacy policy](https://fangjet.com/weather).
+   [privacy policy](https://sunnyandmisty.com/privacy).
 7. **Notifications**: WorkManager delivers daily weather briefings for the active city at 9 AM,
    1 PM, and 7 PM device time (unless `daily_weather_notifications_enabled` is off), and refreshes
    the active city's cached data in the background every `weather_refresh_interval_minutes`; the
@@ -200,7 +200,7 @@ collection and ad-personalisation signals. Analytics keeps working on its app-in
 
 Crashlytics is enabled in release builds only (off in debug).
 
-The privacy policy is at [fangjet.com/weather](https://fangjet.com/weather), linked from
+The privacy policy is at [sunnyandmisty.com/privacy](https://sunnyandmisty.com/privacy), linked from
 Settings → About → *Privacy Policy*.
 
 ## Remote Config

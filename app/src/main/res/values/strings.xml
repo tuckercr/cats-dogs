@@ -130,14 +130,14 @@
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_share_usage_statistics">Share usage statistics</string>
     <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Sunny &amp; Misty</string>
-    <string name="settings_privacy_policy_url">https://fangjet.com/weather</string>
+    <string name="settings_privacy_policy_url">https://sunnyandmisty.com/privacy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
     <string name="notif_channel_name">Weather Updates</string>
     <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay in the loop</string>
-    <string name="notif_onboarding_body">Allow Sunny &amp; Misty to send you daily weather updates for your saved locations.</string>
+    <string name="notif_onboarding_body">Allow Sunny &amp; Misty to send you daily weather updates for your selected city.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 

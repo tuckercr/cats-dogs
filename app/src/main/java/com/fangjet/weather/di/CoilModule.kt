@@ -2,6 +2,7 @@ package com.fangjet.weather.di
 
 import android.content.Context
 import coil.ImageLoader
+import com.fangjet.weather.BuildConfig
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,7 +24,8 @@ object CoilModule {
             .Builder()
             .addNetworkInterceptor { chain ->
                 val originalRequest = chain.request()
-                val userAgent = "CatsDogsWeatherApp/1.0 (Android; OpenStreetMap tiles)"
+                // OpenStreetMap's tile policy asks for an app name and a way to reach us.
+                val userAgent = "SunnyAndMisty/${BuildConfig.VERSION_NAME} (Android; +https://sunnyandmisty.com)"
 
                 val newRequest = originalRequest
                     .newBuilder()
