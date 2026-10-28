@@ -1,5 +1,6 @@
 package com.fangjet.weather.ui
 
+import com.fangjet.weather.domain.WeatherUnits
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -7,21 +8,20 @@ import org.junit.Test
 class CalmWindTest {
 
     @Test
-    fun `a speed that would show as 0_0 is calm`() {
-        assertTrue(isCalmWind(0.0))
-        assertTrue(isCalmWind(0.04))
+    fun `a speed that would show as 0 m per s is calm`() {
+        assertTrue(isCalmWind(0.0, WeatherUnits.METRIC))
+        assertTrue(isCalmWind(0.04, WeatherUnits.METRIC))
     }
 
     @Test
-    fun `anything that shows as 0_1 or more is not`() {
-        assertFalse(isCalmWind(0.05))
-        assertFalse(isCalmWind(3.2))
+    fun `anything that shows as 0_1 m per s or more is not`() {
+        assertFalse(isCalmWind(0.05, WeatherUnits.METRIC))
+        assertFalse(isCalmWind(3.2, WeatherUnits.METRIC))
     }
 
     @Test
-    fun `visibility at OpenWeather's 10 km cap reads as clear`() {
-        assertTrue(isClearVisibility(10_000))
-        assertFalse(isClearVisibility(9_999))
-        assertFalse(isClearVisibility(800))
+    fun `in whole mph, anything that rounds to 0 is calm`() {
+        assertTrue(isCalmWind(0.4, WeatherUnits.IMPERIAL))
+        assertFalse(isCalmWind(0.5, WeatherUnits.IMPERIAL))
     }
 }

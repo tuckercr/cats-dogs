@@ -45,6 +45,21 @@
       "valueType": "NUMBER",
       "description": "Pavement temperature, in °C, at or above which the walk rating is Paws hot and that hour is not walkable. Valid 40–70; anything else uses 52."
     },
+    "walk_warm_pavement_c": {
+      "defaultValue": { "value": "45" },
+      "valueType": "NUMBER",
+      "description": "Pavement temperature, in °C, at or above which the Today pavement tile says \"Getting hot, keep it short\" and that hour is not suggested for a walk. Valid 30–65 and below walk_hot_pavement_c; anything else uses 45 (or 7 below walk_hot_pavement_c)."
+    },
+    "walk_icy_pavement_c": {
+      "defaultValue": { "value": "0" },
+      "valueType": "NUMBER",
+      "description": "Pavement temperature, in °C, below which the Today pavement tile says \"Icy, watch for salt\" after rain or snow (\"Below freezing\" otherwise). Valid -20–10; anything else uses 0."
+    },
+    "walk_dangerous_pavement_c": {
+      "defaultValue": { "value": "57.2" },
+      "valueType": "NUMBER",
+      "description": "Pavement temperature, in °C, at or above which the Today pavement tile says \"Dangerously hot for paws\" (57.2 is 135 °F). Valid 45–80 and above walk_hot_pavement_c; anything else uses 57.2 (or 5 above walk_hot_pavement_c)."
+    },
     "walk_max_rain_chance": {
       "defaultValue": { "value": "30" },
       "valueType": "NUMBER",
@@ -53,12 +68,12 @@
     "walk_comfort_min_c": {
       "defaultValue": { "value": "3" },
       "valueType": "NUMBER",
-      "description": "Coldest air temperature, in °C, at which an hour counts as comfortable for a walk. Valid -20–20; anything else uses 3. Must be below walk_comfort_max_c, or both use their defaults."
+      "description": "Coldest feels-like temperature, in °C, at which an hour counts as comfortable for a walk. Valid -20–20; anything else uses 3. Must be below walk_comfort_max_c, or both use their defaults."
     },
     "walk_comfort_max_c": {
       "defaultValue": { "value": "27" },
       "valueType": "NUMBER",
-      "description": "Warmest air temperature, in °C, at which an hour counts as comfortable for a walk. Valid 15–40; anything else uses 27. Must be above walk_comfort_min_c, or both use their defaults."
+      "description": "Warmest feels-like temperature, in °C, at which an hour counts as comfortable for a walk. Valid 15–40; anything else uses 27. Must be above walk_comfort_min_c, or both use their defaults."
     },
     "walk_hours_start": {
       "defaultValue": { "value": "7" },
@@ -73,12 +88,12 @@
     "pet_hot_threshold_c": {
       "defaultValue": { "value": "30" },
       "valueType": "NUMBER",
-      "description": "Air temperature, in °C, at or above which the pets look hot and the walk rating is Paws hot. Valid 20–45; anything else uses 30. Must be above pet_cold_threshold_c, or both use their defaults."
+      "description": "Feels-like temperature, in °C, at or above which the pets look hot and the walk rating is Paws hot. Valid 20–45; anything else uses 30. Must be above pet_cold_threshold_c, or both use their defaults."
     },
     "pet_cold_threshold_c": {
       "defaultValue": { "value": "0" },
       "valueType": "NUMBER",
-      "description": "Air temperature, in °C, at or below which the pets look cold and the walk rating is Too cold. Valid -20–10; anything else uses 0. Must be below pet_hot_threshold_c, or both use their defaults."
+      "description": "Feels-like temperature, in °C, at or below which the pets look cold and the walk rating is Too cold. Valid -20–10; anything else uses 0. Must be below pet_hot_threshold_c, or both use their defaults."
     },
     "analytics_enabled": {
       "defaultValue": { "value": "true" },

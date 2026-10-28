@@ -53,6 +53,18 @@
         <value>52</value>
     </entry>
     <entry>
+        <key>walk_warm_pavement_c</key>
+        <value>45</value>
+    </entry>
+    <entry>
+        <key>walk_icy_pavement_c</key>
+        <value>0</value>
+    </entry>
+    <entry>
+        <key>walk_dangerous_pavement_c</key>
+        <value>57.2</value>
+    </entry>
+    <entry>
         <key>walk_max_rain_chance</key>
         <value>30</value>
     </entry>

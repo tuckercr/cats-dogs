@@ -42,6 +42,7 @@ object ForecastAggregator {
         val pop: Double = 0.0,
         val uvIndex: Double? = null,
         val pavementTemperature: Double? = null,
+        val groundWet: Boolean = false,
     )
 
     fun aggregate(
@@ -85,6 +86,7 @@ object ForecastAggregator {
                         precipitationChance = (slot.pop * 100).roundToInt(),
                         uvIndex = slot.uvIndex,
                         pavementTemperature = slot.pavementTemperature,
+                        groundWet = slot.groundWet,
                         localHour = zdt.hour,
                         epochSeconds = slot.epochSeconds,
                     )

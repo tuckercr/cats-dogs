@@ -71,6 +71,11 @@ data class HourlySlot(
     val localHour: Int? = null,
     /** Start of the slot, Unix epoch seconds; null in data cached before it existed. */
     val epochSeconds: Long? = null,
+    /**
+     * Rain or snow in the 12 hours before the slot or during it, or snow on the ground: below
+     * freezing, the pavement may be icy or salted. False when the source doesn't say.
+     */
+    val groundWet: Boolean = false,
 )
 
 @Serializable
@@ -90,4 +95,19 @@ data class DayForecast(
     val precipitationChance: Int = 0,
     /** Peak UV index across the day's slots; null when the source doesn't provide UV. */
     val uvIndexMax: Double? = null,
+    /**
+     * The next few hours in 15-minute steps, from the one in progress, for "Rain starting around
+     * 3:15 PM". Only on the first day (it reaches a few hours ahead, whatever the date), and empty
+     * when the source doesn't provide it.
+     */
+    val quarterHours: List<QuarterHour> = emptyList(),
+)
+
+/** Rain and snow over the 15 minutes from [epochSeconds]. */
+@Serializable
+data class QuarterHour(
+    val epochSeconds: Long,
+    /** Rain and snow together, in mm of water. */
+    val precipitationMm: Double,
+    val snowfallCm: Double = 0.0,
 )

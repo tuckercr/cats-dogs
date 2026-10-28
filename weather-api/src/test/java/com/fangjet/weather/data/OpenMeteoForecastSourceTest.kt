@@ -1,7 +1,9 @@
 package com.fangjet.weather.data
 
 import com.fangjet.weather.data.remote.dto.OpenMeteoHourlyDto
+import com.fangjet.weather.data.remote.dto.OpenMeteoMinutely15Dto
 import com.fangjet.weather.data.remote.dto.OpenMeteoResponse
+import com.fangjet.weather.domain.QuarterHour
 import com.fangjet.weather.domain.WeatherUnits
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -133,5 +135,49 @@ class OpenMeteoForecastSourceTest {
         val gappy = r.copy(hourly = r.hourly.copy(temperature = listOf(20.0, null, 21.0)))
         val slots = OpenMeteoForecastSource.toDayForecasts(gappy, WeatherUnits.METRIC, dayStart).single().hourlySlots
         assertEquals(2, slots.size)
+    }
+
+    @Test
+    fun `ground is wet from rain in the 12 hours before an hour or during it, or from lying snow`() {
+        val r = response(24)
+        // 0.4 mm fell in the hour before 03:00, i.e. from 02:00 to 03:00.
+        val rained = r.hourly.copy(precipitation = List(24) { if (it == 3) 0.4 else 0.0 })
+        val wet = (0 until 24).map { OpenMeteoForecastSource.groundWet(rained, it) }
+
+        // 01:00's hour ends at 02:00, before the rain: dry. 02:00's hour is the rain itself.
+        assertEquals(false, wet[1])
+        assertEquals(true, wet[2])
+        // The 12 hours before 14:00 still take in the rain; the 12 before 15:00 start after it.
+        assertEquals(true, wet[14])
+        assertEquals(false, wet[15])
+
+        val snowy = r.hourly.copy(snowDepth = List(24) { 0.02 })
+        assertEquals(true, OpenMeteoForecastSource.groundWet(snowy, 10))
+        assertEquals(false, OpenMeteoForecastSource.groundWet(r.hourly, 10))
+    }
+
+    @Test
+    fun `slots carry whether the ground is wet`() {
+        val r = response(3)
+        val rained = r.copy(hourly = r.hourly.copy(precipitation = listOf(0.0, 0.0, 1.0)))
+        val slots = OpenMeteoForecastSource.toDayForecasts(rained, WeatherUnits.METRIC, dayStart).single().hourlySlots
+        assertEquals(listOf(false, true, true), slots.map { it.groundWet })
+    }
+
+    @Test
+    fun `15-minute amounts become quarters starting 15 minutes before their time, on the first day`() {
+        val r = response(3).copy(
+            minutely15 = OpenMeteoMinutely15Dto(
+                time = listOf(dayStart + 900, dayStart + 1800, dayStart + 2700),
+                precipitation = listOf(0.0, 0.4, null),
+                snowfall = listOf(0.0, 0.2, 0.0),
+            ),
+        )
+        val days = OpenMeteoForecastSource.toDayForecasts(r, WeatherUnits.METRIC, dayStart)
+
+        assertEquals(
+            listOf(QuarterHour(dayStart, 0.0, 0.0), QuarterHour(dayStart + 900, 0.4, 0.2)),
+            days.first().quarterHours,
+        )
     }
 }

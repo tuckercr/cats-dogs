@@ -31,12 +31,13 @@ import com.fangjet.weather.ui.theme.WalkOkayBg
 import com.fangjet.weather.ui.theme.WalkOkayText
 import com.fangjet.weather.ui.theme.WalkPoorBg
 import com.fangjet.weather.ui.theme.WalkPoorText
+import com.fangjet.weather.util.PavementBand
 import kotlin.math.roundToInt
 
 /**
  * "Best walk time" card: when to take the dog out. The sentence carries the advice; the paw icon is
  * tinted by the rating as a glance cue (deliberately not a chip, which read as a button), and a
- * short caption says why when it's too hot or too cold.
+ * short caption says why when it's too hot or too cold, naming the pavement only when that's the reason.
  */
 @Composable
 fun WalkCard(
@@ -50,9 +51,19 @@ fun WalkCard(
         advice.bestTimeLabel != null -> stringResource(R.string.walk_around, advice.bestTimeLabel)
         else -> stringResource(R.string.walk_none)
     }
-    val caption = when (advice.rating) {
-        WalkRating.PAWS_HOT -> advice.pavementNow?.let { stringResource(R.string.walk_pavement, it.roundToInt()) }
-            ?: stringResource(R.string.walk_too_hot)
+    val pavement = advice.pavementNow?.roundToInt()
+    val caption = when {
+        pavement == null -> null
+        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.DANGEROUS ->
+            stringResource(R.string.walk_pavement_dangerous, pavement)
+        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.TOO_HOT ->
+            stringResource(R.string.walk_pavement, pavement)
+        advice.rating == WalkRating.OKAY && advice.pavementBand == PavementBand.WARM ->
+            stringResource(R.string.walk_pavement_warm, pavement)
+        else -> null
+    } ?: when (advice.rating) {
+        // Hot or cold air, not the pavement.
+        WalkRating.PAWS_HOT -> stringResource(R.string.walk_too_hot)
         WalkRating.TOO_COLD -> stringResource(R.string.walk_too_cold)
         else -> null
     }

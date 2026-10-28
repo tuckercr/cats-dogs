@@ -11,6 +11,18 @@ data class OpenMeteoResponse(
     // IANA zone name (e.g. "Europe/London"), so DST changes inside the forecast window are honoured.
     @SerialName("timezone") val timezone: String? = null,
     @SerialName("hourly") val hourly: OpenMeteoHourlyDto = OpenMeteoHourlyDto(),
+    @SerialName("minutely_15") val minutely15: OpenMeteoMinutely15Dto = OpenMeteoMinutely15Dto(),
+)
+
+/**
+ * Parallel arrays in 15-minute steps. Like the hourly ones, the amounts at [time][i] are totals for
+ * the 15 minutes *before* it: rain and snow in mm water, snowfall in cm.
+ */
+@Serializable
+data class OpenMeteoMinutely15Dto(
+    @SerialName("time") val time: List<Long> = emptyList(),
+    @SerialName("precipitation") val precipitation: List<Double?> = emptyList(),
+    @SerialName("snowfall") val snowfall: List<Double?> = emptyList(),
 )
 
 /** Parallel arrays: index i of every list describes the hour starting at [time][i]. */
@@ -28,4 +40,7 @@ data class OpenMeteoHourlyDto(
     @SerialName("uv_index") val uvIndex: List<Double?> = emptyList(),
     @SerialName("shortwave_radiation") val shortwaveRadiation: List<Double?> = emptyList(),
     @SerialName("is_day") val isDay: List<Int?> = emptyList(),
+    // Rain and snow over the hour before [time][i], in mm; snow lying on the ground, in metres.
+    @SerialName("precipitation") val precipitation: List<Double?> = emptyList(),
+    @SerialName("snow_depth") val snowDepth: List<Double?> = emptyList(),
 )

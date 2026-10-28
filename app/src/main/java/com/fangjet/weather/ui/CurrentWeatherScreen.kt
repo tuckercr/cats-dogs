@@ -30,17 +30,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.WbCloudy
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.Button
@@ -77,16 +71,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -126,10 +121,12 @@ import com.fangjet.weather.ui.pets.walkAdviceFor
 import com.fangjet.weather.ui.theme.CatsDogsTheme
 import com.fangjet.weather.ui.theme.StaleBannerBg
 import com.fangjet.weather.ui.theme.StaleBannerText
+import com.fangjet.weather.util.NextRain
 import com.fangjet.weather.util.ReadingDay
 import com.fangjet.weather.util.forecastAsCurrent
 import com.fangjet.weather.util.fromCurrentSlot
 import com.fangjet.weather.util.isTooOldToShowAsNow
+import com.fangjet.weather.util.nextRain
 import com.fangjet.weather.util.readingDay
 import com.fangjet.weather.util.usesMilesForDistance
 import kotlinx.coroutines.delay
@@ -691,8 +688,8 @@ private fun CurrentWeatherContent(
     val todayForecast = forecastDays.firstOrNull()?.takeIf { it.dateLabel == todayLabel }
     val upcomingDays = if (todayForecast != null) forecastDays.drop(1) else forecastDays
     var selectedDay by remember { mutableStateOf<DayForecast?>(null) }
-    val currentTempC = weather.units.toCelsius(weather.temperature)
-    val mood = petMoodFor(weather.conditionMain, weather.iconCode, currentTempC, petWeatherThresholds)
+    val feelsLikeC = weather.units.toCelsius(weather.feelsLike)
+    val mood = petMoodFor(weather.conditionMain, weather.iconCode, feelsLikeC, petWeatherThresholds)
     val ink = mood.inkColor
     // Slots from the one in progress onwards. "Now" is re-read whenever the forecast changes,
     // whenever the screen resumes and every half hour while it stays open, so a cached forecast,
@@ -720,9 +717,9 @@ private fun CurrentWeatherContent(
         forecastDays.flatMap { it.hourlySlots }.fromCurrentSlot(nowEpochSeconds)
     }
     val walkAdvice =
-        remember(currentSlots, currentTempC, weather.conditionMain, weather.offsetSeconds, nowEpochSeconds, petWeatherThresholds) {
+        remember(currentSlots, feelsLikeC, weather.conditionMain, weather.offsetSeconds, nowEpochSeconds, petWeatherThresholds) {
             walkAdviceFor(
-                currentTempC,
+                feelsLikeC,
                 currentSlots,
                 precipitatingNow = isPrecipitating(weather.conditionMain),
                 thresholds = petWeatherThresholds,
@@ -798,14 +795,21 @@ private fun CurrentWeatherContent(
                         fontWeight = FontWeight.Bold,
                         color = ink,
                     )
+                    val spokenRange = stringResource(
+                        R.string.label_temp_range_spoken,
+                        weather.tempMax.roundToInt(),
+                        weather.tempMin.roundToInt(),
+                    )
                     Text(
                         text = stringResource(
                             R.string.label_temp_range,
-                            formatTemperature(weather.tempMin, weather.units),
-                            formatTemperature(weather.tempMax, weather.units),
+                            weather.tempMax.roundToInt(),
+                            weather.tempMin.roundToInt(),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = ink,
+                        // "H 64°" would be read as the letter H.
+                        modifier = Modifier.clearAndSetSemantics { text = AnnotatedString(spokenRange) },
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
@@ -817,93 +821,37 @@ private fun CurrentWeatherContent(
                 }
             }
         }
+        // "Rain starting around 3:15 PM", only when rain or snow is due in the next 2 hours.
+        val nextRain = remember(forecastDays, nowEpochSeconds) {
+            nextRain(forecastDays.firstOrNull()?.quarterHours.orEmpty(), nowEpochSeconds)
+        }
+        val nextRainSection: @Composable () -> Unit = {
+            nextRain?.let { NextRainLine(it, weather.offsetSeconds) }
+        }
         val walkSection: @Composable () -> Unit = {
             // walk_card_enabled: Remote Config can hide the card.
             if (walkCardEnabled) walkAdvice?.let { WalkCard(advice = it) }
         }
         val detailsSection: @Composable () -> Unit = {
-            // Today's details card
             SectionHeader(R.string.section_today)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    MetricIconRow(
-                        icon = Icons.Default.Thermostat,
-                        label = stringResource(R.string.label_feels_like),
-                        value = formatTemperature(weather.feelsLike, weather.units),
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.WaterDrop,
-                        label = stringResource(R.string.label_humidity),
-                        value = stringResource(R.string.format_percent, weather.humidityPercent),
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    MetricIconRow(
-                        icon = Icons.Default.Air,
-                        label = stringResource(R.string.label_wind),
-                        // No direction when it's calm: "0 mph N" means nothing.
-                        value = if (isCalmWind(weather.windSpeed)) {
-                            formatWind(weather.windSpeed, weather.units)
-                        } else {
-                            formatWind(weather.windSpeed, weather.units) + "  " + windDirection(weather.windDeg)
-                        },
-                    )
-                    weather.visibilityMeters?.let { visibilityMeters ->
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        MetricIconRow(
-                            icon = Icons.Default.Visibility,
-                            label = stringResource(R.string.label_visibility),
-                            value = formatVisibility(visibilityMeters),
-                        )
-                    }
-                    if (!showingForecast) {
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        MetricIconRow(
-                            icon = Icons.Default.WbCloudy,
-                            label = stringResource(R.string.label_cloud_cover),
-                            value = stringResource(R.string.format_percent, weather.cloudPercent),
-                        )
-                    }
-                    // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
-                    val isNight = weather.iconCode.endsWith("n")
-                    forecastDays.firstOrNull()?.hourlySlots?.firstOrNull()?.uvIndex?.takeUnless { isNight }?.let { uv ->
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        MetricIconRow(
-                            icon = Icons.Default.LightMode,
-                            label = stringResource(R.string.label_uv_index),
-                            value = uvLabel(uv),
-                            iconTint = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                    weather.sunriseEpoch?.let { epoch ->
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        MetricIconRow(
-                            icon = Icons.Default.WbSunny,
-                            label = stringResource(R.string.label_sunrise),
-                            value = formatEpochTime(epoch, weather.offsetSeconds),
-                            iconTint = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                    weather.sunsetEpoch?.let { epoch ->
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        MetricIconRow(
-                            icon = Icons.Default.WbSunny,
-                            label = stringResource(R.string.label_sunset),
-                            value = formatEpochTime(epoch, weather.offsetSeconds),
-                            iconTint = MaterialTheme.colorScheme.secondary,
-                        )
-                    }
-                }
-            }
+            // UV is always 0 after dark, so only show it in the daytime (OWM night icons end in "n").
+            val isNight = weather.iconCode.endsWith("n")
+            TodayTiles(
+                weather = weather,
+                showingForecast = showingForecast,
+                pavementNow = currentSlots.firstOrNull()?.pavementTemperature,
+                groundWet = currentSlots.firstOrNull()?.groundWet == true || isPrecipitating(weather.conditionMain),
+                uvIndex = currentSlots.firstOrNull()?.uvIndex?.takeUnless { isNight },
+                nowEpochSeconds = nowEpochSeconds,
+                thresholds = petWeatherThresholds,
+            )
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (wide) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         heroSection()
+                        nextRainSection()
                         walkSection()
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -912,6 +860,7 @@ private fun CurrentWeatherContent(
                 }
             } else {
                 heroSection()
+                nextRainSection()
                 walkSection()
             }
             // Hourly strip (next 24h), starting at the slot in progress — see currentSlots above.
@@ -1048,13 +997,54 @@ private fun HourlyCell(
     }
 }
 
-/** Small "raindrop N%" chip; renders nothing when the chance is zero to avoid clutter. */
+/** One line under the top card: when rain or snow starts or stops in the next 2 hours. */
 @Composable
-private fun PrecipChance(
+private fun NextRainLine(
+    nextRain: NextRain,
+    utcOffsetSeconds: Int,
+) {
+    val text = when (nextRain) {
+        is NextRain.Starting -> stringResource(
+            if (nextRain.snow) R.string.next_snow_starting else R.string.next_rain_starting,
+            formatEpochTime(nextRain.epochSeconds, utcOffsetSeconds),
+        )
+        is NextRain.Stopping -> stringResource(
+            if (nextRain.snow) R.string.next_snow_stopping else R.string.next_rain_stopping,
+            formatEpochTime(nextRain.epochSeconds, utcOffsetSeconds),
+        )
+        is NextRain.Continuing -> stringResource(if (nextRain.snow) R.string.next_snow_continuing else R.string.next_rain_continuing)
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // The app's own shower and snow icons, as in the hourly row; the text says it all.
+            WeatherIcon(
+                iconCode = if (nextRain.snow) "13d" else "09d",
+                contentDescription = "",
+                sizeDp = 28,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+            Text(text = text, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
+/**
+ * Small "raindrop N%" chip, showing [displayedRainChance]; renders nothing under 10% to avoid
+ * clutter.
+ */
+@Composable
+internal fun PrecipChance(
     percent: Int,
     modifier: Modifier = Modifier,
 ) {
-    if (percent <= 0) return
+    val shown = displayedRainChance(percent) ?: return
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
@@ -1067,25 +1057,30 @@ private fun PrecipChance(
             modifier = Modifier.size(12.dp),
         )
         Text(
-            text = stringResource(R.string.format_percent, percent),
+            text = stringResource(R.string.format_percent, shown),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
         )
     }
 }
 
-/** UV index with the WHO exposure category, e.g. "6 (High)". */
-@Composable
-private fun uvLabel(uv: Double): String {
+/**
+ * A chance of rain as shown: nothing under 10%, where it's noise (most dry hours forecast 1%), and
+ * otherwise to the nearest 10%, like Apple and Google Weather, since the forecast isn't more precise.
+ */
+internal fun displayedRainChance(percent: Int): Int? = if (percent < 10) null else (percent + 5) / 10 * 10
+
+/** The WHO exposure category for a UV index, e.g. "High" for 6. */
+@androidx.annotation.StringRes
+internal fun uvLevelRes(uv: Double): Int {
     val value = uv.roundToInt()
-    val level = when {
+    return when {
         value <= 2 -> R.string.uv_low
         value <= 5 -> R.string.uv_moderate
         value <= 7 -> R.string.uv_high
         value <= 10 -> R.string.uv_very_high
         else -> R.string.uv_extreme
     }
-    return stringResource(R.string.format_uv, value, stringResource(level))
 }
 
 /**
@@ -1223,52 +1218,44 @@ internal fun weatherErrorMessage(errorKey: String): String =
         else -> stringResource(R.string.error_generic)
     }
 
+/** Whole degrees: forecasts aren't accurate to a tenth, and other weather apps don't show one. */
 @Composable
-private fun formatTemperature(
+internal fun formatTemperature(
     value: Double,
     units: WeatherUnits,
 ): String =
     when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
+        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value.roundToInt())
+        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value.roundToInt())
     }
 
+/**
+ * Whole mph, and whole m/s from 10 up; below that a whole m/s is too coarse (3 m/s is anything
+ * from a light to a gentle breeze), so it keeps one decimal.
+ */
 @Composable
-private fun formatWind(
+internal fun formatWind(
     speed: Double,
     units: WeatherUnits,
 ): String =
     when {
-        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
-        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
-        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        else -> stringResource(R.string.format_wind_mph, speed)
+        isCalmWind(speed, units) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
+        isCalmWind(speed, units) -> stringResource(R.string.format_wind_calm_mph)
+        units == WeatherUnits.METRIC && speed < WHOLE_MS_FROM -> stringResource(R.string.format_wind_ms, speed)
+        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms_whole, speed.roundToInt())
+        else -> stringResource(R.string.format_wind_mph, speed.roundToInt())
     }
 
-/** A speed that would show as "0.0": written as a plain 0, with no direction. */
-internal fun isCalmWind(speed: Double): Boolean = speed < 0.05
+/** At and above this many m/s (what rounds to 10.0), wind speeds show without a decimal. */
+private const val WHOLE_MS_FROM = 9.95
 
-private const val METERS_PER_MILE = 1609.344
+/** A speed that would show as 0 (whole mph, or m/s to one decimal): written as a plain 0, with no direction. */
+internal fun isCalmWind(
+    speed: Double,
+    units: WeatherUnits,
+): Boolean = speed < (if (units == WeatherUnits.IMPERIAL) 0.5 else 0.05)
 
-/**
- * OpenWeather reports visibility up to 10 km and no further, so 10 km means "at least 10 km".
- * Converted, that read as a precise and poor-looking 6.2 mi (US sources cap at 10 mi instead).
- */
-internal fun isClearVisibility(meters: Int): Boolean = meters >= 10_000
-
-@Composable
-private fun formatVisibility(meters: Int): String =
-    if (isClearVisibility(meters)) {
-        stringResource(R.string.visibility_clear)
-    } else if (LocalDistanceInMiles.current) {
-        stringResource(R.string.format_visibility_mi, meters / METERS_PER_MILE)
-    } else if (meters >= 1000) {
-        stringResource(R.string.format_visibility_km, meters / 1000.0)
-    } else {
-        stringResource(R.string.format_visibility_m, meters)
-    }
-
-private fun formatEpochTime(
+internal fun formatEpochTime(
     epochSeconds: Long,
     utcOffsetSeconds: Int,
 ): String {
@@ -1282,10 +1269,8 @@ private fun formatEpochTime(
     )
 }
 
-private fun windDirection(deg: Int): String {
-    val directions = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
-    return directions[((deg + 22) / 45) % 8]
-}
+/** The compass point a wind comes from, 0 (N) to 7 (NW) clockwise; indexes `R.array.compass_points_spoken`. */
+internal fun windDirectionIndex(deg: Int): Int = ((deg + 22) / 45) % 8
 
 @Composable
 private fun UpcomingDayRow(
@@ -1329,40 +1314,6 @@ private fun UpcomingDayRow(
             )
         }
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-    }
-}
-
-@Composable
-private fun MetricIconRow(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(20.dp),
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 

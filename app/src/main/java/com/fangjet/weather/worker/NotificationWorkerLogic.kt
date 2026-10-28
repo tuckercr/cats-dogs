@@ -80,7 +80,7 @@ internal class NotificationWorkerLogic(
         val mood = petMoodFor(
             weather.conditionMain,
             weather.iconCode,
-            weather.units.toCelsius(weather.temperature),
+            weather.units.toCelsius(weather.feelsLike),
             runCatching { petWeatherThresholds() }.getOrDefault(PetWeatherThresholds.DEFAULT),
         )
         postNotification(WeatherNotification(title, body, mood, southernHemisphere = (location.latitude ?: 0.0) < 0))
