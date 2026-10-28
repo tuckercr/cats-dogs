@@ -47,6 +47,12 @@
     <string name="cd_remove_city">Remove city</string>
     <string name="cd_precip_chance">Chance of precipitation</string>
     <string name="action_add_city">Add city</string>
+    <string name="cd_add_location">Add location</string>
+    <string name="cd_delete_location">Delete %1$s</string>
+    <string name="locations_active_label">%1$s (Active)</string>
+    <string name="a11y_make_active">Make active</string>
+    <string name="a11y_move_up">Move up</string>
+    <string name="a11y_move_down">Move down</string>
     <string name="action_cancel">Cancel</string>
     <string name="add_city_sheet_title">Manage cities</string>
     <string name="saved_cities_section">SAVED CITIES</string>

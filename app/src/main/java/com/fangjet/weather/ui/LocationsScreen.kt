@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
@@ -46,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fangjet.weather.R
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.model.GeoLocationViewModel
 import kotlin.math.roundToInt
@@ -132,12 +134,12 @@ fun LocationsRoute(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Locations") },
+                title = { Text(stringResource(R.string.settings_manage_locations)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.cd_navigate_back),
                         )
                     }
                 },
@@ -145,7 +147,7 @@ fun LocationsRoute(
                     IconButton(onClick = { showAddSheet = true }) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = "Add location",
+                            contentDescription = stringResource(R.string.cd_add_location),
                         )
                     }
                 },
@@ -177,6 +179,11 @@ internal fun DraggableLocationList(
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableIntStateOf(1) }
+
+    // Resolved here: the semantics and clickable blocks below aren't composable.
+    val makeActiveLabel = stringResource(R.string.a11y_make_active)
+    val moveUpLabel = stringResource(R.string.a11y_move_up)
+    val moveDownLabel = stringResource(R.string.a11y_move_down)
 
     val targetIndex: Int? = draggingIndex?.let { from ->
         val steps = (dragOffsetY / itemHeightPx).roundToInt()
@@ -229,7 +236,7 @@ internal fun DraggableLocationList(
                         ) {
                             Text(
                                 text = if (index == activeIndex) {
-                                    "${location.label} (Active)"
+                                    stringResource(R.string.locations_active_label, location.label)
                                 } else {
                                     location.label
                                 },
@@ -241,7 +248,7 @@ internal fun DraggableLocationList(
                             ) {
                                 Icon(
                                     Icons.Default.Delete,
-                                    contentDescription = "Delete ${location.label}",
+                                    contentDescription = stringResource(R.string.cd_delete_location, location.label),
                                 )
                             }
                         }
@@ -289,13 +296,13 @@ internal fun DraggableLocationList(
                             if (index == activeIndex) {
                                 Modifier
                             } else {
-                                Modifier.clickable(onClickLabel = "Make active") { onSetActive(index) }
+                                Modifier.clickable(onClickLabel = makeActiveLabel) { onSetActive(index) }
                             },
                         ).semantics {
                             selected = index == activeIndex
                             customActions = listOfNotNull(
                                 if (index > 0) {
-                                    CustomAccessibilityAction("Move up") {
+                                    CustomAccessibilityAction(moveUpLabel) {
                                         onReorder(index, index - 1)
                                         true
                                     }
@@ -303,7 +310,7 @@ internal fun DraggableLocationList(
                                     null
                                 },
                                 if (index < locations.size - 1) {
-                                    CustomAccessibilityAction("Move down") {
+                                    CustomAccessibilityAction(moveDownLabel) {
                                         onReorder(index, index + 1)
                                         true
                                     }

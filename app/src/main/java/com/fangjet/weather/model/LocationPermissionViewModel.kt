@@ -54,6 +54,11 @@ class LocationPermissionViewModel internal constructor(
 
     fun hasLocationPermission(): Boolean = hasLocationPermissionProvider()
 
+    /** Back to idle once a [LocationFetchState.Located] has been acted on, so it isn't acted on twice. */
+    fun consumeLocated() {
+        if (_state.value is LocationFetchState.Located) _state.value = LocationFetchState.Idle
+    }
+
     fun onPermissionDenied() {
         _state.value = LocationFetchState.PermissionDenied
     }

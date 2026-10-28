@@ -186,10 +186,106 @@ class UpdateWorkerLogicTest {
             assertEquals(listOf(40.0, london.latitude), capturedLats)
         }
 
+    @Test
+    fun `also refreshes the tab last viewed when it is another city, but alerts only for the notification city`() =
+        runTest {
+            val myLocation = SavedLocation("My Location", 40.0, -83.0, isCurrentLocation = true)
+            val cachedKeys = mutableListOf<String>()
+            val alertedFor = mutableListOf<SavedLocation>()
+            val logic = logic(
+                savedLocations = listOf(myLocation, london),
+                activeIndex = 1,
+                cacheCurrentWeather = { key, _ -> cachedKeys += key },
+                afterRefresh = { location, _, _ -> alertedFor += location },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+
+            assertEquals(listOf(myLocation.cacheKey, london.cacheKey), cachedKeys)
+            assertEquals(listOf(myLocation), alertedFor)
+        }
+
+    @Test
+    fun `refreshes once when the tab last viewed is the notification city`() =
+        runTest {
+            var fetches = 0
+            val logic = logic(
+                savedLocations = listOf(london, cityByName),
+                activeIndex = 0,
+                fetchCurrentWeather = { _, _, _, _ ->
+                    fetches++
+                    kotlin.Result.success(weather())
+                },
+            )
+
+            logic.doWork()
+
+            assertEquals(1, fetches)
+        }
+
+    @Test
+    fun `an out of range active index refreshes only the notification city`() =
+        runTest {
+            var fetches = 0
+            val logic = logic(
+                savedLocations = listOf(london),
+                activeIndex = 4,
+                fetchCurrentWeather = { _, _, _, _ ->
+                    fetches++
+                    kotlin.Result.success(weather())
+                },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(1, fetches)
+        }
+
+    @Test
+    fun `succeeds when only the active city refreshes`() =
+        runTest {
+            val logic = logic(
+                savedLocations = listOf(london, cityByName),
+                activeIndex = 1,
+                fetchCurrentWeather = { _, _, lat, _ ->
+                    if (lat == null) kotlin.Result.success(weather()) else kotlin.Result.failure(RuntimeException("offline"))
+                },
+                fetchForecast = { _, _, _, _ -> kotlin.Result.failure(RuntimeException("offline")) },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+        }
+
+    @Test
+    fun `retries when every city fails`() =
+        runTest {
+            val logic = logic(
+                savedLocations = listOf(london, cityByName),
+                activeIndex = 1,
+                fetchCurrentWeather = { _, _, _, _ -> kotlin.Result.failure(RuntimeException("offline")) },
+                fetchForecast = { _, _, _, _ -> kotlin.Result.failure(RuntimeException("offline")) },
+            )
+
+            assertEquals(Result.retry(), logic.doWork())
+        }
+
+    @Test
+    fun `a failing rain alert step does not fail the refresh`() =
+        runTest {
+            val cachedKeys = mutableListOf<String>()
+            val logic = logic(
+                cacheCurrentWeather = { key, _ -> cachedKeys += key },
+                afterRefresh = { _, _, _ -> throw IllegalStateException("notification failed") },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(listOf(london.cacheKey), cachedKeys)
+        }
+
     // --- helpers ---
 
     private fun logic(
         savedLocations: List<SavedLocation> = listOf(london),
+        activeIndex: Int? = null,
         units: WeatherUnits = WeatherUnits.IMPERIAL,
         fetchCurrentWeather: suspend (WeatherUnits, String, Double?, Double?) -> kotlin.Result<CurrentWeather> =
             { u, _, _, _ -> kotlin.Result.success(weather(units = u)) },
@@ -197,13 +293,16 @@ class UpdateWorkerLogicTest {
             { u, _, _, _ -> kotlin.Result.success(listOf(forecast(units = u))) },
         cacheCurrentWeather: suspend (String, CurrentWeather) -> Unit = { _, _ -> },
         cacheForecast: suspend (String, List<DayForecast>) -> Unit = { _, _ -> },
+        afterRefresh: suspend (SavedLocation, CurrentWeather?, List<DayForecast>?) -> Unit = { _, _, _ -> },
     ) = UpdateWorkerLogic(
         getSavedLocations = { savedLocations },
+        getActiveIndex = { activeIndex },
         getUnits = { units },
         fetchCurrentWeather = fetchCurrentWeather,
         fetchForecast = fetchForecast,
         cacheCurrentWeather = cacheCurrentWeather,
         cacheForecast = cacheForecast,
+        afterRefresh = afterRefresh,
     )
 
     private companion object {

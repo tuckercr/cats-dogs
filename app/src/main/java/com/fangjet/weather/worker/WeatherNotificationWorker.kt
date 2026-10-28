@@ -48,7 +48,6 @@ class WeatherNotificationWorker @AssistedInject constructor(
         isDailyWeatherNotificationEnabled = remoteConfigRepository::dailyWeatherNotificationsEnabled,
         petWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
         isBriefingEnabled = { preferencesRepository.notifyMorningBriefing.first() },
-        hasDog = { preferencesRepository.showWalkCard.first() },
         isWalkTimeEnabled = { preferencesRepository.notifyWalkTime.first() },
         scheduleWalkTime = scheduler::scheduleWalkTime,
     )

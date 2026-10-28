@@ -75,20 +75,6 @@ class WorkManagerScheduler @Inject constructor(
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    private fun millisUntilNext(
-        hour: Int,
-        minute: Int,
-    ): Long {
-        val now = ZonedDateTime.now()
-        var target = now
-            .withHour(hour)
-            .withMinute(minute)
-            .withSecond(0)
-            .withNano(0)
-        if (!target.isAfter(now)) target = target.plusDays(1)
-        return target.toInstant().toEpochMilli() - now.toInstant().toEpochMilli()
-    }
-
     companion object {
         private const val WORK_NAME = "weather_background_update"
         private const val MIN_INTERVAL_MINUTES = 15L // WorkManager platform minimum
@@ -97,5 +83,20 @@ class WorkManagerScheduler @Inject constructor(
         private const val BRIEFING_HOUR = 8
         private const val BRIEFING_MINUTE = 30
         private val LEGACY_NOTIFICATION_HOURS = listOf(9, 13, 19)
+
+        /** Time from [now] to the next [hour]:[minute] local time; a full day when it is exactly that time. */
+        internal fun millisUntilNext(
+            hour: Int,
+            minute: Int,
+            now: ZonedDateTime = ZonedDateTime.now(),
+        ): Long {
+            var target = now
+                .withHour(hour)
+                .withMinute(minute)
+                .withSecond(0)
+                .withNano(0)
+            if (!target.isAfter(now)) target = target.plusDays(1)
+            return target.toInstant().toEpochMilli() - now.toInstant().toEpochMilli()
+        }
     }
 }

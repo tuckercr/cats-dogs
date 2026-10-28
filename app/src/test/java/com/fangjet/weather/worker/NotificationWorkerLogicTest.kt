@@ -304,7 +304,7 @@ class NotificationWorkerLogicTest {
     }
 
     @Test
-    fun `with a dog the briefing says when to walk`() {
+    fun `the briefing says when to walk when given the walk advice`() {
         fun body(walk: WalkAdvice) = buildBriefingContent(weather(tempMin = 50.0, tempMax = 70.0), null, walk).second
 
         assertEquals("High 70°, low 50°. Sunny says now's a great time for a walk.", body(WalkAdvice(WalkRating.GREAT, null)))
@@ -367,6 +367,27 @@ class NotificationWorkerLogicTest {
                 scheduleWalkTime = { planned = it },
             ).doWork()
             assertEquals(NOW, planned)
+        }
+
+    @Test
+    fun `the briefing's walk sentence follows the walk-time switch`() =
+        runTest {
+            val dry = listOf(forecast(slots = (8..12).map { slot(it, rain = 0) }))
+            val posted = mutableListOf<WeatherNotification>()
+
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(dry) },
+                isWalkTimeEnabled = true,
+                postNotification = { posted += it },
+            ).doWork()
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(dry) },
+                isWalkTimeEnabled = false,
+                postNotification = { posted += it },
+            ).doWork()
+
+            assertTrue(posted[0].body.endsWith("Sunny says now's a great time for a walk."))
+            assertTrue("walk" !in posted[1].body)
         }
 
     @Test

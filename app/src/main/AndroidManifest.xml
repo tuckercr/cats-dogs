@@ -22,8 +22,11 @@
         android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
         tools:node="remove" />
 
+    <!-- No cloud backup: the saved cities are quick to re-add, and restoring the weather
+         caches or Firebase's per-install ids onto a new phone does more harm than good. -->
     <application
         android:name=".WeatherApplication"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_launcher_name"
         android:roundIcon="@mipmap/ic_launcher_round"

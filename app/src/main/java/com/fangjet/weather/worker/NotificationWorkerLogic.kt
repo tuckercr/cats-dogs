@@ -74,11 +74,10 @@ internal class NotificationWorkerLogic(
     private val todayLabel: (utcOffsetSeconds: Int) -> String = { offset ->
         OffsetDateTime.now(ZoneOffset.ofTotalSeconds(offset)).format(DAY_LABEL_FORMATTER)
     },
-    // The user's switches in Settings.
+    // The user's switches in Settings. Walk time owns every walk message, the briefing's walk
+    // sentence included; the main screen's Dog walking switch plays no part here.
     private val isBriefingEnabled: suspend () -> Boolean = { true },
     private val isWalkTimeEnabled: suspend () -> Boolean = { false },
-    // A dog at home (the dog question / walk card switch): the briefing then mentions the walk.
-    private val hasDog: suspend () -> Boolean = { false },
     private val scheduleWalkTime: (epochSeconds: Long) -> Unit = {},
     private val nowEpochSeconds: () -> Long = { Instant.now().epochSecond },
 ) {
@@ -112,7 +111,8 @@ internal class NotificationWorkerLogic(
             runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true) &&
             isBriefingEnabled()
 
-        if (walk != null && isWalkTimeEnabled()) {
+        val walkOn = isWalkTimeEnabled()
+        if (walk != null && walkOn) {
             when {
                 // Now is the time: the briefing says so, or, without one, the nudge goes now.
                 walk.rating == WalkRating.GREAT -> if (!briefingOn) scheduleWalkTime(now)
@@ -124,7 +124,7 @@ internal class NotificationWorkerLogic(
         }
 
         if (!briefingOn) return Result.success()
-        val (title, body) = buildBriefingContent(weather, todayForecast, walk.takeIf { hasDog() })
+        val (title, body) = buildBriefingContent(weather, todayForecast, walk.takeIf { walkOn })
         postNotification(
             WeatherNotification(
                 NotificationKind.MORNING_BRIEFING,
@@ -222,7 +222,7 @@ private const val BRIEFING_RAIN_CHANCE = 40
 
 /**
  * "52° and partly cloudy in Knoxville" / "High 70°, low 45°, 60% chance of rain. Sunny's picked
- * 1 PM for a walk." The walk sentence only comes with [walk], which is null without a dog.
+ * 1 PM for a walk." The walk sentence only comes with [walk], which is null with walk-time notifications off.
  */
 internal fun buildBriefingContent(
     weather: CurrentWeather,
