@@ -1,7 +1,9 @@
 package com.fangjet.weather.data
 
+import com.fangjet.weather.data.remote.dto.OpenMeteoHourlyDto
 import com.fangjet.weather.data.remote.dto.OpenMeteoResponse
 import com.fangjet.weather.domain.DayForecast
+import com.fangjet.weather.domain.QuarterHour
 import com.fangjet.weather.domain.WeatherUnits
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +43,13 @@ class OpenMeteoForecastSource @Inject constructor(
                     .addQueryParameter("timezone", "auto")
                     .addQueryParameter("timeformat", "unixtime")
                     .addQueryParameter("forecast_days", FORECAST_DAYS.toString())
+                    // Yesterday too, so the pavement and wet ground remember last night's weather.
+                    .addQueryParameter("past_days", "1")
+                    // A few hours of 15-minute rain and snow from now, for "Rain starting around…"
+                    // (a little more than the 2 hours shown, so a cached forecast still covers them).
+                    .addQueryParameter("minutely_15", "precipitation,snowfall")
+                    .addQueryParameter("forecast_minutely_15", QUARTER_HOURS.toString())
+                    .addQueryParameter("past_minutely_15", "0")
                     .addQueryParameter("temperature_unit", if (units == WeatherUnits.IMPERIAL) "fahrenheit" else "celsius")
                     .addQueryParameter("wind_speed_unit", if (units == WeatherUnits.IMPERIAL) "mph" else "ms")
                     .build()
@@ -59,7 +68,13 @@ class OpenMeteoForecastSource @Inject constructor(
         private const val HOURLY_FIELDS =
             "temperature_2m,apparent_temperature,precipitation_probability,weather_code," +
                 "wind_speed_10m,wind_direction_10m,relative_humidity_2m,pressure_msl," +
-                "uv_index,shortwave_radiation,is_day"
+                "uv_index,shortwave_radiation,is_day,precipitation,snow_depth"
+
+        private const val QUARTER_HOURS = 16
+        private const val QUARTER_HOUR_SECONDS = 15 * 60L
+
+        /** How far back rain or snow counts towards wet (and, below freezing, icy) ground. */
+        private const val WET_GROUND_HOURS = 12
 
         /**
          * Converts the parallel hourly arrays into day forecasts in the city's own timezone,
@@ -79,6 +94,13 @@ class OpenMeteoForecastSource @Inject constructor(
             val offset = zone.rules.getOffset(Instant.ofEpochSecond(nowEpochSeconds)).totalSeconds
             val localNow = nowEpochSeconds + offset
             val currentHourStart = localNow - Math.floorMod(localNow, 3600L) - offset
+            // Worked out over every hour sent (from yesterday's midnight), including the ones dropped
+            // below, so the pavement remembers the night and the morning's sun.
+            val pavementC = PavementHeat.series(
+                airC = h.time.indices.map { i -> h.temperature.getOrNull(i)?.let(units::toCelsius) },
+                shortwaveRadiationWm2 = h.time.indices.map { i -> h.shortwaveRadiation.getOrNull(i) },
+                isDay = h.time.indices.map { i -> h.isDay.getOrNull(i) == 1 },
+            )
             val slots = h.time.indices.mapNotNull { i ->
                 val epoch = h.time[i]
                 val temp = h.temperature.getOrNull(i) ?: return@mapNotNull null
@@ -98,17 +120,33 @@ class OpenMeteoForecastSource @Inject constructor(
                     pressure = h.seaLevelPressure.getOrNull(i)?.toInt() ?: 0,
                     pop = (h.precipitationProbability.getOrNull(i) ?: 0) / 100.0,
                     uvIndex = h.uvIndex.getOrNull(i),
-                    pavementTemperature = pavementIn(units, temp, h.shortwaveRadiation.getOrNull(i), isDay),
+                    pavementTemperature = pavementC[i]?.let(units::fromCelsius),
+                    groundWet = groundWet(h, i),
                 )
             }
-            return ForecastAggregator.aggregate(slots, zone, units)
+            val days = ForecastAggregator.aggregate(slots, zone, units)
+            val quarters = quarterHours(response)
+            return if (quarters.isEmpty() || days.isEmpty()) days else listOf(days.first().copy(quarterHours = quarters)) + days.drop(1)
         }
 
-        private fun pavementIn(
-            units: WeatherUnits,
-            air: Double,
-            radiation: Double?,
-            isDay: Boolean,
-        ): Double = units.fromCelsius(PavementHeat.estimateC(units.toCelsius(air), radiation, isDay))
+        /** Each amount is for the 15 minutes before its time, so its quarter starts 15 minutes earlier. */
+        internal fun quarterHours(response: OpenMeteoResponse): List<QuarterHour> {
+            val m = response.minutely15
+            return m.time.indices.mapNotNull { i ->
+                val precipitation = m.precipitation.getOrNull(i) ?: return@mapNotNull null
+                QuarterHour(m.time[i] - QUARTER_HOUR_SECONDS, precipitation, m.snowfall.getOrNull(i) ?: 0.0)
+            }
+        }
+
+        /**
+         * Rain or snow in the [WET_GROUND_HOURS] before hour [i] starts or during it, or snow lying.
+         * Precipitation at time t is the total for the hour before t, so hour i's own falls at i + 1.
+         */
+        internal fun groundWet(
+            h: OpenMeteoHourlyDto,
+            i: Int,
+        ): Boolean =
+            (h.snowDepth.getOrNull(i) ?: 0.0) > 0.0 ||
+                (i - WET_GROUND_HOURS + 1..i + 1).any { (h.precipitation.getOrNull(it) ?: 0.0) > 0.0 }
     }
 }

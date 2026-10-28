@@ -1,6 +1,7 @@
 package com.fangjet.weather.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -8,17 +9,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
-import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -29,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -92,12 +90,12 @@ private fun DayDetailContent(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = formatDayDetailTemp(day.tempMax, day.units),
+                    text = formatTemperature(day.tempMax, day.units),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = formatDayDetailTemp(day.tempMin, day.units),
+                    text = formatTemperature(day.tempMin, day.units),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -146,15 +144,11 @@ private fun DayDetailContent(
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 Text(
-                    text = stringResource(R.string.detail_wind_label),
+                    text = stringResource(R.string.detail_rain_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    text = stringResource(R.string.detail_humidity_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.widthIn(min = RAIN_COLUMN_WIDTH),
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
@@ -188,32 +182,11 @@ private fun HourlySlotColumn(slot: HourlySlot) {
         Text(text = slot.timeLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
         WeatherIcon(iconCode = slot.iconCode, contentDescription = slot.description, sizeDp = 28, epochSeconds = slot.epochSeconds)
         Text(
-            text = formatHourlyTemp(slot.temperature, slot.units),
+            text = formatTemperature(slot.temperature, slot.units),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
         )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(
-                imageVector = Icons.Default.Air,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(
-                text = formatHourlyWind(slot.windSpeed, slot.units),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(
-                imageVector = Icons.Default.WaterDrop,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(text = stringResource(R.string.format_percent, slot.humidity), style = MaterialTheme.typography.bodySmall)
-        }
+        PrecipChance(percent = slot.precipitationChance)
     }
 }
 
@@ -242,76 +215,20 @@ private fun HourlySlotRow(
             epochSeconds = slot.epochSeconds,
         )
         Text(
-            text = formatHourlyTemp(slot.temperature, slot.units),
+            text = formatTemperature(slot.temperature, slot.units),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 4.dp),
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.Air,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(
-                text = formatHourlyWind(slot.windSpeed, slot.units),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.WaterDrop,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(
-                text = stringResource(R.string.format_percent, slot.humidity),
-                style = MaterialTheme.typography.bodySmall,
-            )
+        // A fixed slot, so temperatures stay lined up on dry hours, which show no chance.
+        Box(modifier = Modifier.widthIn(min = RAIN_COLUMN_WIDTH), contentAlignment = Alignment.CenterEnd) {
+            PrecipChance(percent = slot.precipitationChance)
         }
     }
 }
 
-@Composable
-private fun formatDayDetailTemp(
-    value: Double,
-    units: WeatherUnits,
-): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
-    }
-
-@Composable
-private fun formatHourlyTemp(
-    value: Double,
-    units: WeatherUnits,
-): String =
-    when (units) {
-        WeatherUnits.METRIC -> stringResource(R.string.format_temperature_c, value)
-        WeatherUnits.IMPERIAL -> stringResource(R.string.format_temperature_f, value)
-    }
-
-@Composable
-private fun formatHourlyWind(
-    speed: Double,
-    units: WeatherUnits,
-): String =
-    when {
-        isCalmWind(speed) && units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_calm_ms)
-        isCalmWind(speed) -> stringResource(R.string.format_wind_calm_mph)
-        units == WeatherUnits.METRIC -> stringResource(R.string.format_wind_ms, speed)
-        else -> stringResource(R.string.format_wind_mph, speed)
-    }
+/** Wide enough for "100%" with its drop. */
+private val RAIN_COLUMN_WIDTH = 44.dp
 
 // --- Previews ---
 

@@ -22,12 +22,27 @@ data class PetWeatherThresholds(
     val petHotC: Double = 30.0,
     /** At or below this the pets are COLD (and the walk rating TOO_COLD). */
     val petColdC: Double = 0.0,
+    /** Pavement at or above this (and below [hotPavementC]) is getting hot: keep walks short. */
+    val warmPavementC: Double = 45.0,
+    /** Pavement below this may be icy or salted. */
+    val icyPavementC: Double = 0.0,
+    /** Pavement at or above this (about 135 F) is dangerously hot: worse than [hotPavementC]. */
+    val dangerousPavementC: Double = 57.2,
 ) {
     companion object {
         /** The compiled-in values; also the fallback for anything invalid. */
         val DEFAULT = PetWeatherThresholds()
 
         val HOT_PAVEMENT_RANGE = 40.0..70.0
+        val WARM_PAVEMENT_RANGE = 30.0..65.0
+        val ICY_PAVEMENT_RANGE = -20.0..10.0
+        val DANGEROUS_PAVEMENT_RANGE = 45.0..80.0
+
+        /** How far below [hotPavementC] a warm threshold at or above it is moved. */
+        private const val WARM_PAVEMENT_GAP_C = 7.0
+
+        /** How far above [hotPavementC] a dangerous threshold at or below it is moved. */
+        private const val DANGEROUS_PAVEMENT_GAP_C = 5.0
         val MAX_RAIN_CHANCE_RANGE = 0..100
         val COMFORT_MIN_RANGE = -20.0..20.0
         val COMFORT_MAX_RANGE = 15.0..40.0
@@ -39,9 +54,16 @@ data class PetWeatherThresholds(
          * Builds thresholds from raw (possibly missing or bad) values. A null or out-of-range
          * value falls back to its default; then any pair that is not strictly ordered
          * (comfort min < max, walk start < end, pet cold < hot) falls back to the default pair.
+         * A warm-pavement threshold at or above the hot one would never show, so it moves to
+         * [WARM_PAVEMENT_GAP_C] below it instead, and a dangerous one at or below it moves to
+         * [DANGEROUS_PAVEMENT_GAP_C] above it; the hot threshold drives the walk advice and is
+         * left alone.
          */
         fun validated(
             hotPavementC: Double? = null,
+            warmPavementC: Double? = null,
+            icyPavementC: Double? = null,
+            dangerousPavementC: Double? = null,
             maxRainChancePercent: Int? = null,
             comfortMinC: Double? = null,
             comfortMaxC: Double? = null,
@@ -60,8 +82,15 @@ data class PetWeatherThresholds(
             val comfortOrdered = comfortMin < comfortMax
             val hoursOrdered = hoursStart < hoursEnd
             val petOrdered = cold < hot
+            val hotPavement = hotPavementC.inRangeOr(HOT_PAVEMENT_RANGE, d.hotPavementC)
+            val warmPavement = warmPavementC.inRangeOr(WARM_PAVEMENT_RANGE, d.warmPavementC)
+            val dangerousPavement = dangerousPavementC.inRangeOr(DANGEROUS_PAVEMENT_RANGE, d.dangerousPavementC)
             return PetWeatherThresholds(
-                hotPavementC = hotPavementC.inRangeOr(HOT_PAVEMENT_RANGE, d.hotPavementC),
+                hotPavementC = hotPavement,
+                warmPavementC = if (warmPavement < hotPavement) warmPavement else hotPavement - WARM_PAVEMENT_GAP_C,
+                icyPavementC = icyPavementC.inRangeOr(ICY_PAVEMENT_RANGE, d.icyPavementC),
+                dangerousPavementC =
+                    if (dangerousPavement > hotPavement) dangerousPavement else hotPavement + DANGEROUS_PAVEMENT_GAP_C,
                 maxRainChancePercent = maxRainChancePercent.inRangeOr(MAX_RAIN_CHANCE_RANGE, d.maxRainChancePercent),
                 comfortMinC = if (comfortOrdered) comfortMin else d.comfortMinC,
                 comfortMaxC = if (comfortOrdered) comfortMax else d.comfortMaxC,

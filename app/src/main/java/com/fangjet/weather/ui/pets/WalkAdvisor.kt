@@ -2,6 +2,8 @@ package com.fangjet.weather.ui.pets
 
 import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
+import com.fangjet.weather.util.PavementBand
+import com.fangjet.weather.util.pavementBand
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -11,21 +13,23 @@ enum class WalkRating { GREAT, OKAY, POOR, PAWS_HOT, TOO_COLD }
  * [bestTimeLabel] is null when now is a good time, or when there is no good window soon.
  * [pavementNow] is the estimated pavement temperature for the current hour, in the forecast's
  * units, when the source provides it. [bestTimeIsTomorrow] is true when [bestTimeLabel] falls on
- * the next calendar day in the city's own time zone.
+ * the next calendar day in the city's own time zone. [pavementBand] is what [pavementNow] means for
+ * paws (the Today tile's band), so the caption can say whether the pavement is the problem.
  */
 data class WalkAdvice(
     val rating: WalkRating,
     val bestTimeLabel: String?,
     val pavementNow: Double? = null,
     val bestTimeIsTomorrow: Boolean = false,
+    val pavementBand: PavementBand? = null,
 )
 
 private const val LOOKAHEAD_SLOTS = 24 // a day of hourly slots
 private const val LOOKAHEAD_SECONDS = 24 * 60 * 60L // and never more than a day, for 3-hourly slots
 
 // The walk thresholds (pavement heat, rain chance, comfort range, walking hours) are Remote Config
-// values; see PetWeatherThresholds. Defaults: pavement 52 C (about 125 F, burns paws in under a
-// minute), under 30% rain, 3..27 C, and 7 AM..8 PM.
+// values; see PetWeatherThresholds. Defaults: pavement under 45 C (about 113 F; at 52 C, about
+// 125 F, it burns paws in under a minute), under 30% rain, 3..27 C feels-like, and 7 AM..8 PM.
 
 /**
  * Nobody wants walk advice for 2 AM: only suggest slots within the walking hours that are also in
@@ -37,9 +41,13 @@ private fun HourlySlot.isDaytime(t: PetWeatherThresholds): Boolean =
 
 private fun HourlySlot.pavementC(): Double? = pavementTemperature?.let { units.toCelsius(it) }
 
+/**
+ * Feels-like rather than air temperature: humid heat and wind chill are what the dog feels. Pavement
+ * that's only getting hot already rules an hour out, so the suggested hour is a cooler one.
+ */
 private fun HourlySlot.isWalkable(t: PetWeatherThresholds): Boolean {
-    val c = units.toCelsius(temperature)
-    val pavementOk = (pavementC() ?: 0.0) < t.hotPavementC
+    val c = units.toCelsius(feelsLike)
+    val pavementOk = (pavementC() ?: 0.0) < t.warmPavementC
     return isDaytime(t) &&
         pavementOk &&
         precipitationChance < t.maxRainChancePercent &&
@@ -50,7 +58,7 @@ private fun HourlySlot.isWalkable(t: PetWeatherThresholds): Boolean {
 fun isPrecipitating(conditionMain: String): Boolean = conditionMain.lowercase() in setOf("thunderstorm", "snow", "rain", "drizzle")
 
 /**
- * Works out when to walk the dog from the current temperature and the upcoming hourly slots
+ * Works out when to walk the dog from the current feels-like temperature and the upcoming hourly slots
  * (the first slot is the next forecast window, so it stands in for "now"). Returns null when
  * there are no slots yet (forecast loading or failed), since there is nothing to advise on.
  *
@@ -58,7 +66,7 @@ fun isPrecipitating(conditionMain: String): Boolean = conditionMain.lowercase() 
  * is dry while it is raining, so when it's raining now, now is never the walk time.
  */
 fun walkAdviceFor(
-    currentTempC: Double,
+    currentFeelsLikeC: Double,
     upcoming: List<HourlySlot>,
     thresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     // The city's UTC offset (CurrentWeather.offsetSeconds): "tomorrow" means the city's tomorrow.
@@ -75,15 +83,16 @@ fun walkAdviceFor(
     val pavementNow = slots.first().pavementTemperature
     val pavementHotNow = (slots.first().pavementC() ?: 0.0) >= thresholds.hotPavementC
     val rating = when {
-        currentTempC >= thresholds.petHotC || pavementHotNow -> WalkRating.PAWS_HOT
-        currentTempC <= thresholds.petColdC -> WalkRating.TOO_COLD
+        currentFeelsLikeC >= thresholds.petHotC || pavementHotNow -> WalkRating.PAWS_HOT
+        currentFeelsLikeC <= thresholds.petColdC -> WalkRating.TOO_COLD
         nowWalkable -> WalkRating.GREAT
         firstGood != null -> WalkRating.OKAY
         else -> WalkRating.POOR
     }
     val bestSlot = if (rating == WalkRating.GREAT) null else firstGood
     val bestIsTomorrow = bestSlot?.epochSeconds?.let { isNextDay(it, nowEpochSeconds, utcOffsetSeconds) } == true
-    return WalkAdvice(rating, bestSlot?.timeLabel, pavementNow, bestIsTomorrow)
+    val band = slots.first().pavementC()?.let { pavementBand(it, slots.first().groundWet, currentFeelsLikeC, thresholds) }
+    return WalkAdvice(rating, bestSlot?.timeLabel, pavementNow, bestIsTomorrow, band)
 }
 
 /** True when [epochSeconds] falls on the calendar day after [nowEpochSeconds], in the city's zone. */

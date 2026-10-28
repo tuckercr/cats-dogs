@@ -10,19 +10,18 @@
     <string name="label_humidity">Humidity</string>
     <string name="label_wind">Wind</string>
     <string name="label_visibility">Visibility</string>
-    <string name="label_cloud_cover">Cloud cover</string>
-    <string name="label_temp_range">%1$s / %2$s</string>
-    <string name="format_temperature_c">%.1f °C</string>
-    <string name="format_temperature_f">%.1f °F</string>
+    <!-- Today's high and low on the top card, in whole degrees: "H 64° · L 61°". -->
+    <string name="label_temp_range">H %1$d° · L %2$d°</string>
+    <string name="label_temp_range_spoken">High %1$d°, low %2$d°</string>
+    <string name="format_temperature_c">%d °C</string>
+    <string name="format_temperature_f">%d °F</string>
     <string name="format_percent">%d%%</string>
     <string name="format_wind_ms">%.1f m/s</string>
-    <string name="format_wind_mph">%.1f mph</string>
+    <string name="format_wind_ms_whole">%d m/s</string>
+    <string name="format_wind_mph">%d mph</string>
     <string name="format_wind_calm_ms">0 m/s</string>
     <string name="format_wind_calm_mph">0 mph</string>
-    <string name="format_visibility_km">%.1f km</string>
-    <string name="format_visibility_mi">%.1f mi</string>
     <string name="format_visibility_m">%d m</string>
-    <string name="visibility_clear">Clear</string>
     <string name="welcome_title">Meet Sunny &amp; Misty</string>
     <string name="welcome_sunny_name">Sunny</string>
     <string name="welcome_sunny_body">Loves a walk in almost any weather, and always knows the best time to head out.</string>
@@ -79,8 +78,7 @@
     <string name="detail_no_hourly_data">Hourly data not available for this day.</string>
     <string name="detail_time_label">TIME</string>
     <string name="detail_temp_label">TEMP</string>
-    <string name="detail_wind_label">WIND</string>
-    <string name="detail_humidity_label">HUM</string>
+    <string name="detail_rain_label">RAIN</string>
 
     <!-- Error messages -->
     <string name="error_title_offline">No connection</string>
@@ -103,10 +101,6 @@
     <string name="error_rate_limited">Too many requests. Please wait a moment and try again.</string>
     <string name="error_server">The weather service is napping. Try again in a few minutes.</string>
     <string name="error_generic">Weather data is not available right now. Please try again later.</string>
-
-    <!-- Sunrise / sunset -->
-    <string name="label_sunrise">Sunrise</string>
-    <string name="label_sunset">Sunset</string>
 
     <!-- Settings screen -->
     <string name="screen_settings">Settings</string>
@@ -173,7 +167,7 @@
         <item>Wipe those paws when you come in.</item>
     </string-array>
     <string-array name="pet_caption_hot">
-        <item>Too hot for paws on the pavement. Walk early or late.</item>
+        <item>Too hot for long walks. Plenty of water today.</item>
         <item>Fresh water bowls today. It is a scorcher.</item>
     </string-array>
     <string-array name="pet_caption_cold">
@@ -195,6 +189,14 @@
     </string-array>
     <string name="cd_pet_scene">Sunny the dog and Misty the cat reacting to the weather</string>
 
+    <!-- The line under the top card when rain or snow is due in the next 2 hours. -->
+    <string name="next_rain_starting">Rain starting around %1$s</string>
+    <string name="next_rain_stopping">Rain stopping around %1$s</string>
+    <string name="next_rain_continuing">Rain for the next 2 hours</string>
+    <string name="next_snow_starting">Snow starting around %1$s</string>
+    <string name="next_snow_stopping">Snow stopping around %1$s</string>
+    <string name="next_snow_continuing">Snow for the next 2 hours</string>
+
     <!-- Walk advice -->
     <string name="walk_title">Best walk time</string>
     <string name="walk_now">Now is a great time</string>
@@ -206,11 +208,82 @@
 
     <!-- UV index -->
     <string name="label_uv_index">UV index</string>
-    <string name="format_uv">%1$d (%2$s)</string>
     <string name="uv_low">Low</string>
     <string name="uv_moderate">Moderate</string>
     <string name="uv_high">High</string>
     <string name="uv_very_high">Very high</string>
     <string name="uv_extreme">Extreme</string>
     <string name="walk_pavement">Pavement about %1$d°. Too hot for paws.</string>
+    <string name="walk_pavement_dangerous">Pavement about %1$d°. Dangerously hot for paws.</string>
+    <string name="walk_pavement_warm">Pavement about %1$d°. Getting hot.</string>
+
+    <!-- Today tiles -->
+    <string name="label_pavement">Asphalt in sun</string>
+    <string name="format_about_temperature_c">About %1$d °C</string>
+    <string name="format_about_temperature_f">About %1$d °F</string>
+    <string name="label_daylight">Daylight</string>
+    <string name="label_sky">Sky</string>
+    <string name="today_actual">Actual %1$s</string>
+    <string name="today_dew_point">Dew point %1$s</string>
+    <string name="today_uv">UV %1$d · %2$s</string>
+    <!-- What screen readers hear on the Wind tile, which shows the direction only as an arrow. -->
+    <string name="today_wind_from_spoken">From the %1$s, %2$s</string>
+    <string-array name="compass_points_spoken">
+        <item>north</item>
+        <item>northeast</item>
+        <item>east</item>
+        <item>southeast</item>
+        <item>south</item>
+        <item>southwest</item>
+        <item>west</item>
+        <item>northwest</item>
+    </string-array>
+    <string name="today_sky_visibility">%1$s · %2$s</string>
+    <string name="today_sky_visibility_distance">%1$s · %2$s, %3$s</string>
+    <string name="format_visibility_whole_km">%d km</string>
+    <string name="format_visibility_whole_mi">%d mi</string>
+    <string name="format_visibility_tenths_mi">%.1f mi</string>
+    <string name="today_daylight_left">%1$s left</string>
+    <string name="today_sunrise_in">Sunrise in %1$s</string>
+    <string name="today_sun_set">The sun has set</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="sky_clear">Clear</string>
+    <string name="sky_partly_cloudy">Partly cloudy</string>
+    <string name="sky_mostly_cloudy">Mostly cloudy</string>
+    <string name="sky_overcast">Overcast</string>
+    <string name="sky_mist">Mist</string>
+    <string name="sky_haze">Hazy</string>
+    <string name="sky_fog">Fog</string>
+    <string name="sky_smoke">Smoky</string>
+    <string name="sky_dust">Dusty</string>
+    <string name="visibility_excellent">Excellent visibility</string>
+    <string name="visibility_good">Good visibility</string>
+    <string name="visibility_moderate">Moderate visibility</string>
+    <string name="visibility_poor">Poor visibility</string>
+    <string name="misty_visibility_excellent">Misty can see the whole street</string>
+    <string name="misty_visibility_good">Misty can see down the block</string>
+    <string name="misty_visibility_moderate">The end of the street looks fuzzy</string>
+    <string name="misty_visibility_poor">Misty can\'t see past the garden</string>
+    <string name="pavement_dangerous">Dangerously hot for paws</string>
+    <string name="pavement_too_hot">Too hot for paws</string>
+    <string name="pavement_warm">Getting hot, keep it short</string>
+    <string name="pavement_safe">Safe for paws</string>
+    <string name="pavement_ok">Pavement is fine</string>
+    <string name="pavement_freezing">Below freezing</string>
+    <string name="pavement_icy">Icy, watch for salt</string>
+    <string name="wind_calm">Calm</string>
+    <string name="wind_light_air">Light air</string>
+    <string name="wind_light_breeze">Light breeze</string>
+    <string name="wind_gentle_breeze">Gentle breeze</string>
+    <string name="wind_moderate_breeze">Moderate breeze</string>
+    <string name="wind_fresh_breeze">Fresh breeze</string>
+    <string name="wind_strong_breeze">Strong breeze</string>
+    <string name="wind_near_gale">Near gale</string>
+    <string name="wind_gale">Gale</string>
+    <string name="wind_strong_gale">Strong gale</string>
+    <string name="wind_storm">Storm</string>
+    <string name="wind_violent_storm">Violent storm</string>
+    <string name="wind_hurricane">Hurricane force</string>
 </resources>

@@ -3,6 +3,7 @@ package com.fangjet.weather.ui.pets
 import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.WeatherUnits
+import com.fangjet.weather.util.PavementBand
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -68,14 +69,42 @@ class WalkAdvisorTest {
             24.0,
             listOf(slot("1 PM", 24.0, 0, pavement = 58.0), slot("6 PM", 22.0, 0, pavement = 30.0)),
         )
-        assertEquals(WalkAdvice(WalkRating.PAWS_HOT, "6 PM", 58.0), advice)
+        assertEquals(WalkAdvice(WalkRating.PAWS_HOT, "6 PM", 58.0, pavementBand = PavementBand.DANGEROUS), advice)
     }
 
     @Test
     fun `imperial pavement is compared in celsius`() {
-        // 120F is ~49C: under the 52C paw limit, so a warm afternoon is still walkable.
-        val advice = walkAdviceFor(26.0, listOf(slot("2 PM", 79.0, 0, WeatherUnits.IMPERIAL, pavement = 120.0)))
+        // 110F is ~43C: under the 45C warm limit, so a warm afternoon is still walkable.
+        val advice = walkAdviceFor(26.0, listOf(slot("2 PM", 79.0, 0, WeatherUnits.IMPERIAL, pavement = 110.0)))
         assertEquals(WalkRating.GREAT, advice?.rating)
+    }
+
+    @Test
+    fun `pavement that is getting hot makes now only okay, pointing at a cooler hour`() {
+        // 49C is between the 45C warm and 52C hot limits.
+        val advice = walkAdviceFor(
+            24.0,
+            listOf(slot("2 PM", 24.0, 0, pavement = 49.0), slot("6 PM", 22.0, 0, pavement = 35.0)),
+        )
+        assertEquals(WalkAdvice(WalkRating.OKAY, "6 PM", 49.0, pavementBand = PavementBand.WARM), advice)
+    }
+
+    @Test
+    fun `too hot air on mild pavement is paws hot, but the pavement band says the pavement is fine`() {
+        // A muggy evening: 31C feels-like, pavement no hotter than the air.
+        val advice = walkAdviceFor(31.0, listOf(slot("7 PM", 29.0, 0, pavement = 29.0)))
+        assertEquals(WalkRating.PAWS_HOT, advice?.rating)
+        assertEquals(PavementBand.PAVEMENT_OK, advice?.pavementBand)
+    }
+
+    @Test
+    fun `hours are judged by how warm they feel`() {
+        // 25C air, but 31C in the humidity: past the 27C comfort limit.
+        val humid = slot("2 PM", 25.0, 0).copy(feelsLike = 31.0)
+        assertEquals(WalkRating.POOR, walkAdviceFor(25.0, listOf(humid))?.rating)
+        // 5C air, but 1C in the wind: under the 3C comfort limit.
+        val windy = slot("2 PM", 5.0, 0).copy(feelsLike = 1.0)
+        assertEquals(WalkRating.POOR, walkAdviceFor(5.0, listOf(windy))?.rating)
     }
 
     // --- Remote Config thresholds ---
@@ -100,10 +129,10 @@ class WalkAdvisorTest {
 
     @Test
     fun `a lower pavement limit flags paws hot sooner`() {
-        val slots = listOf(slot("1 PM", 24.0, 0, pavement = 45.0))
+        val slots = listOf(slot("1 PM", 24.0, 0, pavement = 44.5))
 
         assertEquals(WalkRating.GREAT, walkAdviceFor(24.0, slots)?.rating)
-        assertEquals(WalkRating.PAWS_HOT, walkAdviceFor(24.0, slots, default.copy(hotPavementC = 44.0))?.rating)
+        assertEquals(WalkRating.PAWS_HOT, walkAdviceFor(24.0, slots, default.copy(hotPavementC = 44.0, warmPavementC = 40.0))?.rating)
     }
 
     @Test

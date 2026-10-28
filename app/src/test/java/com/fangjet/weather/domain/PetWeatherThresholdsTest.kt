@@ -42,7 +42,8 @@ class PetWeatherThresholdsTest {
             petColdC = -20.0,
         )
 
-        assertEquals(PetWeatherThresholds(40.0, 100, -20.0, 40.0, 0, 23, 45.0, -20.0), t)
+        // A hot-pavement limit of 40 moves the default warm limit (45) to 7 below it.
+        assertEquals(PetWeatherThresholds(40.0, 100, -20.0, 40.0, 0, 23, 45.0, -20.0, warmPavementC = 33.0), t)
     }
 
     @Test
@@ -131,5 +132,42 @@ class PetWeatherThresholdsTest {
 
         assertEquals(default.walkHoursStart, t.walkHoursStart)
         assertEquals(default.walkHoursEnd, t.walkHoursEnd)
+    }
+
+    @Test
+    fun `pavement tile thresholds default to 45 and 0 and use in-range values`() {
+        assertEquals(45.0, default.warmPavementC, 0.0)
+        assertEquals(0.0, default.icyPavementC, 0.0)
+
+        val t = PetWeatherThresholds.validated(warmPavementC = 40.0, icyPavementC = -5.0)
+
+        assertEquals(40.0, t.warmPavementC, 0.0)
+        assertEquals(-5.0, t.icyPavementC, 0.0)
+        assertEquals(default, PetWeatherThresholds.validated(warmPavementC = 80.0, icyPavementC = 20.0))
+    }
+
+    @Test
+    fun `a warm pavement threshold at or above the hot one moves below it, leaving the hot one alone`() {
+        // walk_hot_pavement_c = 44 is valid; the default warm threshold of 45 would never show.
+        val t = PetWeatherThresholds.validated(hotPavementC = 44.0)
+
+        assertEquals(44.0, t.hotPavementC, 0.0)
+        assertEquals(37.0, t.warmPavementC, 0.0)
+    }
+
+    @Test
+    fun `dangerous pavement defaults to 135 F and uses in-range values`() {
+        assertEquals(57.2, default.dangerousPavementC, 0.0)
+        assertEquals(60.0, PetWeatherThresholds.validated(dangerousPavementC = 60.0).dangerousPavementC, 0.0)
+        assertEquals(57.2, PetWeatherThresholds.validated(dangerousPavementC = 90.0).dangerousPavementC, 0.0)
+    }
+
+    @Test
+    fun `a dangerous pavement threshold at or below the hot one moves above it, leaving the hot one alone`() {
+        // walk_hot_pavement_c = 60 is valid; the default dangerous threshold of 57.2 would never show.
+        val t = PetWeatherThresholds.validated(hotPavementC = 60.0)
+
+        assertEquals(60.0, t.hotPavementC, 0.0)
+        assertEquals(65.0, t.dangerousPavementC, 0.0)
     }
 }

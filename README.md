@@ -28,21 +28,26 @@ WorkManager, and CI on GitHub Actions.
   other side in the southern hemisphere.
 - **Best walk time** card: "Now is a great time", the next good hour ("Around 8 AM"), or "Not a good
   day for walkies" when nothing in the next 24 hours qualifies. A good hour is under 30% rain
-  chance, at a comfortable temperature, within walking hours and in daylight, and below the
-  pavement-heat limit (estimated, with Open-Meteo); when it is raining now, now never counts,
+  chance, at a comfortable feels-like temperature, within walking hours and in daylight, and
+  below the warm-pavement limit (estimated, with Open-Meteo); when it is raining now, now never counts,
   whatever the hourly forecast says. A suggestion on the city's next calendar day reads "Tomorrow
   around…", judged in the city's own UTC offset. The paw is tinted by the rating, and a caption
-  explains hot pavement or freezing weather. Users can turn the card off in Settings, and
+  explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn the card off in Settings, and
   `walk_card_enabled` hides it remotely.
+- **Next rain** line under the top card, only when rain or snow is due in the next 2 hours: "Rain
+  starting around 3:15 PM", "Rain stopping around 4:30 PM" or "Rain for the next 2 hours", from
+  Open-Meteo's 15-minute forecast (0.1 mm in 15 minutes counts; it stops after 30 dry minutes).
+  Rules in `util/NextRain.kt`.
 - **Hourly strip** with the next 24 forecast slots (hours from Open-Meteo, 3-hour slots on the
-  OpenWeatherMap fallback): time, condition icon, temperature, and rain chance. Hours that have
+  OpenWeatherMap fallback): time, condition icon, temperature, and rain chance (hidden under 10%,
+  otherwise to the nearest 10%, as everywhere in the app). Hours that have
   already passed are dropped at display time (`fromCurrentSlot`), so a cached forecast or an app
   left open never shows or advises on past hours.
 - **Weather icons** bundled as vector drawables, drawn in the pets' style with their navy outline so
   they read on light and dark cards. Night icons show the moon's phase for that hour, worked out
   from the date (no API).
 - **Multi-day forecast** shown inline, aggregated to the city's local-timezone days with tappable
-  day details.
+  day details: each hour's temperature and rain chance.
 - **Rain probability** surfaced per hour and per day.
 - **Animated radar**: a RainViewer precipitation loop (recent past plus short-range nowcast) over
   an OpenStreetMap base, with a timeline scrubber, colour legend, play/pause, and an
@@ -222,13 +227,16 @@ validated: a missing or bad value falls back to the default rather than crashing
 | `daily_weather_notifications_enabled` | boolean | `true` | Posts the daily 9 / 13 / 19 weather-summary notifications; false skips posting (the scheduled work still runs). Other notification types will get their own switches |
 | `foreground_refresh_min_minutes` | number | `0` | Skips the silent refresh on returning to the foreground if that city's weather (or forecast, tracked separately) was fetched within this many minutes in this session; outside 0–1440 falls back to 0, which always refreshes. Pull-to-refresh, retry and switching cities are never throttled |
 | `walk_hot_pavement_c` | number | `52` | Pavement °C at or above which the walk rating is *Paws hot* and that hour is not walkable; valid 40–70 |
+| `walk_warm_pavement_c` | number | `45` | Pavement °C at or above which the Today pavement tile says *Getting hot, keep it short* and that hour is not suggested for a walk (a walk now rates *Okay*); valid 30–65, and below `walk_hot_pavement_c` (otherwise 7 below it) |
+| `walk_dangerous_pavement_c` | number | `57.2` | Pavement °C (57.2 is 135 °F) at or above which the Today pavement tile says *Dangerously hot for paws*; valid 45–80, and above `walk_hot_pavement_c` (otherwise 5 above it) |
+| `walk_icy_pavement_c` | number | `0` | Pavement °C below which the Today pavement tile says *Icy, watch for salt* after rain or snow in the last 12 hours or with snow on the ground, and *Below freezing* otherwise; valid -20–10 |
 | `walk_max_rain_chance` | number | `30` | An hour is walkable only below this rain chance (%); whole number, valid 0–100 |
-| `walk_comfort_min_c` | number | `3` | Coldest comfortable walking temperature (°C); valid -20–20, and below `walk_comfort_max_c` |
-| `walk_comfort_max_c` | number | `27` | Warmest comfortable walking temperature (°C); valid 15–40, and above `walk_comfort_min_c` |
+| `walk_comfort_min_c` | number | `3` | Coldest comfortable walking temperature (°C, feels-like); valid -20–20, and below `walk_comfort_max_c` |
+| `walk_comfort_max_c` | number | `27` | Warmest comfortable walking temperature (°C, feels-like); valid 15–40, and above `walk_comfort_min_c` |
 | `walk_hours_start` | number | `7` | First local hour a walk may be suggested (inclusive); whole number, valid 0–23, and before `walk_hours_end` |
 | `walk_hours_end` | number | `20` | Last local hour a walk may be suggested (inclusive); whole number, valid 0–23, and after `walk_hours_start` |
-| `pet_hot_threshold_c` | number | `30` | At or above this °C the pets look hot and the walk rating is *Paws hot*; valid 20–45, and above `pet_cold_threshold_c` |
-| `pet_cold_threshold_c` | number | `0` | At or below this °C the pets look cold and the walk rating is *Too cold*; valid -20–10, and below `pet_hot_threshold_c` |
+| `pet_hot_threshold_c` | number | `30` | At or above this °C (feels-like) the pets look hot and the walk rating is *Paws hot*; valid 20–45, and above `pet_cold_threshold_c` |
+| `pet_cold_threshold_c` | number | `0` | At or below this °C (feels-like) the pets look cold and the walk rating is *Too cold*; valid -20–10, and below `pet_hot_threshold_c` |
 | `analytics_enabled` | boolean | `true` | Analytics kill switch; see [Gates](#gates) |
 
 The walk and pet-mood thresholds are always Celsius, whatever units the user picks. A value outside

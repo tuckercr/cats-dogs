@@ -131,7 +131,7 @@ class CurrentWeatherScreenTest {
                 "Showing the forecast from yesterday at ${utcTime(observedAt)}. " + string(R.string.error_offline) + " " +
                     string(R.string.error_pull_to_retry),
             ).assertIsDisplayed()
-        composeRule.onNodeWithText("21.0 °C").assertIsDisplayed()
+        composeRule.onNodeWithText("21 °C").assertIsDisplayed()
     }
 
     @Test

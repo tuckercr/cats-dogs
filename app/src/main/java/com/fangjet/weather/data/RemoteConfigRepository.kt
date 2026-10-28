@@ -103,6 +103,9 @@ class RemoteConfigRepository @Inject constructor(
         runCatching {
             PetWeatherThresholds.validated(
                 hotPavementC = double(KEY_WALK_HOT_PAVEMENT_C),
+                warmPavementC = double(KEY_WALK_WARM_PAVEMENT_C),
+                icyPavementC = double(KEY_WALK_ICY_PAVEMENT_C),
+                dangerousPavementC = double(KEY_WALK_DANGEROUS_PAVEMENT_C),
                 maxRainChancePercent = wholeNumber(KEY_WALK_MAX_RAIN_CHANCE),
                 comfortMinC = double(KEY_WALK_COMFORT_MIN_C),
                 comfortMaxC = double(KEY_WALK_COMFORT_MAX_C),
@@ -188,6 +191,9 @@ class RemoteConfigRepository @Inject constructor(
         private const val MAX_FOREGROUND_REFRESH_MIN_MINUTES = 1440L
 
         const val KEY_WALK_HOT_PAVEMENT_C = "walk_hot_pavement_c"
+        const val KEY_WALK_WARM_PAVEMENT_C = "walk_warm_pavement_c"
+        const val KEY_WALK_ICY_PAVEMENT_C = "walk_icy_pavement_c"
+        const val KEY_WALK_DANGEROUS_PAVEMENT_C = "walk_dangerous_pavement_c"
         const val KEY_WALK_MAX_RAIN_CHANCE = "walk_max_rain_chance"
         const val KEY_WALK_COMFORT_MIN_C = "walk_comfort_min_c"
         const val KEY_WALK_COMFORT_MAX_C = "walk_comfort_max_c"
