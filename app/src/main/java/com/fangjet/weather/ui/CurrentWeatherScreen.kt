@@ -144,15 +144,20 @@ private val AUTO_REFRESH_INTERVAL = 30.minutes
 private val STALE_RECHECK_INTERVAL = 5.minutes
 
 /**
- * "My Location" for screens that can add it. Returns the add-city sheet's "My Location" action, or
- * null when it's already in the list or location access is off. Access is re-read on every resume,
- * so turning it on or off in system settings shows or hides the action on return.
+ * "My Location" for screens that can add it. Returns the add-city sheet's "Add My Location" action,
+ * or null when it's already in the list or the system won't ask for location any more. Without
+ * access it asks first, so "Only this time" / "Ask every time" users can still add it. Access is
+ * re-read on every resume, so changing it in system settings shows or hides the action on return.
  *
- * With [autoAdd] (the main screen) it also adds it unprompted once access turns up after
- * onboarding went without it: granted later in Settings, say. Only when there are no cities yet,
- * or access has just changed to granted, so someone who removed My Location on purpose doesn't
- * get it back on every resume. That check waits for [locationsLoaded]: before the saved cities
- * have loaded, the empty list would read as "no cities yet".
+ * With [autoAdd] (the main screen) it also:
+ * - adds it unprompted once access turns up after onboarding went without it: granted later in
+ *   Settings, say. Only when there are no cities yet, or access has just changed to granted, so
+ *   someone who removed My Location on purpose doesn't get it back on every resume. That check
+ *   waits for [locationsLoaded]: before the saved cities have loaded, the empty list would read
+ *   as "no cities yet".
+ * - re-reads the device's position on every resume while My Location is saved and access is on,
+ *   passing it to [onRefreshed], so My Location follows the device rather than staying where it
+ *   was added.
  */
 @Composable
 internal fun rememberAddMyLocation(
@@ -160,15 +165,19 @@ internal fun rememberAddMyLocation(
     onLocated: (SavedLocation) -> Unit,
     autoAdd: Boolean = false,
     locationsLoaded: Boolean = true,
+    onRefreshed: (SavedLocation) -> Unit = {},
     viewModel: LocationPermissionViewModel = hiltViewModel(),
 ): (() -> Unit)? {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val hasCurrentLocation = locations.any { it.isCurrentLocation }
     var granted by remember { mutableStateOf(viewModel.hasLocationPermission()) }
     var wasGranted by rememberSaveable { mutableStateOf(granted) }
+    // Whether the fetch under way is to add My Location, rather than to move a saved one.
+    var fetchingToAdd by rememberSaveable { mutableStateOf(false) }
     var resumeCount by remember { mutableIntStateOf(0) }
     val currentHasCurrentLocation by rememberUpdatedState(hasCurrentLocation)
     val currentHasAnyLocation by rememberUpdatedState(locations.isNotEmpty())
+    val requestPermission = rememberLocationPermissionRequest(viewModel)
 
     val lifecycleOwner = LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -186,8 +195,16 @@ internal fun rememberAddMyLocation(
             if (resumeCount == 0 || !locationsLoaded) return@LaunchedEffect
             val newlyGranted = granted && !wasGranted
             wasGranted = granted
-            if (granted && !currentHasCurrentLocation && (newlyGranted || !currentHasAnyLocation)) {
-                viewModel.fetchLocation()
+            when {
+                !granted -> Unit
+                currentHasCurrentLocation -> {
+                    fetchingToAdd = false
+                    viewModel.fetchLocation()
+                }
+                newlyGranted || !currentHasAnyLocation -> {
+                    fetchingToAdd = true
+                    viewModel.fetchLocation()
+                }
             }
         }
     }
@@ -197,10 +214,32 @@ internal fun rememberAddMyLocation(
         // Handled once: a Located still held when this screen comes back (from another screen,
         // or after rotation) must not re-add a My Location the user has since removed.
         viewModel.consumeLocated()
-        if (!currentHasCurrentLocation) onLocated(located.location)
+        when {
+            currentHasCurrentLocation -> onRefreshed(located.location)
+            // A position read only to move My Location, arriving after it was removed, adds nothing.
+            fetchingToAdd -> onLocated(located.location)
+        }
+        fetchingToAdd = false
     }
 
-    return if (!hasCurrentLocation && granted) viewModel::fetchLocation else null
+    // Re-read on recomposition, so an answer in the system dialog shows or hides it at once.
+    val canAsk = !granted && viewModel.canRequestPermission()
+    return when {
+        hasCurrentLocation -> null
+        granted -> {
+            {
+                fetchingToAdd = true
+                viewModel.fetchLocation()
+            }
+        }
+        canAsk -> {
+            {
+                fetchingToAdd = true
+                requestPermission()
+            }
+        }
+        else -> null
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,6 +314,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         onLocated = cityListViewModel::addLocation,
         autoAdd = true,
         locationsLoaded = locationsLoaded,
+        onRefreshed = cityListViewModel::updateCurrentLocation,
     )
 
     var showAddSheet by remember { mutableStateOf(false) }

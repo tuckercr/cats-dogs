@@ -1,8 +1,5 @@
 package com.fangjet.weather.ui
 
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -64,14 +61,7 @@ fun OnboardingLocationScreen(
         }
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions(),
-    ) { permissions ->
-        val fine = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
-        val coarse = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
-        Timber.d("permission result: fine=$fine coarse=$coarse")
-        if (fine || coarse) viewModel.fetchLocation() else viewModel.onPermissionDenied()
-    }
+    val requestPermission = rememberLocationPermissionRequest(viewModel)
 
     OnboardingLayout(modifier = modifier) {
         Box(
@@ -120,12 +110,7 @@ fun OnboardingLocationScreen(
                         viewModel.fetchLocation()
                     } else {
                         Timber.d("launching permission dialog")
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                            ),
-                        )
+                        requestPermission()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

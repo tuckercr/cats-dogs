@@ -20,6 +20,13 @@ class NotificationLocationTest {
     }
 
     @Test
+    fun `distanceMeters measures along the earth`() {
+        // A tenth of a degree of latitude is about 11.1 km anywhere.
+        assertEquals(11_119.0, distanceMeters(40.0, -83.0, 40.1, -83.0), 10.0)
+        assertEquals(0.0, distanceMeters(40.0, -83.0, 40.0, -83.0), 0.0)
+    }
+
+    @Test
     fun `no cities, no notification city`() {
         assertNull(emptyList<SavedLocation>().notificationLocation())
     }
