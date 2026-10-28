@@ -51,10 +51,16 @@ fun OnboardingLocationScreen(
 
     LaunchedEffect(state) {
         Timber.d("state changed: $state")
-        if (state is LocationFetchState.Located) {
-            val location = (state as LocationFetchState.Located).location
-            Timber.d("location resolved: lat=${location.latitude} lon=${location.longitude}")
-            onLocationResolved(location)
+        when (val current = state) {
+            is LocationFetchState.Located -> {
+                val location = current.location
+                Timber.d("location resolved: lat=${location.latitude} lon=${location.longitude}")
+                onLocationResolved(location)
+            }
+            // A "no" is an answer: move on to entering a city rather than asking again. This also
+            // covers a tap after Android stops showing the dialog, which reports denied at once.
+            LocationFetchState.PermissionDenied -> onSkip()
+            else -> Unit
         }
     }
 
@@ -97,7 +103,6 @@ fun OnboardingLocationScreen(
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = when (state) {
-                LocationFetchState.PermissionDenied -> stringResource(R.string.location_permission_denied)
                 LocationFetchState.Failed -> stringResource(R.string.location_fetch_failed)
                 else -> stringResource(R.string.location_onboarding_body)
             },

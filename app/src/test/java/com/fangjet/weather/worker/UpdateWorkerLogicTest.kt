@@ -8,7 +8,6 @@ import com.fangjet.weather.domain.WeatherUnits
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UpdateWorkerLogicTest {
@@ -20,20 +19,6 @@ class UpdateWorkerLogicTest {
         runTest {
             val cached = mutableListOf<String>()
             val logic = logic(savedLocations = emptyList(), cacheCurrentWeather = { k, _ -> cached += k })
-
-            assertEquals(Result.success(), logic.doWork())
-            assertEquals(emptyList<String>(), cached)
-        }
-
-    @Test
-    fun `returns success when active index is out of bounds`() =
-        runTest {
-            val cached = mutableListOf<String>()
-            val logic = logic(
-                savedLocations = listOf(london),
-                activeIndex = 5,
-                cacheCurrentWeather = { k, _ -> cached += k },
-            )
 
             assertEquals(Result.success(), logic.doWork())
             assertEquals(emptyList<String>(), cached)
@@ -181,27 +166,30 @@ class UpdateWorkerLogicTest {
         }
 
     @Test
-    fun `refreshes the active location when several cities are saved`() =
+    fun `refreshes the notification city, My Location first, not the tab last viewed`() =
         runTest {
-            var capturedLabel: String? = null
-            val logic = logic(
-                savedLocations = listOf(cityByName, london),
-                activeIndex = 1,
-                fetchCurrentWeather = { _, label, _, _ ->
-                    capturedLabel = label
-                    kotlin.Result.success(weather())
-                },
-            )
+            val myLocation = SavedLocation("My Location", 40.0, -83.0, isCurrentLocation = true)
+            val capturedLats = mutableListOf<Double?>()
 
-            assertTrue(logic.doWork() == Result.success())
-            assertEquals(london.label, capturedLabel)
+            fun logicFor(locations: List<SavedLocation>) =
+                logic(
+                    savedLocations = locations,
+                    fetchCurrentWeather = { _, _, lat, _ ->
+                        capturedLats += lat
+                        kotlin.Result.success(weather())
+                    },
+                )
+
+            logicFor(listOf(london, myLocation)).doWork()
+            logicFor(listOf(london, cityByName)).doWork()
+
+            assertEquals(listOf(40.0, london.latitude), capturedLats)
         }
 
     // --- helpers ---
 
     private fun logic(
         savedLocations: List<SavedLocation> = listOf(london),
-        activeIndex: Int = 0,
         units: WeatherUnits = WeatherUnits.IMPERIAL,
         fetchCurrentWeather: suspend (WeatherUnits, String, Double?, Double?) -> kotlin.Result<CurrentWeather> =
             { u, _, _, _ -> kotlin.Result.success(weather(units = u)) },
@@ -211,7 +199,6 @@ class UpdateWorkerLogicTest {
         cacheForecast: suspend (String, List<DayForecast>) -> Unit = { _, _ -> },
     ) = UpdateWorkerLogic(
         getSavedLocations = { savedLocations },
-        getActiveIndex = { activeIndex },
         getUnits = { units },
         fetchCurrentWeather = fetchCurrentWeather,
         fetchForecast = fetchForecast,

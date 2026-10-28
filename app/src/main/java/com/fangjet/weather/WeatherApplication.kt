@@ -8,8 +8,8 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import com.fangjet.weather.analytics.AnalyticsCollectionController
 import com.fangjet.weather.worker.WorkManagerScheduler
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.crashlytics.crashlytics
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,21 +54,30 @@ class WeatherApplication :
         // Applies "Share usage statistics" + the analytics_enabled kill switch to the SDK now,
         // and again whenever either changes.
         runCatching { analyticsCollectionController.start(appScope) }
-        createNotificationChannel()
+        createNotificationChannels()
     }
 
-    private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            NOTIF_CHANNEL_ID,
-            getString(R.string.notif_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT,
-        ).apply {
-            description = getString(R.string.notif_channel_description)
+    /** One channel per notification type, so each can be silenced on its own in system settings. */
+    private fun createNotificationChannels() {
+        val manager = getSystemService(NotificationManager::class.java)
+        // The 9 AM / 1 PM / 7 PM briefings' channel, replaced by these.
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+        listOf(
+            Triple(CHANNEL_MORNING_BRIEFING, R.string.notif_channel_briefing_name, R.string.notif_channel_briefing_description),
+            Triple(CHANNEL_WALK_TIME, R.string.notif_channel_walk_name, R.string.notif_channel_walk_description),
+            Triple(CHANNEL_RAIN, R.string.notif_channel_rain_name, R.string.notif_channel_rain_description),
+        ).forEach { (id, name, description) ->
+            val channel = NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                this.description = getString(description)
+            }
+            manager.createNotificationChannel(channel)
         }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     companion object {
-        const val NOTIF_CHANNEL_ID = "weather_daily"
+        const val CHANNEL_MORNING_BRIEFING = "morning_briefing"
+        const val CHANNEL_WALK_TIME = "walk_time"
+        const val CHANNEL_RAIN = "rain_alerts"
+        private const val LEGACY_CHANNEL_ID = "weather_daily"
     }
 }

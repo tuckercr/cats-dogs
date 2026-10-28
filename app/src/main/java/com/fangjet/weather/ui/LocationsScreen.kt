@@ -69,6 +69,11 @@ fun LocationsRoute(
     val suggestLoading by geoViewModel.citySuggestLoading.collectAsStateWithLifecycle()
     val selectedSuggestion by geoViewModel.selectedSuggestion.collectAsStateWithLifecycle()
 
+    val addMyLocation = rememberAddMyLocation(
+        locations = locations,
+        onLocated = cityListViewModel::addLocation,
+    )
+
     if (showAddSheet) {
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
@@ -109,6 +114,13 @@ fun LocationsRoute(
                     showAddSheet = false
                 },
                 onRemoveSaved = cityListViewModel::removeLocation,
+                onAddMyLocation = addMyLocation?.let { add ->
+                    {
+                        add()
+                        geoViewModel.reset()
+                        showAddSheet = false
+                    }
+                },
                 onDismiss = {
                     geoViewModel.reset()
                     showAddSheet = false

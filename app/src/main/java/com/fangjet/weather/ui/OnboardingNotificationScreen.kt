@@ -34,6 +34,8 @@ import timber.log.Timber
 fun OnboardingNotificationScreen(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    // The answer to the dog question just before: with a dog, the walk-time nudge is mentioned too.
+    hasDog: Boolean = true,
 ) {
     LaunchedEffect(Unit) {
         Timber.d("screen shown")
@@ -68,7 +70,8 @@ fun OnboardingNotificationScreen(
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = stringResource(R.string.notif_onboarding_body),
+            text = stringResource(if (hasDog) R.string.notif_onboarding_body_dog else R.string.notif_onboarding_body) +
+                "\n\n" + stringResource(R.string.notif_onboarding_rain_hint),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -8,6 +8,7 @@ import com.fangjet.weather.data.PreferencesRepository
 import com.fangjet.weather.data.WeatherRepository
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
+import com.fangjet.weather.ui.pets.PetMood
 import com.fangjet.weather.util.resolveWeatherUnits
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,7 +26,6 @@ class WeatherUpdateWorker @AssistedInject constructor(
 
     private val logic = UpdateWorkerLogic(
         getSavedLocations = { preferencesRepository.savedLocations.first() },
-        getActiveIndex = { preferencesRepository.activeLocationIndex.first() },
         getUnits = {
             // Honor the user's unit override so the background worker never writes a different
             // unit system into the cache than a foreground refresh would.
@@ -57,6 +57,22 @@ class WeatherUpdateWorker @AssistedInject constructor(
                 key,
                 json.encodeToString<List<DayForecast>>(forecast),
             )
+        },
+        afterRefresh = { location, weather, forecast ->
+            if (weather != null && forecast != null && preferencesRepository.notifyRain.first() && context.canPostNotifications()) {
+                rainAlertFor(
+                    forecast,
+                    System.currentTimeMillis() / 1000,
+                    weather.offsetSeconds,
+                    preferencesRepository.lastRainAlertStart(),
+                )?.let { rain ->
+                    val (title, body) = buildRainAlertContent(rain, weather.cityName, weather.offsetSeconds)
+                    val mood = if (rain.snow) PetMood.SNOW else PetMood.RAIN
+                    val southern = (location.latitude ?: 0.0) < 0
+                    context.postWeatherNotification(WeatherNotification(NotificationKind.RAIN, title, body, mood, southern))
+                    preferencesRepository.setLastRainAlertStart(rain.epochSeconds)
+                }
+            }
         },
     )
 

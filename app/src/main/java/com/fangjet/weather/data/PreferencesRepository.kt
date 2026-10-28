@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.fangjet.weather.domain.SavedLocation
@@ -147,6 +148,43 @@ class PreferencesRepository @Inject constructor(
         dataStore.edit { it[KEY_SHOW_WALK_CARD] = show }
     }
 
+    /** The 8:30 AM weather briefing. On unless they turn it off. */
+    val notifyMorningBriefing: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_NOTIFY_MORNING_BRIEFING] ?: true
+    }
+
+    suspend fun setNotifyMorningBriefing(enabled: Boolean) {
+        dataStore.edit { it[KEY_NOTIFY_MORNING_BRIEFING] = enabled }
+    }
+
+    /**
+     * A nudge at the day's best walk time. Until they choose, it follows the dog question (the walk
+     * card's switch): on with a dog at home, off without.
+     */
+    val notifyWalkTime: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_NOTIFY_WALK_TIME] ?: prefs[KEY_SHOW_WALK_CARD] ?: true
+    }
+
+    suspend fun setNotifyWalkTime(enabled: Boolean) {
+        dataStore.edit { it[KEY_NOTIFY_WALK_TIME] = enabled }
+    }
+
+    /** An alert when rain or snow is about to start. Off unless they turn it on. */
+    val notifyRain: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_NOTIFY_RAIN] ?: false
+    }
+
+    suspend fun setNotifyRain(enabled: Boolean) {
+        dataStore.edit { it[KEY_NOTIFY_RAIN] = enabled }
+    }
+
+    /** When the rain last alerted about starts, epoch seconds, so the same shower isn't alerted twice. */
+    suspend fun lastRainAlertStart(): Long? = dataStore.data.first()[KEY_LAST_RAIN_ALERT_START]
+
+    suspend fun setLastRainAlertStart(epochSeconds: Long) {
+        dataStore.edit { it[KEY_LAST_RAIN_ALERT_START] = epochSeconds }
+    }
+
     suspend fun clearCache() {
         dataStore.edit {
             it.remove(KEY_WEATHER_CACHE)
@@ -172,5 +210,9 @@ class PreferencesRepository @Inject constructor(
         private val KEY_UNIT_OVERRIDE = stringPreferencesKey("unit_override")
         private val KEY_SHARE_USAGE_STATISTICS = booleanPreferencesKey("share_usage_statistics")
         private val KEY_SHOW_WALK_CARD = booleanPreferencesKey("show_walk_card")
+        private val KEY_NOTIFY_MORNING_BRIEFING = booleanPreferencesKey("notify_morning_briefing")
+        private val KEY_NOTIFY_WALK_TIME = booleanPreferencesKey("notify_walk_time")
+        private val KEY_NOTIFY_RAIN = booleanPreferencesKey("notify_rain")
+        private val KEY_LAST_RAIN_ALERT_START = longPreferencesKey("last_rain_alert_start")
     }
 }

@@ -9,7 +9,6 @@
     <string name="label_feels_like">Feels like</string>
     <string name="label_humidity">Humidity</string>
     <string name="label_wind">Wind</string>
-    <string name="label_visibility">Visibility</string>
     <!-- Today's high and low on the top card, in whole degrees: "H 64° · L 61°". -->
     <string name="label_temp_range">H %1$d° · L %2$d°</string>
     <string name="label_temp_range_spoken">High %1$d°, low %2$d°</string>
@@ -41,7 +40,6 @@
     <string name="location_onboarding_body">Misty likes to know which window she\'s looking out of. Allow your location to see the weather where you are.</string>
     <string name="location_allow_button">Use my location</string>
     <string name="location_skip_button">Enter a city manually</string>
-    <string name="location_permission_denied">Location access was denied. You can still add cities manually.</string>
     <string name="location_fetch_failed">Could not determine your location. You can still add cities manually.</string>
 
     <!-- Multi-city -->
@@ -49,11 +47,11 @@
     <string name="cd_remove_city">Remove city</string>
     <string name="cd_precip_chance">Chance of precipitation</string>
     <string name="action_add_city">Add city</string>
-    <string name="action_remove_city">Remove</string>
     <string name="action_cancel">Cancel</string>
     <string name="add_city_sheet_title">Manage cities</string>
     <string name="saved_cities_section">SAVED CITIES</string>
     <string name="search_city_section">ADD A NEW CITY</string>
+    <string name="add_my_location">Add My Location</string>
     <string name="empty_cities_title">No cities added yet</string>
     <string name="empty_cities_body">Tap the + button to add your first city and get started.</string>
 
@@ -76,9 +74,6 @@
     <string name="section_today">TODAY</string>
     <string name="section_radar">RADAR</string>
     <string name="detail_no_hourly_data">Hourly data not available for this day.</string>
-    <string name="detail_time_label">TIME</string>
-    <string name="detail_temp_label">TEMP</string>
-    <string name="detail_rain_label">RAIN</string>
 
     <!-- Error messages -->
     <string name="error_title_offline">No connection</string>
@@ -107,7 +102,8 @@
     <string name="cd_open_settings">Open settings</string>
     <string name="settings_section_units">UNITS</string>
     <string name="settings_section_main_screen">MAIN SCREEN</string>
-    <string name="settings_show_walk_card">Best walk time</string>
+    <string name="settings_show_walk_card">Dog walking</string>
+    <string name="settings_show_walk_card_summary">Best walk time and Paw check</string>
     <string name="settings_unit_system">System default</string>
     <string name="settings_unit_metric">Celsius (°C)</string>
     <string name="settings_unit_imperial">Fahrenheit (°F)</string>
@@ -117,6 +113,7 @@
     <string name="settings_section_cache">CACHE</string>
     <string name="settings_clear_cache">Clear cached data</string>
     <string name="settings_cache_cleared">Cache cleared</string>
+    <string name="settings_section_privacy">PRIVACY</string>
     <string name="settings_section_about">ABOUT</string>
     <string name="settings_attribution">Weather data by OpenWeather</string>
     <string name="settings_attribution_openmeteo">Forecast data by Open-Meteo.com</string>
@@ -126,18 +123,30 @@
     <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Sunny &amp; Misty</string>
     <string name="settings_privacy_policy_url">https://sunnyandmisty.com/privacy</string>
     <string name="settings_openweather_url">https://openweathermap.org</string>
-    <string name="notif_channel_name">Weather Updates</string>
-    <string name="notif_channel_description">Daily weather briefings at 9 AM, 1 PM and 7 PM</string>
+    <!-- Notification channels: one per kind, so each can be silenced in system settings. -->
+    <string name="notif_channel_briefing_name">Morning briefing</string>
+    <string name="notif_channel_briefing_description">Today\'s weather each morning</string>
+    <string name="notif_channel_walk_name">Walk time</string>
+    <string name="notif_channel_walk_description">A nudge at the day\'s best time for a walk</string>
+    <string name="notif_channel_rain_name">Rain alerts</string>
+    <string name="notif_channel_rain_description">When rain or snow is about to start</string>
 
     <!-- Notification onboarding -->
     <string name="notif_onboarding_title">Stay in the loop</string>
-    <string name="notif_onboarding_body">Allow Sunny &amp; Misty to send you daily weather updates for your selected city.</string>
+    <string name="notif_onboarding_body">Each morning, Sunny &amp; Misty will send a weather briefing for your city.</string>
+    <string name="notif_onboarding_body_dog">Each morning, Sunny &amp; Misty will send a weather briefing for your city, and Sunny will nudge you at the best time for a walk.</string>
+    <string name="notif_onboarding_rain_hint">You can turn on rain alerts in Settings.</string>
     <string name="notif_allow_button">Allow notifications</string>
     <string name="notif_not_now_button">Not now</string>
 
     <!-- Settings: notifications section -->
     <string name="settings_section_notifications">NOTIFICATIONS</string>
-    <string name="settings_notifications_enabled">Notifications are enabled</string>
+    <string name="settings_notify_briefing">Morning briefing</string>
+    <string name="settings_notify_briefing_summary">Today\'s weather each morning</string>
+    <string name="settings_notify_walk">Walk time</string>
+    <string name="settings_notify_walk_summary">A nudge at the day\'s best time for a walk</string>
+    <string name="settings_notify_rain">Rain alerts</string>
+    <string name="settings_notify_rain_summary">When rain or snow is about to start</string>
     <string name="settings_notifications_disabled">Notifications are disabled. Tap to open Settings.</string>
     <string name="settings_section_locations">LOCATIONS</string>
     <string name="settings_manage_locations">Manage Locations</string>
@@ -213,12 +222,12 @@
     <string name="uv_high">High</string>
     <string name="uv_very_high">Very high</string>
     <string name="uv_extreme">Extreme</string>
-    <string name="walk_pavement">Pavement about %1$d°. Too hot for paws.</string>
-    <string name="walk_pavement_dangerous">Pavement about %1$d°. Dangerously hot for paws.</string>
-    <string name="walk_pavement_warm">Pavement about %1$d°. Getting hot.</string>
+    <string name="walk_pavement">Paw check: about %1$d°. Too hot for paws.</string>
+    <string name="walk_pavement_dangerous">Paw check: about %1$d°. Dangerously hot.</string>
+    <string name="walk_pavement_warm">Paw check: about %1$d°. Getting hot.</string>
 
     <!-- Today tiles -->
-    <string name="label_pavement">Asphalt in sun</string>
+    <string name="label_pavement">Paw check</string>
     <string name="format_about_temperature_c">About %1$d °C</string>
     <string name="format_about_temperature_f">About %1$d °F</string>
     <string name="label_daylight">Daylight</string>
@@ -266,11 +275,11 @@
     <string name="misty_visibility_good">Misty can see down the block</string>
     <string name="misty_visibility_moderate">The end of the street looks fuzzy</string>
     <string name="misty_visibility_poor">Misty can\'t see past the garden</string>
-    <string name="pavement_dangerous">Dangerously hot for paws</string>
+    <string name="pavement_dangerous">Dangerously hot</string>
     <string name="pavement_too_hot">Too hot for paws</string>
-    <string name="pavement_warm">Getting hot, keep it short</string>
+    <string name="pavement_warm">Getting hot</string>
     <string name="pavement_safe">Safe for paws</string>
-    <string name="pavement_ok">Pavement is fine</string>
+    <string name="pavement_ok">Fine underfoot</string>
     <string name="pavement_freezing">Below freezing</string>
     <string name="pavement_icy">Icy, watch for salt</string>
     <string name="wind_calm">Calm</string>

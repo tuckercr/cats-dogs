@@ -67,6 +67,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,6 +107,8 @@ import com.fangjet.weather.domain.WeatherUnits
 import com.fangjet.weather.model.CityListViewModel
 import com.fangjet.weather.model.GeoLocationViewModel
 import com.fangjet.weather.model.LoadingState
+import com.fangjet.weather.model.LocationFetchState
+import com.fangjet.weather.model.LocationPermissionViewModel
 import com.fangjet.weather.model.RadarViewModel
 import com.fangjet.weather.model.SettingsViewModel
 import com.fangjet.weather.model.WeatherForecastViewModel
@@ -139,6 +142,53 @@ private val AUTO_REFRESH_INTERVAL = 30.minutes
 
 /** How often old weather is re-checked against the cutoff while a refresh keeps failing. */
 private val STALE_RECHECK_INTERVAL = 5.minutes
+
+/**
+ * "My Location" for screens that can add it. Returns the add-city sheet's "My Location" action, or
+ * null when it's already in the list or location access is off.
+ *
+ * With [autoAdd] (the main screen) it also adds it unprompted once access turns up after
+ * onboarding went without it: granted later in Settings, say. Only when there are no cities yet,
+ * or access has just changed to granted, so someone who removed My Location on purpose doesn't
+ * get it back on every resume.
+ */
+@Composable
+internal fun rememberAddMyLocation(
+    locations: List<SavedLocation>,
+    onLocated: (SavedLocation) -> Unit,
+    autoAdd: Boolean = false,
+    viewModel: LocationPermissionViewModel = hiltViewModel(),
+): (() -> Unit)? {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val hasCurrentLocation = locations.any { it.isCurrentLocation }
+    var wasGranted by rememberSaveable { mutableStateOf(viewModel.hasLocationPermission()) }
+    val currentHasCurrentLocation by rememberUpdatedState(hasCurrentLocation)
+    val currentHasAnyLocation by rememberUpdatedState(locations.isNotEmpty())
+
+    if (autoAdd) {
+        val lifecycleOwner = LocalLifecycleOwner.current
+        androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+                val granted = viewModel.hasLocationPermission()
+                val newlyGranted = granted && !wasGranted
+                wasGranted = granted
+                if (granted && !currentHasCurrentLocation && (newlyGranted || !currentHasAnyLocation)) {
+                    viewModel.fetchLocation()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+    }
+
+    LaunchedEffect(state) {
+        val located = state as? LocationFetchState.Located ?: return@LaunchedEffect
+        if (!currentHasCurrentLocation) onLocated(located.location)
+    }
+
+    return if (!hasCurrentLocation && viewModel.hasLocationPermission()) viewModel::fetchLocation else null
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -206,6 +256,12 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         }
     }
 
+    val addMyLocation = rememberAddMyLocation(
+        locations = locations,
+        onLocated = cityListViewModel::addLocation,
+        autoAdd = true,
+    )
+
     var showAddSheet by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalDistanceInMiles provides distanceInMiles) {
@@ -218,6 +274,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             staleErrorKey = staleErrorKey,
             radarEnabled = radarEnabled,
             walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
+            dogWalking = showWalkCard,
             petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
             onTabSelected = cityListViewModel::setActiveIndex,
             onOpenSettings = {
@@ -279,6 +336,13 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     showAddSheet = false
                 },
                 onRemoveSaved = cityListViewModel::removeLocation,
+                onAddMyLocation = addMyLocation?.let { add ->
+                    {
+                        add()
+                        geoViewModel.reset()
+                        showAddSheet = false
+                    }
+                },
                 onDismiss = {
                     geoViewModel.reset()
                     showAddSheet = false
@@ -301,6 +365,8 @@ fun CurrentWeatherScreen(
     staleErrorKey: String? = null,
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
+    // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
+    dogWalking: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -470,6 +536,7 @@ fun CurrentWeatherScreen(
                                         location = location,
                                         radarEnabled = radarEnabled,
                                         walkCardEnabled = walkCardEnabled,
+                                        dogWalking = dogWalking,
                                         petWeatherThresholds = petWeatherThresholds,
                                         refreshCount = pullCount,
                                         onForecastRetry = onRetry,
@@ -534,6 +601,8 @@ fun AddCitySheetContent(
     onRemoveSaved: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    // Shown when My Location isn't saved and location access is on.
+    onAddMyLocation: (() -> Unit)? = null,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -590,6 +659,18 @@ fun AddCitySheetContent(
                 }
             }
             HorizontalDivider()
+        }
+
+        if (onAddMyLocation != null) {
+            OutlinedButton(onClick = onAddMyLocation, modifier = Modifier.fillMaxWidth()) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(stringResource(R.string.add_my_location))
+            }
         }
 
         Text(
@@ -664,13 +745,15 @@ fun AddCitySheetContent(
 private fun CurrentWeatherContent(
     weather: CurrentWeather,
     forecastState: LoadingState<List<DayForecast>>,
+    modifier: Modifier = Modifier,
     // True when [weather] is the cached forecast's current hour standing in for an old reading:
     // there's no cloud cover (or visibility) to show.
     showingForecast: Boolean = false,
-    modifier: Modifier = Modifier,
     location: SavedLocation? = null,
     radarEnabled: Boolean = true,
     walkCardEnabled: Boolean = true,
+    // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
+    dogWalking: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     refreshCount: Int = 0,
     onForecastRetry: () -> Unit = {},
@@ -839,7 +922,8 @@ private fun CurrentWeatherContent(
             TodayTiles(
                 weather = weather,
                 showingForecast = showingForecast,
-                pavementNow = currentSlots.firstOrNull()?.pavementTemperature,
+                // Paw check goes with the walk card: Settings' Dog walking switch hides both.
+                pavementNow = currentSlots.firstOrNull()?.pavementTemperature?.takeIf { dogWalking },
                 groundWet = currentSlots.firstOrNull()?.groundWet == true || isPrecipitating(weather.conditionMain),
                 uvIndex = currentSlots.firstOrNull()?.uvIndex?.takeUnless { isNight },
                 nowEpochSeconds = nowEpochSeconds,

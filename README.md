@@ -5,7 +5,7 @@
 
 A clean, modern Android weather app, where Sunny the dog and Misty the cat act out the forecast.
 Track current conditions, an hourly and multi-day forecast, and an animated precipitation radar for
-any number of saved cities, see when to walk the dog, get daily notification briefings, and switch
+any number of saved cities, see when to walk the dog, get a morning briefing, walk-time nudges and rain alerts, and switch
 between metric and imperial units. Built with Jetpack Compose and Material 3.
 
 There is also a native iOS version of the same product, built in Swift and SwiftUI:
@@ -32,7 +32,7 @@ WorkManager, and CI on GitHub Actions.
   below the warm-pavement limit (estimated, with Open-Meteo); when it is raining now, now never counts,
   whatever the hourly forecast says. A suggestion on the city's next calendar day reads "Tomorrow
   around…", judged in the city's own UTC offset. The paw is tinted by the rating, and a caption
-  explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn the card off in Settings, and
+  explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn it off in Settings (*Dog walking*, which hides the Paw check tile too), and
   `walk_card_enabled` hides it remotely.
 - **Next rain** line under the top card, only when rain or snow is due in the next 2 hours: "Rain
   starting around 3:15 PM", "Rain stopping around 4:30 PM" or "Rain for the next 2 hours", from
@@ -60,8 +60,16 @@ WorkManager, and CI on GitHub Actions.
 - **Current location** resolved with one tap via fused location services.
 - **Local time everywhere**: forecast days, hourly slots, sunrise/sunset, and the radar all render
   in the selected city's timezone.
-- **Daily notifications**: weather briefings for the active city at 9 AM, 1 PM, and 7 PM (device
-  time) via WorkManager, switchable remotely with `daily_weather_notifications_enabled`.
+- **Notifications** for one city, My Location when it's saved and otherwise the first in the list,
+  each with its own switch in Settings and its own Android channel:
+  - *Morning briefing* at 8:30 AM device time (on): "52° and partly cloudy in Knoxville / High
+    70°, low 45°, 60% chance of rain. Sunny's picked 1 PM for a walk." The walk sentence only comes
+    with a dog at home; the rain chance from 40%.
+  - *Walk time* (on with a dog, off without): the morning run plans a nudge for the day's best walk
+    time, which checks again when it's due and only goes if now is still a great time.
+  - *Rain alerts* (off): the background refresh alerts up to an hour before rain or snow starts,
+    from the 15-minute forecast, between 7 AM and 9 PM city time, once per shower.
+  `daily_weather_notifications_enabled` switches the briefing off remotely.
 - **Unit selection**: System default, Celsius (metric), or Fahrenheit (imperial), chosen in
   Settings. Visibility follows in miles or km (see [Units](#units)).
 - **Offline-first**: per-city caching paints instantly, then refreshes silently in the background,
@@ -72,9 +80,9 @@ WorkManager, and CI on GitHub Actions.
 
 ## Screenshots
 
-| Pets, walk time & hourly | Radar & rest of week | Day detail | Settings & units |
-|---|---|---|---|
-| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour detail for a day](./screenshots/day.png) | ![Settings with unit selection](./screenshots/settings.png) |
+| Pets, walk time & hourly | Today tiles & Paw check | Radar & rest of week | Day detail | Settings |
+|---|---|---|---|---|
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, Dog walking and a switch for each notification](./screenshots/settings.png) |
 
 On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -126,7 +134,7 @@ build artifacts.
 | State | `StateFlow` + `collectAsStateWithLifecycle` | Unidirectional data flow |
 | DI | Hilt | Repositories and ViewModels are injected |
 | Navigation | Compose Navigation | String route constants in `WeatherDestinations` |
-| Background work | WorkManager | Periodic weather refresh + daily notifications |
+| Background work | WorkManager | Periodic weather refresh (and rain alerts) + the 8:30 AM briefing and walk-time nudge |
 | Networking | Retrofit + OkHttp + kotlinx.serialization | Suspend functions, no RxJava |
 | Radar | RainViewer + OpenStreetMap tiles | Animated precipitation loop stitched on a Compose `Canvas`; frame speed via Remote Config |
 | Images | Coil, vector drawables | Coil loads the radar and base-map tiles; the weather icons are bundled vector drawables |
@@ -157,13 +165,13 @@ build artifacts.
    every 10 minutes, so a timeline that old is refetched on resume and every 10 minutes while the
    screen is resumed; the current loop stays on screen during the refresh, and a failed refresh
    keeps it.
-6. **Settings**: choose temperature units (System default / Celsius / Fahrenheit), turn the *Best
-   walk time* card on or off, see location and notification permission status, manage saved locations, clear cached data, open the
+6. **Settings**: choose temperature units (System default / Celsius / Fahrenheit), turn *Dog walking*
+   (the walk card and the Paw check tile) on or off, switch each notification on or off, see location and notification permission status, manage saved locations, clear cached data, open the
    OpenWeather and Open-Meteo attributions, turn *Share usage statistics* off, and open the
    [privacy policy](https://sunnyandmisty.com/privacy).
-7. **Notifications**: WorkManager delivers daily weather briefings for the active city at 9 AM,
-   1 PM, and 7 PM device time (unless `daily_weather_notifications_enabled` is off), and refreshes
-   the active city's cached data in the background every `weather_refresh_interval_minutes`; the
+7. **Notifications**: WorkManager runs the 8:30 AM briefing (unless `daily_weather_notifications_enabled`
+   is off), which also plans the one-off walk-time nudge, and refreshes
+   the notification city's cached data (My Location when saved, otherwise the first city) in the background every `weather_refresh_interval_minutes`; the
    schedule survives reboots.
 8. **Error handling**: network failures, HTTP errors, empty API keys, and malformed payloads all
    surface as inline error messages with *Retry* where appropriate.
@@ -224,12 +232,12 @@ validated: a missing or bad value falls back to the default rather than crashing
 | `walk_card_enabled` | boolean | `true` | Shows the "Best walk time" card; false hides it for everyone (phone and tablet layouts). Users can also turn it off in Settings |
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `openweather_api_key` | string | `""` | Replacement OpenWeather API key, used from the next app start; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
-| `daily_weather_notifications_enabled` | boolean | `true` | Posts the daily 9 / 13 / 19 weather-summary notifications; false skips posting (the scheduled work still runs). Other notification types will get their own switches |
+| `daily_weather_notifications_enabled` | boolean | `true` | Posts the 8:30 AM morning briefing; false skips it (the morning run still plans the walk-time nudge). Walk time and rain alerts have their own switches in Settings |
 | `foreground_refresh_min_minutes` | number | `0` | Skips the silent refresh on returning to the foreground if that city's weather (or forecast, tracked separately) was fetched within this many minutes in this session; outside 0–1440 falls back to 0, which always refreshes. Pull-to-refresh, retry and switching cities are never throttled |
 | `walk_hot_pavement_c` | number | `52` | Pavement °C at or above which the walk rating is *Paws hot* and that hour is not walkable; valid 40–70 |
-| `walk_warm_pavement_c` | number | `45` | Pavement °C at or above which the Today pavement tile says *Getting hot, keep it short* and that hour is not suggested for a walk (a walk now rates *Okay*); valid 30–65, and below `walk_hot_pavement_c` (otherwise 7 below it) |
-| `walk_dangerous_pavement_c` | number | `57.2` | Pavement °C (57.2 is 135 °F) at or above which the Today pavement tile says *Dangerously hot for paws*; valid 45–80, and above `walk_hot_pavement_c` (otherwise 5 above it) |
-| `walk_icy_pavement_c` | number | `0` | Pavement °C below which the Today pavement tile says *Icy, watch for salt* after rain or snow in the last 12 hours or with snow on the ground, and *Below freezing* otherwise; valid -20–10 |
+| `walk_warm_pavement_c` | number | `45` | Pavement °C at or above which the Today Paw check tile says *Getting hot* and that hour is not suggested for a walk (a walk now rates *Okay*); valid 30–65, and below `walk_hot_pavement_c` (otherwise 7 below it) |
+| `walk_dangerous_pavement_c` | number | `57.2` | Pavement °C (57.2 is 135 °F) at or above which the Today Paw check tile says *Dangerously hot*; valid 45–80, and above `walk_hot_pavement_c` (otherwise 5 above it) |
+| `walk_icy_pavement_c` | number | `0` | Pavement °C below which the Today Paw check tile says *Icy, watch for salt* after rain or snow in the last 12 hours or with snow on the ground, and *Below freezing* otherwise; valid -20–10 |
 | `walk_max_rain_chance` | number | `30` | An hour is walkable only below this rain chance (%); whole number, valid 0–100 |
 | `walk_comfort_min_c` | number | `3` | Coldest comfortable walking temperature (°C, feels-like); valid -20–20, and below `walk_comfort_max_c` |
 | `walk_comfort_max_c` | number | `27` | Warmest comfortable walking temperature (°C, feels-like); valid 15–40, and above `walk_comfort_min_c` |
@@ -308,7 +316,7 @@ JVM unit tests (JUnit 4, MockK, and `kotlinx-coroutines-test`) live in `weather-
 | `:app` | `CityListViewModelTest` | Add, remove, reorder, active-city tracking, legacy single-city migration, and `city_added` firing |
 | `:app` | `GeoLocationViewModelTest` | City autocomplete: short input, latest search wins, pinned coordinates from a suggestion |
 | `:app` | `LocationPermissionViewModelTest` | Current-location lookup: permission denial, cached vs current location, failure |
-| `:app` | `NotificationWorkerLogicTest` | Notification content, city-timezone "today" matching, and the `daily_weather_notifications_enabled` switch |
+| `:app` | `NotificationWorkerLogicTest` | Briefing text, walk-time planning and nudge, rain alerts (lead, quiet hours, once per shower), city-timezone "today" matching, and the switches |
 | `:app` | `UpdateWorkerLogicTest` | Background refresh result routing, caching, and resolved units |
 
 Compose UI tests live in `app/src/androidTest` and run on an emulator in CI via a separate

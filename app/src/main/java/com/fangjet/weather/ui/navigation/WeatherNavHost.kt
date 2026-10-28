@@ -8,6 +8,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -47,6 +50,8 @@ fun WeatherNavHost(
     val cityListViewModel = hiltViewModel<CityListViewModel>(viewModelStoreOwner = activity)
     val onboardingState by welcomeViewModel.onboardingState.collectAsStateWithLifecycle()
 
+    // The dog answer, for the notification screen right after it (a restored app shows the dog wording).
+    var answeredHasDog by rememberSaveable { mutableStateOf(true) }
     NavHost(
         navController = navController,
         startDestination = WeatherDestinations.LOADING,
@@ -88,6 +93,7 @@ fun WeatherNavHost(
         composable(WeatherDestinations.DOG_QUESTION) {
             OnboardingDogScreen(
                 onAnswered = { hasDog ->
+                    answeredHasDog = hasDog
                     welcomeViewModel.answerHasDog(hasDog)
                     navController.navigate(WeatherDestinations.NOTIFICATION_PERMISSION) {
                         popUpTo(WeatherDestinations.DOG_QUESTION) { inclusive = true }
@@ -99,6 +105,7 @@ fun WeatherNavHost(
 
         composable(WeatherDestinations.NOTIFICATION_PERMISSION) {
             OnboardingNotificationScreen(
+                hasDog = answeredHasDog,
                 onDone = {
                     welcomeViewModel.completeNotificationOnboarding()
                     navController.navigate(WeatherDestinations.LOCATION_PERMISSION) {

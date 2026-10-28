@@ -182,7 +182,11 @@ class WalkAdvisorTest {
     fun `a best time later the same day is not tomorrow`() {
         val advice = adviceWithBestAt(noonUtc + 6 * hourSec, utcOffsetSeconds = 0, best = "6 PM")
 
-        assertEquals(WalkAdvice(WalkRating.OKAY, "6 PM", bestTimeIsTomorrow = false), advice)
+        // The best slot's start comes along too, for the walk-time notification.
+        assertEquals(
+            WalkAdvice(WalkRating.OKAY, "6 PM", bestTimeIsTomorrow = false, bestTimeEpochSeconds = noonUtc + 6 * hourSec),
+            advice,
+        )
     }
 
     @Test
@@ -190,7 +194,10 @@ class WalkAdvisorTest {
         // 07:00 UTC on 2 January, with a UTC city.
         val advice = adviceWithBestAt(noonUtc + 19 * hourSec, utcOffsetSeconds = 0)
 
-        assertEquals(WalkAdvice(WalkRating.OKAY, "7 AM", bestTimeIsTomorrow = true), advice)
+        assertEquals(
+            WalkAdvice(WalkRating.OKAY, "7 AM", bestTimeIsTomorrow = true, bestTimeEpochSeconds = noonUtc + 19 * hourSec),
+            advice,
+        )
     }
 
     @Test
