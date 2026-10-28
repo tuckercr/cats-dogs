@@ -6,6 +6,8 @@ import com.fangjet.weather.domain.DayForecast
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
 import com.fangjet.weather.domain.notificationLocation
+import kotlinx.coroutines.CancellationException
+import timber.log.Timber
 
 /**
  * Pure logic extracted from [WeatherUpdateWorker] so it can be unit-tested without Android
@@ -67,7 +69,14 @@ internal class UpdateWorkerLogic(
             .onSuccess { forecast -> cacheForecast(cacheKey, forecast) }
             .isSuccess
 
-        afterRefresh(location, currentResult.getOrNull(), forecastResult.getOrNull())
+        // The refresh has done its job by now: a failed alert mustn't turn it into a failed run.
+        try {
+            afterRefresh(location, currentResult.getOrNull(), forecastResult.getOrNull())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Timber.w(e, "after-refresh step failed")
+        }
         return if (weatherOk || forecastOk) Result.success() else Result.retry()
     }
 }

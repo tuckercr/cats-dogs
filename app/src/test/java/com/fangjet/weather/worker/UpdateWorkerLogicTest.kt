@@ -186,6 +186,19 @@ class UpdateWorkerLogicTest {
             assertEquals(listOf(40.0, london.latitude), capturedLats)
         }
 
+    @Test
+    fun `a failing rain alert step does not fail the refresh`() =
+        runTest {
+            val cachedKeys = mutableListOf<String>()
+            val logic = logic(
+                cacheCurrentWeather = { key, _ -> cachedKeys += key },
+                afterRefresh = { _, _, _ -> throw IllegalStateException("notification failed") },
+            )
+
+            assertEquals(Result.success(), logic.doWork())
+            assertEquals(listOf(london.cacheKey), cachedKeys)
+        }
+
     // --- helpers ---
 
     private fun logic(
@@ -197,6 +210,7 @@ class UpdateWorkerLogicTest {
             { u, _, _, _ -> kotlin.Result.success(listOf(forecast(units = u))) },
         cacheCurrentWeather: suspend (String, CurrentWeather) -> Unit = { _, _ -> },
         cacheForecast: suspend (String, List<DayForecast>) -> Unit = { _, _ -> },
+        afterRefresh: suspend (SavedLocation, CurrentWeather?, List<DayForecast>?) -> Unit = { _, _, _ -> },
     ) = UpdateWorkerLogic(
         getSavedLocations = { savedLocations },
         getUnits = { units },
@@ -204,6 +218,7 @@ class UpdateWorkerLogicTest {
         fetchForecast = fetchForecast,
         cacheCurrentWeather = cacheCurrentWeather,
         cacheForecast = cacheForecast,
+        afterRefresh = afterRefresh,
     )
 
     private companion object {

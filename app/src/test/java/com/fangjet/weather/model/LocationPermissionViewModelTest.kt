@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -111,6 +112,29 @@ class LocationPermissionViewModelTest {
             assertEquals(1, fetcher.lastLocationCallCount)
             assertEquals(1, fetcher.currentLocationCallCount)
         }
+
+    @Test
+    fun `consumeLocated returns a located result to idle, so it isn't acted on twice`() =
+        runTest {
+            val viewModel = viewModel(locationFetcher = FakeLocationFetcher(lastLocation = DeviceLocation(40.0, -83.0)))
+            viewModel.fetchLocation()
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+            assertTrue(viewModel.state.value is LocationFetchState.Located)
+
+            viewModel.consumeLocated()
+
+            assertEquals(LocationFetchState.Idle, viewModel.state.value)
+        }
+
+    @Test
+    fun `consumeLocated leaves other states alone`() {
+        val viewModel = viewModel()
+        viewModel.onPermissionDenied()
+
+        viewModel.consumeLocated()
+
+        assertEquals(LocationFetchState.PermissionDenied, viewModel.state.value)
+    }
 
     @Test
     fun `onPermissionDenied records denied state`() {

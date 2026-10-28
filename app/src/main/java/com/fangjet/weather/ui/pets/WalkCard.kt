@@ -1,5 +1,6 @@
 package com.fangjet.weather.ui.pets
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,29 +45,8 @@ fun WalkCard(
     advice: WalkAdvice,
     modifier: Modifier = Modifier,
 ) {
-    val detail = when {
-        advice.rating == WalkRating.GREAT -> stringResource(R.string.walk_now)
-        advice.bestTimeLabel != null && advice.bestTimeIsTomorrow ->
-            stringResource(R.string.walk_around_tomorrow, advice.bestTimeLabel)
-        advice.bestTimeLabel != null -> stringResource(R.string.walk_around, advice.bestTimeLabel)
-        else -> stringResource(R.string.walk_none)
-    }
-    val pavement = advice.pavementNow?.roundToInt()
-    val caption = when {
-        pavement == null -> null
-        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.DANGEROUS ->
-            stringResource(R.string.walk_pavement_dangerous, pavement)
-        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.TOO_HOT ->
-            stringResource(R.string.walk_pavement, pavement)
-        advice.rating == WalkRating.OKAY && advice.pavementBand == PavementBand.WARM ->
-            stringResource(R.string.walk_pavement_warm, pavement)
-        else -> null
-    } ?: when (advice.rating) {
-        // Hot or cold air, not the pavement.
-        WalkRating.PAWS_HOT -> stringResource(R.string.walk_too_hot)
-        WalkRating.TOO_COLD -> stringResource(R.string.walk_too_cold)
-        else -> null
-    }
+    val detail = walkDetail(advice).resolve()
+    val caption = walkCaption(advice)?.resolve()
     val tint = ratingTint(advice.rating)
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -102,6 +82,48 @@ fun WalkCard(
                 }
             }
         }
+    }
+}
+
+/** A string resource and its format arguments, chosen without Compose so the choice is unit-testable. */
+internal data class WalkText(
+    @param:StringRes val resId: Int,
+    val args: List<Any> = emptyList(),
+)
+
+@Composable
+private fun WalkText.resolve(): String = stringResource(resId, *args.toTypedArray())
+
+/** The card's sentence: walk now, around a time (today or tomorrow), or no good time soon. */
+internal fun walkDetail(advice: WalkAdvice): WalkText =
+    when {
+        advice.rating == WalkRating.GREAT -> WalkText(R.string.walk_now)
+        advice.bestTimeLabel != null && advice.bestTimeIsTomorrow ->
+            WalkText(R.string.walk_around_tomorrow, listOf(advice.bestTimeLabel))
+        advice.bestTimeLabel != null -> WalkText(R.string.walk_around, listOf(advice.bestTimeLabel))
+        else -> WalkText(R.string.walk_none)
+    }
+
+/**
+ * Why it's not a good time, when that's heat or cold: the pavement temperature when the pavement is
+ * the reason, otherwise the air. Null for the other ratings.
+ */
+internal fun walkCaption(advice: WalkAdvice): WalkText? {
+    val pavement = advice.pavementNow?.roundToInt()
+    return when {
+        pavement == null -> null
+        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.DANGEROUS ->
+            WalkText(R.string.walk_pavement_dangerous, listOf(pavement))
+        advice.rating == WalkRating.PAWS_HOT && advice.pavementBand == PavementBand.TOO_HOT ->
+            WalkText(R.string.walk_pavement, listOf(pavement))
+        advice.rating == WalkRating.OKAY && advice.pavementBand == PavementBand.WARM ->
+            WalkText(R.string.walk_pavement_warm, listOf(pavement))
+        else -> null
+    } ?: when (advice.rating) {
+        // Hot or cold air, not the pavement.
+        WalkRating.PAWS_HOT -> WalkText(R.string.walk_too_hot)
+        WalkRating.TOO_COLD -> WalkText(R.string.walk_too_cold)
+        else -> null
     }
 }
 
