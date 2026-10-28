@@ -47,6 +47,18 @@ class CityListViewModelTest {
         }
 
     @Test
+    fun `locationsLoaded stays false until the saved cities have been read`() =
+        runTest {
+            val viewModel = viewModel(savedLocations = emptyList())
+
+            // An empty list at this point says nothing about whether there are cities.
+            assertEquals(false, viewModel.locationsLoaded.value)
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(true, viewModel.locationsLoaded.value)
+        }
+
+    @Test
     fun `init with no saved locations migrates from legacy lastCity`() =
         runTest {
             val persisted = mutableListOf<List<SavedLocation>>()

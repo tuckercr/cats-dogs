@@ -22,12 +22,15 @@ import javax.inject.Singleton
 private val Context.weatherDataStore: DataStore<Preferences> by preferencesDataStore(name = "weather_prefs")
 
 @Singleton
-class PreferencesRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class PreferencesRepository internal constructor(
+    // Injected directly by tests, which give each case its own file-backed store.
+    private val dataStore: DataStore<Preferences>,
     private val json: Json,
 ) {
-
-    private val dataStore get() = context.weatherDataStore
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        json: Json,
+    ) : this(context.weatherDataStore, json)
 
     val hasSeenWelcome: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_HAS_SEEN_WELCOME] == true

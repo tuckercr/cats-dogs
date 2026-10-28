@@ -145,49 +145,62 @@ private val STALE_RECHECK_INTERVAL = 5.minutes
 
 /**
  * "My Location" for screens that can add it. Returns the add-city sheet's "My Location" action, or
- * null when it's already in the list or location access is off.
+ * null when it's already in the list or location access is off. Access is re-read on every resume,
+ * so turning it on or off in system settings shows or hides the action on return.
  *
  * With [autoAdd] (the main screen) it also adds it unprompted once access turns up after
  * onboarding went without it: granted later in Settings, say. Only when there are no cities yet,
  * or access has just changed to granted, so someone who removed My Location on purpose doesn't
- * get it back on every resume.
+ * get it back on every resume. That check waits for [locationsLoaded]: before the saved cities
+ * have loaded, the empty list would read as "no cities yet".
  */
 @Composable
 internal fun rememberAddMyLocation(
     locations: List<SavedLocation>,
     onLocated: (SavedLocation) -> Unit,
     autoAdd: Boolean = false,
+    locationsLoaded: Boolean = true,
     viewModel: LocationPermissionViewModel = hiltViewModel(),
 ): (() -> Unit)? {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val hasCurrentLocation = locations.any { it.isCurrentLocation }
-    var wasGranted by rememberSaveable { mutableStateOf(viewModel.hasLocationPermission()) }
+    var granted by remember { mutableStateOf(viewModel.hasLocationPermission()) }
+    var wasGranted by rememberSaveable { mutableStateOf(granted) }
+    var resumeCount by remember { mutableIntStateOf(0) }
     val currentHasCurrentLocation by rememberUpdatedState(hasCurrentLocation)
     val currentHasAnyLocation by rememberUpdatedState(locations.isNotEmpty())
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+            granted = viewModel.hasLocationPermission()
+            resumeCount++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     if (autoAdd) {
-        val lifecycleOwner = LocalLifecycleOwner.current
-        androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event != Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
-                val granted = viewModel.hasLocationPermission()
-                val newlyGranted = granted && !wasGranted
-                wasGranted = granted
-                if (granted && !currentHasCurrentLocation && (newlyGranted || !currentHasAnyLocation)) {
-                    viewModel.fetchLocation()
-                }
+        LaunchedEffect(resumeCount, locationsLoaded) {
+            if (resumeCount == 0 || !locationsLoaded) return@LaunchedEffect
+            val newlyGranted = granted && !wasGranted
+            wasGranted = granted
+            if (granted && !currentHasCurrentLocation && (newlyGranted || !currentHasAnyLocation)) {
+                viewModel.fetchLocation()
             }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
     }
 
     LaunchedEffect(state) {
         val located = state as? LocationFetchState.Located ?: return@LaunchedEffect
+        // Handled once: a Located still held when this screen comes back (from another screen,
+        // or after rotation) must not re-add a My Location the user has since removed.
+        viewModel.consumeLocated()
         if (!currentHasCurrentLocation) onLocated(located.location)
     }
 
-    return if (!hasCurrentLocation && viewModel.hasLocationPermission()) viewModel::fetchLocation else null
+    return if (!hasCurrentLocation && granted) viewModel::fetchLocation else null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -256,10 +269,12 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         }
     }
 
+    val locationsLoaded by cityListViewModel.locationsLoaded.collectAsStateWithLifecycle()
     val addMyLocation = rememberAddMyLocation(
         locations = locations,
         onLocated = cityListViewModel::addLocation,
         autoAdd = true,
+        locationsLoaded = locationsLoaded,
     )
 
     var showAddSheet by remember { mutableStateOf(false) }

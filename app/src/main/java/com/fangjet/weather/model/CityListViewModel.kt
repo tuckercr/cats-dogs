@@ -38,6 +38,10 @@ class CityListViewModel internal constructor(
     private val _locations = MutableStateFlow<List<SavedLocation>>(emptyList())
     val locations: StateFlow<List<SavedLocation>> = _locations.asStateFlow()
 
+    /** False until the saved cities have been read: an empty [locations] before then means nothing. */
+    private val _locationsLoaded = MutableStateFlow(false)
+    val locationsLoaded: StateFlow<Boolean> = _locationsLoaded.asStateFlow()
+
     private val _activeIndex = MutableStateFlow(0)
     val activeIndex: StateFlow<Int> = _activeIndex.asStateFlow()
 
@@ -61,6 +65,7 @@ class CityListViewModel internal constructor(
 
             _locations.value = locs
             _activeIndex.value = idx.coerceIn(0, (locs.size - 1).coerceAtLeast(0))
+            _locationsLoaded.value = true
         }
     }
 
