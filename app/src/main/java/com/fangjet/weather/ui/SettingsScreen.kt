@@ -70,6 +70,9 @@ fun SettingsRoute(
     val unitOverride by viewModel.unitOverride.collectAsStateWithLifecycle()
     val shareUsageStatistics by viewModel.shareUsageStatistics.collectAsStateWithLifecycle()
     val showWalkCard by viewModel.showWalkCard.collectAsStateWithLifecycle()
+    val notifyMorningBriefing by viewModel.notifyMorningBriefing.collectAsStateWithLifecycle()
+    val notifyWalkTime by viewModel.notifyWalkTime.collectAsStateWithLifecycle()
+    val notifyRain by viewModel.notifyRain.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -146,6 +149,7 @@ fun SettingsRoute(
             SettingsSectionHeader(stringResource(R.string.settings_section_main_screen))
             SettingsSwitchRow(
                 label = stringResource(R.string.settings_show_walk_card),
+                summary = stringResource(R.string.settings_show_walk_card_summary),
                 checked = showWalkCard,
                 onCheckedChange = viewModel::setShowWalkCard,
             )
@@ -179,13 +183,23 @@ fun SettingsRoute(
             SettingsSectionHeader(stringResource(R.string.settings_section_notifications))
 
             if (notificationGranted) {
-                Text(
-                    text = stringResource(R.string.settings_notifications_enabled),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                SettingsSwitchRow(
+                    label = stringResource(R.string.settings_notify_briefing),
+                    summary = stringResource(R.string.settings_notify_briefing_summary),
+                    checked = notifyMorningBriefing,
+                    onCheckedChange = viewModel::setNotifyMorningBriefing,
+                )
+                SettingsSwitchRow(
+                    label = stringResource(R.string.settings_notify_walk),
+                    summary = stringResource(R.string.settings_notify_walk_summary),
+                    checked = notifyWalkTime,
+                    onCheckedChange = viewModel::setNotifyWalkTime,
+                )
+                SettingsSwitchRow(
+                    label = stringResource(R.string.settings_notify_rain),
+                    summary = stringResource(R.string.settings_notify_rain_summary),
+                    checked = notifyRain,
+                    onCheckedChange = viewModel::setNotifyRain,
                 )
             } else {
                 SettingsLinkRow(
@@ -220,6 +234,16 @@ fun SettingsRoute(
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsSectionHeader(stringResource(R.string.settings_section_privacy))
+
+            SettingsSwitchRow(
+                label = stringResource(R.string.settings_share_usage_statistics),
+                summary = stringResource(R.string.settings_share_usage_statistics_summary),
+                checked = shareUsageStatistics,
+                onCheckedChange = viewModel::setShareUsageStatistics,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SettingsSectionHeader(stringResource(R.string.settings_section_about))
 
             val openWeatherUrl = stringResource(R.string.settings_openweather_url)
@@ -241,13 +265,6 @@ fun SettingsRoute(
                         Intent(Intent.ACTION_VIEW, openMeteoUrl.toUri()),
                     )
                 },
-            )
-
-            SettingsSwitchRow(
-                label = stringResource(R.string.settings_share_usage_statistics),
-                summary = stringResource(R.string.settings_share_usage_statistics_summary),
-                checked = shareUsageStatistics,
-                onCheckedChange = viewModel::setShareUsageStatistics,
             )
 
             val privacyUrl = stringResource(R.string.settings_privacy_policy_url)

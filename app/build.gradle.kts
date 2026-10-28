@@ -145,9 +145,9 @@ dependencies {
     // plugins above are applied; without it the app falls back to the local defaults in
     // res/xml/remote_config_defaults.xml and analytics/crash reporting become no-ops.
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.config.ktx)
-    implementation(libs.firebase.analytics.ktx)
-    implementation(libs.firebase.crashlytics.ktx)
+    implementation(libs.firebase.config)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 
     // DI
     implementation(libs.hilt.android)

@@ -15,6 +15,7 @@ enum class WalkRating { GREAT, OKAY, POOR, PAWS_HOT, TOO_COLD }
  * units, when the source provides it. [bestTimeIsTomorrow] is true when [bestTimeLabel] falls on
  * the next calendar day in the city's own time zone. [pavementBand] is what [pavementNow] means for
  * paws (the Today tile's band), so the caption can say whether the pavement is the problem.
+ * [bestTimeEpochSeconds] is when [bestTimeLabel] starts, for the walk-time notification.
  */
 data class WalkAdvice(
     val rating: WalkRating,
@@ -22,6 +23,7 @@ data class WalkAdvice(
     val pavementNow: Double? = null,
     val bestTimeIsTomorrow: Boolean = false,
     val pavementBand: PavementBand? = null,
+    val bestTimeEpochSeconds: Long? = null,
 )
 
 private const val LOOKAHEAD_SLOTS = 24 // a day of hourly slots
@@ -92,7 +94,7 @@ fun walkAdviceFor(
     val bestSlot = if (rating == WalkRating.GREAT) null else firstGood
     val bestIsTomorrow = bestSlot?.epochSeconds?.let { isNextDay(it, nowEpochSeconds, utcOffsetSeconds) } == true
     val band = slots.first().pavementC()?.let { pavementBand(it, slots.first().groundWet, currentFeelsLikeC, thresholds) }
-    return WalkAdvice(rating, bestSlot?.timeLabel, pavementNow, bestIsTomorrow, band)
+    return WalkAdvice(rating, bestSlot?.timeLabel, pavementNow, bestIsTomorrow, band, bestSlot?.epochSeconds)
 }
 
 /** True when [epochSeconds] falls on the calendar day after [nowEpochSeconds], in the city's zone. */

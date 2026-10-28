@@ -5,6 +5,7 @@ import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
+import com.fangjet.weather.domain.notificationLocation
 
 /**
  * Pure logic extracted from [WeatherUpdateWorker] so it can be unit-tested without Android
@@ -16,7 +17,6 @@ import com.fangjet.weather.domain.WeatherUnits
  */
 internal class UpdateWorkerLogic(
     private val getSavedLocations: suspend () -> List<SavedLocation>,
-    private val getActiveIndex: suspend () -> Int,
     private val getUnits: suspend () -> WeatherUnits,
     private val fetchCurrentWeather: suspend (
         units: WeatherUnits,
@@ -32,11 +32,15 @@ internal class UpdateWorkerLogic(
     ) -> kotlin.Result<List<DayForecast>>,
     private val cacheCurrentWeather: suspend (cacheKey: String, weather: CurrentWeather) -> Unit,
     private val cacheForecast: suspend (cacheKey: String, forecast: List<DayForecast>) -> Unit,
+    // After a refresh, with whatever came back: the rain alert checks it.
+    private val afterRefresh: suspend (
+        location: SavedLocation,
+        weather: CurrentWeather?,
+        forecast: List<DayForecast>?,
+    ) -> Unit = { _, _, _ -> },
 ) {
     suspend fun doWork(): Result {
-        val locations = getSavedLocations()
-        val activeIndex = getActiveIndex()
-        val location = locations.getOrNull(activeIndex) ?: return Result.success()
+        val location = getSavedLocations().notificationLocation() ?: return Result.success()
 
         val units = getUnits()
 
@@ -63,6 +67,7 @@ internal class UpdateWorkerLogic(
             .onSuccess { forecast -> cacheForecast(cacheKey, forecast) }
             .isSuccess
 
+        afterRefresh(location, currentResult.getOrNull(), forecastResult.getOrNull())
         return if (weatherOk || forecastOk) Result.success() else Result.retry()
     }
 }

@@ -20,3 +20,9 @@ data class SavedLocation(
         label.trim().lowercase(java.util.Locale.ROOT)
     }
 }
+
+/**
+ * The city notifications are about: My Location when it's saved, otherwise the first city. Fixed
+ * on purpose, so looking at another city's tab doesn't move tomorrow's briefing there.
+ */
+fun List<SavedLocation>.notificationLocation(): SavedLocation? = firstOrNull { it.isCurrentLocation } ?: firstOrNull()

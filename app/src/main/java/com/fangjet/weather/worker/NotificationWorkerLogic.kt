@@ -6,20 +6,50 @@ import com.fangjet.weather.domain.DayForecast
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
+import com.fangjet.weather.domain.notificationLocation
+import com.fangjet.weather.ui.displayedRainChance
+import com.fangjet.weather.ui.formatEpochTime
 import com.fangjet.weather.ui.pets.PetMood
+import com.fangjet.weather.ui.pets.WalkAdvice
+import com.fangjet.weather.ui.pets.WalkRating
+import com.fangjet.weather.ui.pets.isPrecipitating
 import com.fangjet.weather.ui.pets.petMoodFor
+import com.fangjet.weather.ui.pets.walkAdviceFor
+import com.fangjet.weather.util.NextRain
+import com.fangjet.weather.util.SkyCondition
+import com.fangjet.weather.util.fromCurrentSlot
+import com.fangjet.weather.util.nextRain
+import com.fangjet.weather.util.skyCondition
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/** Which notification it is: each has its own channel, id and Settings switch. */
+internal enum class NotificationKind { MORNING_BRIEFING, WALK_TIME, RAIN }
+
+/** A notification: its text, and the pets' mood for its picture. */
+internal data class WeatherNotification(
+    val kind: NotificationKind,
+    val title: String,
+    val body: String,
+    val mood: PetMood,
+    val southernHemisphere: Boolean,
+)
+
+/** A walk time closer than this to the morning run isn't worth a separate nudge. */
+private const val MIN_WALK_LEAD_SECONDS = 30 * 60L
+
 /**
- * Pure logic extracted from [WeatherNotificationWorker] so it can be unit-tested
- * without Android framework dependencies (Context, NotificationManager, etc.).
+ * The 8:30 AM run, extracted from [WeatherNotificationWorker] so it can be unit-tested without
+ * Android framework dependencies (Context, NotificationManager, etc.). It posts the morning
+ * briefing, and plans the walk-time nudge for the day's best walk time ([scheduleWalkTime]),
+ * whether or not the briefing is on.
  */
 internal class NotificationWorkerLogic(
     private val getSavedLocations: suspend () -> List<SavedLocation>,
-    private val getActiveIndex: suspend () -> Int,
     private val getUnits: suspend () -> WeatherUnits,
     private val fetchCurrentWeather: suspend (
         units: WeatherUnits,
@@ -35,22 +65,25 @@ internal class NotificationWorkerLogic(
     ) -> kotlin.Result<List<DayForecast>>,
     private val hasNotificationPermission: () -> Boolean,
     private val postNotification: (WeatherNotification) -> Unit,
-    // Remote Config daily_weather_notifications_enabled. Only gates posting: the fetch still runs.
+    // Remote Config daily_weather_notifications_enabled: switches the briefing off for everyone.
     private val isDailyWeatherNotificationEnabled: () -> Boolean = { true },
-    // Remote Config pet-mood thresholds, for the pets picture: the same mood as the app's top card.
+    // Remote Config pet-mood and walk thresholds: the same mood and walk advice as the app.
     private val petWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
     // Same label format as ForecastAggregator produces, in the city's local date (its UTC offset)
     // so it matches the city-local forecast labels. Overridable so tests are date-independent.
     private val todayLabel: (utcOffsetSeconds: Int) -> String = { offset ->
         OffsetDateTime.now(ZoneOffset.ofTotalSeconds(offset)).format(DAY_LABEL_FORMATTER)
     },
+    // The user's switches in Settings.
+    private val isBriefingEnabled: suspend () -> Boolean = { true },
+    private val isWalkTimeEnabled: suspend () -> Boolean = { false },
+    // A dog at home (the dog question / walk card switch): the briefing then mentions the walk.
+    private val hasDog: suspend () -> Boolean = { false },
+    private val scheduleWalkTime: (epochSeconds: Long) -> Unit = {},
+    private val nowEpochSeconds: () -> Long = { Instant.now().epochSecond },
 ) {
     suspend fun doWork(): Result {
-        val locations = getSavedLocations()
-        if (locations.isEmpty()) return Result.success()
-
-        val activeIndex = getActiveIndex()
-        val location = locations.getOrNull(activeIndex) ?: return Result.success()
+        val location = getSavedLocations().notificationLocation() ?: return Result.success()
 
         val units = getUnits()
 
@@ -69,21 +102,38 @@ internal class NotificationWorkerLogic(
             location.latitude,
             location.longitude,
         ).getOrNull()
-        // /forecast only returns upcoming 3-hour slots, so once today's last slot has passed the
-        // first day is tomorrow. Only an entry that is actually today may supply the high/low.
+        // Only an entry that is actually today may supply the high/low.
         val todayForecast = forecast?.firstOrNull { it.dateLabel == todayLabel(weather.offsetSeconds) }
+        val thresholds = runCatching { petWeatherThresholds() }.getOrDefault(PetWeatherThresholds.DEFAULT)
+        val now = nowEpochSeconds()
+        val walk = forecast?.let { walkAdviceNow(weather, it, thresholds, now) }
 
-        if (!hasNotificationPermission()) return Result.success()
-        if (!runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true)) return Result.success()
+        val briefingOn = hasNotificationPermission() &&
+            runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true) &&
+            isBriefingEnabled()
 
-        val (title, body) = buildContent(weather, todayForecast)
-        val mood = petMoodFor(
-            weather.conditionMain,
-            weather.iconCode,
-            weather.units.toCelsius(weather.feelsLike),
-            runCatching { petWeatherThresholds() }.getOrDefault(PetWeatherThresholds.DEFAULT),
+        if (walk != null && isWalkTimeEnabled()) {
+            when {
+                // Now is the time: the briefing says so, or, without one, the nudge goes now.
+                walk.rating == WalkRating.GREAT -> if (!briefingOn) scheduleWalkTime(now)
+                !walk.bestTimeIsTomorrow ->
+                    walk.bestTimeEpochSeconds
+                        ?.takeIf { it - now >= MIN_WALK_LEAD_SECONDS }
+                        ?.let(scheduleWalkTime)
+            }
+        }
+
+        if (!briefingOn) return Result.success()
+        val (title, body) = buildBriefingContent(weather, todayForecast, walk.takeIf { hasDog() })
+        postNotification(
+            WeatherNotification(
+                NotificationKind.MORNING_BRIEFING,
+                title,
+                body,
+                moodFor(weather, thresholds),
+                southernHemisphere = (location.latitude ?: 0.0) < 0,
+            ),
         )
-        postNotification(WeatherNotification(title, body, mood, southernHemisphere = (location.latitude ?: 0.0) < 0))
         return Result.success()
     }
 
@@ -92,29 +142,170 @@ internal class NotificationWorkerLogic(
     }
 }
 
-/** A daily weather notification: its text, and the pets' mood for its picture. */
-internal data class WeatherNotification(
-    val title: String,
-    val body: String,
-    val mood: PetMood,
-    val southernHemisphere: Boolean,
-)
+/**
+ * Runs at the walk time the morning run picked, extracted from [WalkTimeWorker] for tests. The
+ * forecast can change in a few hours, so it only nudges if now is still a great time for a walk.
+ */
+internal class WalkTimeLogic(
+    private val getSavedLocations: suspend () -> List<SavedLocation>,
+    private val getUnits: suspend () -> WeatherUnits,
+    private val fetchCurrentWeather: suspend (
+        units: WeatherUnits,
+        label: String,
+        latitude: Double?,
+        longitude: Double?,
+    ) -> kotlin.Result<CurrentWeather>,
+    private val fetchForecast: suspend (
+        units: WeatherUnits,
+        label: String,
+        latitude: Double?,
+        longitude: Double?,
+    ) -> kotlin.Result<List<DayForecast>>,
+    private val hasNotificationPermission: () -> Boolean,
+    private val postNotification: (WeatherNotification) -> Unit,
+    private val isWalkTimeEnabled: suspend () -> Boolean,
+    private val petWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
+    private val nowEpochSeconds: () -> Long = { Instant.now().epochSecond },
+) {
+    suspend fun doWork(): Result {
+        if (!isWalkTimeEnabled() || !hasNotificationPermission()) return Result.success()
+        val location = getSavedLocations().notificationLocation() ?: return Result.success()
+        val units = getUnits()
+        val weather = fetchCurrentWeather(
+            units,
+            if (location.isCurrentLocation) "" else location.label,
+            location.latitude,
+            location.longitude,
+        ).getOrNull() ?: return Result.retry()
+        val forecast = fetchForecast(units, location.label, location.latitude, location.longitude).getOrNull()
+            ?: return Result.retry()
+        val thresholds = runCatching { petWeatherThresholds() }.getOrDefault(PetWeatherThresholds.DEFAULT)
+        val walk = walkAdviceNow(weather, forecast, thresholds, nowEpochSeconds())
+        if (walk?.rating != WalkRating.GREAT) return Result.success()
+        val (title, body) = buildWalkTimeContent(weather)
+        postNotification(
+            WeatherNotification(
+                NotificationKind.WALK_TIME,
+                title,
+                body,
+                moodFor(weather, thresholds),
+                southernHemisphere = (location.latitude ?: 0.0) < 0,
+            ),
+        )
+        return Result.success()
+    }
+}
 
-internal fun buildNotificationContent(
+/** The walk card's advice for now, from the current reading and the hours from now on. */
+private fun walkAdviceNow(
+    weather: CurrentWeather,
+    forecast: List<DayForecast>,
+    thresholds: PetWeatherThresholds,
+    now: Long,
+): WalkAdvice? =
+    walkAdviceFor(
+        weather.units.toCelsius(weather.feelsLike),
+        forecast.flatMap { it.hourlySlots }.fromCurrentSlot(now),
+        thresholds,
+        utcOffsetSeconds = weather.offsetSeconds,
+        nowEpochSeconds = now,
+        precipitatingNow = isPrecipitating(weather.conditionMain),
+    )
+
+private fun moodFor(
+    weather: CurrentWeather,
+    thresholds: PetWeatherThresholds,
+): PetMood = petMoodFor(weather.conditionMain, weather.iconCode, weather.units.toCelsius(weather.feelsLike), thresholds)
+
+/** Below this, the day's rain chance isn't worth a mention in the briefing. */
+private const val BRIEFING_RAIN_CHANCE = 40
+
+/**
+ * "52° and partly cloudy in Knoxville" / "High 70°, low 45°, 60% chance of rain. Sunny's picked
+ * 1 PM for a walk." The walk sentence only comes with [walk], which is null without a dog.
+ */
+internal fun buildBriefingContent(
     weather: CurrentWeather,
     todayForecast: DayForecast?,
+    walk: WalkAdvice?,
 ): Pair<String, String> {
-    val tempHigh = (todayForecast?.tempMax ?: weather.tempMax).roundToInt()
-    val tempLow = (todayForecast?.tempMin ?: weather.tempMin).roundToInt()
-    val description = weather.description
-        .split(" ")
-        .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
-    val title = "${weather.temperature.roundToInt()}° in ${weather.cityName}"
-    val body = "$tempHigh°/$tempLow° • $description"
+    val high = (todayForecast?.tempMax ?: weather.tempMax).roundToInt()
+    val low = (todayForecast?.tempMin ?: weather.tempMin).roundToInt()
+    val title = "${weather.temperature.roundToInt()}° and ${conditionPhrase(weather)} in ${weather.cityName}"
+    val body = buildString {
+        append("High $high°, low $low°")
+        displayedRainChance(todayForecast?.precipitationChance ?: 0)
+            ?.takeIf { it >= BRIEFING_RAIN_CHANCE }
+            ?.let { append(", $it% chance of rain") }
+        append(".")
+        walkSentence(walk)?.let { append(" ").append(it) }
+    }
     return title to body
 }
 
-private fun buildContent(
-    weather: CurrentWeather,
-    todayForecast: DayForecast?,
-) = buildNotificationContent(weather, todayForecast)
+private fun walkSentence(walk: WalkAdvice?): String? =
+    when {
+        walk == null -> null
+        walk.rating == WalkRating.GREAT -> "Sunny says now's a great time for a walk."
+        walk.bestTimeLabel != null && !walk.bestTimeIsTomorrow -> "Sunny's picked ${walk.bestTimeLabel} for a walk."
+        else -> "Not a good day for walkies."
+    }
+
+/** "Time for a walk" / "64° and clear in Knoxville. Sunny's waiting by the door." */
+internal fun buildWalkTimeContent(weather: CurrentWeather): Pair<String, String> =
+    "Time for a walk" to
+        "${weather.temperature.roundToInt()}° and ${conditionPhrase(weather)} in ${weather.cityName}. Sunny's waiting by the door."
+
+/** Rain, drizzle, snow and storms by their own description ("light rain"); otherwise the sky ("partly cloudy"). */
+internal fun conditionPhrase(weather: CurrentWeather): String {
+    if (isPrecipitating(weather.conditionMain)) return weather.description.lowercase()
+    return when (skyCondition(weather.conditionMain, weather.cloudPercent, weather.iconCode)) {
+        SkyCondition.CLEAR -> "clear"
+        SkyCondition.PARTLY_CLOUDY -> "partly cloudy"
+        SkyCondition.MOSTLY_CLOUDY -> "mostly cloudy"
+        SkyCondition.OVERCAST -> "overcast"
+        SkyCondition.MIST -> "misty"
+        SkyCondition.HAZE -> "hazy"
+        SkyCondition.FOG -> "foggy"
+        SkyCondition.SMOKE -> "smoky"
+        SkyCondition.DUST -> "dusty"
+    }
+}
+
+/** Alert this far ahead of the rain at most. */
+private const val RAIN_ALERT_LEAD_SECONDS = 60 * 60L
+
+/** No alerts before 7 AM or from 9 PM, the city's local time. */
+private val RAIN_ALERT_HOURS = 7 until 21
+
+/** A shower starting within this of the last one alerted about is the same rain. */
+private const val RAIN_ALERT_REPEAT_SECONDS = 3 * 60 * 60L
+
+/**
+ * The rain or snow to alert about now: starting within the hour, in the daytime, and not the one
+ * already alerted about ([lastAlertStart]). Null when there's nothing to say.
+ */
+internal fun rainAlertFor(
+    forecast: List<DayForecast>,
+    nowEpochSeconds: Long,
+    utcOffsetSeconds: Int,
+    lastAlertStart: Long?,
+): NextRain.Starting? {
+    val next = nextRain(forecast.firstOrNull()?.quarterHours.orEmpty(), nowEpochSeconds) as? NextRain.Starting ?: return null
+    if (next.epochSeconds - nowEpochSeconds > RAIN_ALERT_LEAD_SECONDS) return null
+    val hour = Instant.ofEpochSecond(nowEpochSeconds).atOffset(ZoneOffset.ofTotalSeconds(utcOffsetSeconds)).hour
+    if (hour !in RAIN_ALERT_HOURS) return null
+    if (lastAlertStart != null && abs(next.epochSeconds - lastAlertStart) < RAIN_ALERT_REPEAT_SECONDS) return null
+    return next
+}
+
+/** "Rain starting around 3:15 PM" / "Rain on the way in Knoxville. Walk now or wait it out." */
+internal fun buildRainAlertContent(
+    rain: NextRain.Starting,
+    cityName: String,
+    utcOffsetSeconds: Int,
+): Pair<String, String> {
+    val what = if (rain.snow) "Snow" else "Rain"
+    val time = formatEpochTime(rain.epochSeconds, utcOffsetSeconds)
+    return "$what starting around $time" to "$what on the way in $cityName. Walk now or wait it out."
+}

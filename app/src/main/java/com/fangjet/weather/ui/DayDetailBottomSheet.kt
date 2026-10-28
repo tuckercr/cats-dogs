@@ -1,7 +1,6 @@
 package com.fangjet.weather.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -23,10 +21,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,7 +44,11 @@ fun DayDetailBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // In landscape there's little height, so the hours run sideways across a full-width sheet.
-    val compactHeight = LocalConfiguration.current.screenHeightDp < COMPACT_HEIGHT_DP
+    val windowHeight = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.height
+            .toDp()
+    }
+    val compactHeight = windowHeight < COMPACT_HEIGHT_DP.dp
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -124,33 +126,6 @@ private fun DayDetailContent(
                 items(day.hourlySlots) { slot -> HourlySlotColumn(slot = slot) }
             }
         } else {
-            // Column header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_time_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = stringResource(R.string.detail_temp_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-                Text(
-                    text = stringResource(R.string.detail_rain_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.widthIn(min = RAIN_COLUMN_WIDTH),
-                )
-            }
             HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
 
             LazyColumn(
@@ -208,6 +183,8 @@ private fun HourlySlotRow(
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f),
         )
+        // Rain before the icon, so the temperatures line up at the end.
+        PrecipChance(percent = slot.precipitationChance)
         WeatherIcon(
             iconCode = slot.iconCode,
             contentDescription = slot.description,
@@ -218,17 +195,9 @@ private fun HourlySlotRow(
             text = formatTemperature(slot.temperature, slot.units),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 4.dp),
         )
-        // A fixed slot, so temperatures stay lined up on dry hours, which show no chance.
-        Box(modifier = Modifier.widthIn(min = RAIN_COLUMN_WIDTH), contentAlignment = Alignment.CenterEnd) {
-            PrecipChance(percent = slot.precipitationChance)
-        }
     }
 }
-
-/** Wide enough for "100%" with its drop. */
-private val RAIN_COLUMN_WIDTH = 44.dp
 
 // --- Previews ---
 

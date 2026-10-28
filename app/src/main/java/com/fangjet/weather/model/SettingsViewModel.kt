@@ -38,6 +38,26 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.setShowWalkCard(show) }
     }
 
+    /** The notification switches: each kind can be turned off on its own. */
+    val notifyMorningBriefing = preferencesRepository.notifyMorningBriefing
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val notifyWalkTime = preferencesRepository.notifyWalkTime
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+    val notifyRain = preferencesRepository.notifyRain
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setNotifyMorningBriefing(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setNotifyMorningBriefing(enabled) }
+    }
+
+    fun setNotifyWalkTime(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setNotifyWalkTime(enabled) }
+    }
+
+    fun setNotifyRain(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.setNotifyRain(enabled) }
+    }
+
     fun clearCache() {
         viewModelScope.launch { preferencesRepository.clearCache() }
     }

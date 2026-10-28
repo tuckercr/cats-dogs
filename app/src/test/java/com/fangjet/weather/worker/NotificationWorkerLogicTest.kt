@@ -3,11 +3,17 @@ package com.fangjet.weather.worker
 import androidx.work.ListenableWorker.Result
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
+import com.fangjet.weather.domain.HourlySlot
+import com.fangjet.weather.domain.QuarterHour
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
 import com.fangjet.weather.ui.pets.PetMood
+import com.fangjet.weather.ui.pets.WalkAdvice
+import com.fangjet.weather.ui.pets.WalkRating
+import com.fangjet.weather.util.NextRain
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,20 +31,6 @@ class NotificationWorkerLogicTest {
             val result = logic.doWork()
 
             assertEquals(Result.success(), result)
-            assertEquals(emptyList<Pair<String, String>>(), posted)
-        }
-
-    @Test
-    fun `returns success when active index is out of bounds`() =
-        runTest {
-            val posted = mutableListOf<Pair<String, String>>()
-            val logic = logic(
-                savedLocations = listOf(london),
-                activeIndex = 5,
-                postNotification = { posted += it.title to it.body },
-            )
-
-            assertEquals(Result.success(), logic.doWork())
             assertEquals(emptyList<Pair<String, String>>(), posted)
         }
 
@@ -184,23 +176,24 @@ class NotificationWorkerLogicTest {
     // --- notification content ---
 
     @Test
-    fun `notification title uses current temperature and API city name`() =
+    fun `briefing title is the temperature, the sky and the API city name`() =
         runTest {
-            var capturedTitle: String? = null
+            var captured: WeatherNotification? = null
             val logic = logic(
                 fetchCurrentWeather = { _, _, _, _ ->
                     kotlin.Result.success(weather(temperature = 86.4, cityName = "London, GB"))
                 },
-                postNotification = { capturedTitle = it.title },
+                postNotification = { captured = it },
             )
 
             logic.doWork()
 
-            assertEquals("86° in London, GB", capturedTitle)
+            assertEquals("86° and clear in London, GB", captured?.title)
+            assertEquals(NotificationKind.MORNING_BRIEFING, captured?.kind)
         }
 
     @Test
-    fun `notification body uses forecast high-low when forecast is available`() =
+    fun `briefing body uses forecast high-low when forecast is available`() =
         runTest {
             var capturedBody: String? = null
             val logic = logic(
@@ -216,13 +209,12 @@ class NotificationWorkerLogicTest {
             logic.doWork()
 
             // Should use forecast values (99/45), not weather values (60/50)
-            assertTrue("body was: $capturedBody", capturedBody?.startsWith("99°/45°") == true)
+            assertEquals("High 99°, low 45°.", capturedBody)
         }
 
     @Test
-    fun `notification body ignores a forecast whose first day is tomorrow`() =
+    fun `briefing body ignores a forecast whose first day is tomorrow`() =
         runTest {
-            // Late in the evening /forecast has no slots left for today, so its first day is tomorrow.
             var capturedBody: String? = null
             val logic = logic(
                 fetchCurrentWeather = { _, _, _, _ ->
@@ -236,11 +228,11 @@ class NotificationWorkerLogicTest {
 
             logic.doWork()
 
-            assertTrue("body was: $capturedBody", capturedBody?.startsWith("60°/50°") == true)
+            assertEquals("High 60°, low 50°.", capturedBody)
         }
 
     @Test
-    fun `notification body uses today's entry even when it is not first`() =
+    fun `briefing body uses today's entry even when it is not first`() =
         runTest {
             var capturedBody: String? = null
             val logic = logic(
@@ -257,11 +249,11 @@ class NotificationWorkerLogicTest {
 
             logic.doWork()
 
-            assertTrue("body was: $capturedBody", capturedBody?.startsWith("99°/45°") == true)
+            assertEquals("High 99°, low 45°.", capturedBody)
         }
 
     @Test
-    fun `notification body falls back to current weather temps when forecast fails`() =
+    fun `briefing body falls back to current weather temps when forecast fails`() =
         runTest {
             var capturedBody: String? = null
             val logic = logic(
@@ -274,69 +266,161 @@ class NotificationWorkerLogicTest {
 
             logic.doWork()
 
-            assertTrue("body was: $capturedBody", capturedBody?.startsWith("99°/50°") == true)
+            assertEquals("High 99°, low 50°.", capturedBody)
         }
 
     @Test
-    fun `notification body description is title-cased`() =
+    fun `the morning briefing switch posts nothing`() =
         runTest {
-            var capturedBody: String? = null
-            val logic = logic(
-                fetchCurrentWeather = { _, _, _, _ ->
-                    kotlin.Result.success(weather(description = "overcast clouds"))
-                },
-                postNotification = { capturedBody = it.body },
-            )
-
-            logic.doWork()
-
-            assertTrue("body was: $capturedBody", capturedBody?.contains("Overcast Clouds") == true)
+            var posted = false
+            logic(postNotification = { posted = true }, isBriefingEnabled = false).doWork()
+            assertFalse(posted)
         }
 
-    @Test
-    fun `notification body format is high-low-bullet-description`() =
-        runTest {
-            var capturedBody: String? = null
-            val logic = logic(
-                fetchCurrentWeather = { _, _, _, _ ->
-                    kotlin.Result.success(weather(tempMin = 50.0, tempMax = 99.0, description = "clear sky"))
-                },
-                fetchForecast = { _, _, _, _ -> kotlin.Result.failure(RuntimeException()) },
-                postNotification = { capturedBody = it.body },
-            )
-
-            logic.doWork()
-
-            assertEquals("99°/50° • Clear Sky", capturedBody)
-        }
-
-    // --- buildNotificationContent (pure formatter) ---
+    // --- buildBriefingContent (pure formatter) ---
 
     @Test
-    fun `buildNotificationContent uses forecast temps when forecast provided`() {
-        val (_, body) = buildNotificationContent(
-            weather = weather(temperature = 72.0, tempMin = 55.0, tempMax = 80.0, description = "light rain"),
-            todayForecast = forecast(tempMin = 48.0, tempMax = 91.0),
-        )
-        assertEquals("91°/48° • Light Rain", body)
+    fun `the day's rain chance is mentioned from 40 percent, rounded`() {
+        val (_, wet) = buildBriefingContent(weather(), forecast(tempMin = 48.0, tempMax = 91.0, rainChance = 57), walk = null)
+        assertEquals("High 91°, low 48°, 60% chance of rain.", wet)
+        val (_, dry) = buildBriefingContent(weather(), forecast(tempMin = 48.0, tempMax = 91.0, rainChance = 34), walk = null)
+        assertEquals("High 91°, low 48°.", dry)
     }
 
     @Test
-    fun `buildNotificationContent uses weather temps when forecast is null`() {
-        val (_, body) = buildNotificationContent(
-            weather = weather(temperature = 72.0, tempMin = 55.0, tempMax = 80.0, description = "few clouds"),
-            todayForecast = null,
+    fun `rain is named by its description, everything else by the sky`() {
+        val (rainy, _) = buildBriefingContent(
+            weather(temperature = 61.0, cityName = "Tokyo", conditionMain = "Rain", description = "light rain"),
+            null,
+            walk = null,
         )
-        assertEquals("80°/55° • Few Clouds", body)
+        assertEquals("61° and light rain in Tokyo", rainy)
+        val (cloudy, _) = buildBriefingContent(
+            weather(temperature = 85.6, cityName = "Tokyo", conditionMain = "Clouds", cloudPercent = 40),
+            null,
+            walk = null,
+        )
+        assertEquals("86° and partly cloudy in Tokyo", cloudy)
     }
 
     @Test
-    fun `buildNotificationContent rounds temperature in title`() {
-        val (title, _) = buildNotificationContent(
-            weather = weather(temperature = 85.6, cityName = "Tokyo"),
-            todayForecast = null,
+    fun `with a dog the briefing says when to walk`() {
+        fun body(walk: WalkAdvice) = buildBriefingContent(weather(tempMin = 50.0, tempMax = 70.0), null, walk).second
+
+        assertEquals("High 70°, low 50°. Sunny says now's a great time for a walk.", body(WalkAdvice(WalkRating.GREAT, null)))
+        assertEquals("High 70°, low 50°. Sunny's picked 1 PM for a walk.", body(WalkAdvice(WalkRating.OKAY, "1 PM")))
+        assertEquals(
+            "High 70°, low 50°. Not a good day for walkies.",
+            body(WalkAdvice(WalkRating.OKAY, "7 AM", bestTimeIsTomorrow = true)),
         )
-        assertEquals("86° in Tokyo", title)
+        assertEquals("High 70°, low 50°. Not a good day for walkies.", body(WalkAdvice(WalkRating.POOR, null)))
+    }
+
+    // --- walk time planning ---
+
+    @Test
+    fun `the morning run plans the walk nudge for the day's best time`() =
+        runTest {
+            var planned: Long? = null
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = wetMorningDryLater()))) },
+                isWalkTimeEnabled = true,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+
+            assertEquals(DAY_START + 11 * HOUR, planned)
+        }
+
+    @Test
+    fun `no walk nudge when its switch is off`() =
+        runTest {
+            var planned: Long? = null
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = wetMorningDryLater()))) },
+                isWalkTimeEnabled = false,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+
+            assertEquals(null, planned)
+        }
+
+    @Test
+    fun `when now is the time, the briefing says so, or without it the nudge goes now`() =
+        runTest {
+            val dry = listOf(forecast(slots = (8..12).map { slot(it, rain = 0) }))
+            var planned: Long? = null
+            logic(fetchForecast = {
+                _,
+                _,
+                _,
+                _,
+                ->
+                kotlin.Result.success(dry)
+            }, isWalkTimeEnabled = true, scheduleWalkTime = { planned = it })
+                .doWork()
+            assertEquals(null, planned)
+
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(dry) },
+                isWalkTimeEnabled = true,
+                isBriefingEnabled = false,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+            assertEquals(NOW, planned)
+        }
+
+    @Test
+    fun `the walk nudge goes when now is still a great time, and not when it's raining`() =
+        runTest {
+            val posted = mutableListOf<WeatherNotification>()
+
+            fun walkLogic(slots: List<HourlySlot>) =
+                WalkTimeLogic(
+                    getSavedLocations = { listOf(london) },
+                    getUnits = { WeatherUnits.IMPERIAL },
+                    fetchCurrentWeather = { _, _, _, _ -> kotlin.Result.success(weather(cityName = "London")) },
+                    fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = slots))) },
+                    hasNotificationPermission = { true },
+                    postNotification = { posted += it },
+                    isWalkTimeEnabled = { true },
+                    nowEpochSeconds = { NOW },
+                )
+
+            walkLogic((8..12).map { slot(it, rain = 90) }).doWork()
+            assertTrue(posted.isEmpty())
+
+            walkLogic((8..12).map { slot(it, rain = 0) }).doWork()
+            assertEquals(NotificationKind.WALK_TIME, posted.single().kind)
+            assertEquals("Time for a walk", posted.single().title)
+            assertEquals("72° and clear in London. Sunny's waiting by the door.", posted.single().body)
+        }
+
+    // --- rain alerts ---
+
+    private fun rainFrom(startQuarter: Int) =
+        listOf(forecast(quarters = (0 until 12).map { QuarterHour(NOW + it * 900L, if (it >= startQuarter) 0.5 else 0.0) }))
+
+    @Test
+    fun `rain alerts come within the hour before rain starts`() {
+        assertEquals(NOW + 3 * 900, rainAlertFor(rainFrom(3), NOW, 0, lastAlertStart = null)?.epochSeconds)
+        // 75 minutes away: too early.
+        assertEquals(null, rainAlertFor(rainFrom(5), NOW, 0, lastAlertStart = null))
+    }
+
+    @Test
+    fun `rain alerts stay quiet at night and for rain already alerted about`() {
+        // NOW is 8:30 AM UTC; at UTC-10 it's 10:30 PM.
+        assertEquals(null, rainAlertFor(rainFrom(2), NOW, -10 * 3600, lastAlertStart = null))
+        assertEquals(null, rainAlertFor(rainFrom(2), NOW, 0, lastAlertStart = NOW - HOUR))
+        assertEquals(NOW + 2 * 900, rainAlertFor(rainFrom(2), NOW, 0, lastAlertStart = NOW - 5 * HOUR)?.epochSeconds)
+    }
+
+    @Test
+    fun `rain alert text names the time and the city`() {
+        val (title, body) = buildRainAlertContent(NextRain.Starting(DAY_START + 15 * HOUR + 900, snow = false), "Knoxville", 0)
+        assertEquals("Rain starting around 3:15 PM", title.replace('\u202F', ' '))
+        assertEquals("Rain on the way in Knoxville. Walk now or wait it out.", body)
+        assertTrue(buildRainAlertContent(NextRain.Starting(DAY_START, snow = true), "Oslo", 0).first.startsWith("Snow starting"))
     }
 
     @Test
@@ -345,7 +429,6 @@ class NotificationWorkerLogicTest {
             var capturedOffset: Int? = null
             val logic = NotificationWorkerLogic(
                 getSavedLocations = { listOf(london) },
-                getActiveIndex = { 0 },
                 getUnits = { WeatherUnits.IMPERIAL },
                 fetchCurrentWeather = { _, _, _, _ ->
                     kotlin.Result.success(weather(utcOffsetSeconds = -21600))
@@ -403,7 +486,6 @@ class NotificationWorkerLogicTest {
 
     private fun logic(
         savedLocations: List<SavedLocation> = listOf(london),
-        activeIndex: Int = 0,
         units: WeatherUnits = WeatherUnits.IMPERIAL,
         fetchCurrentWeather: suspend (WeatherUnits, String, Double?, Double?) -> kotlin.Result<CurrentWeather> =
             { _, _, _, _ -> kotlin.Result.success(weather()) },
@@ -413,9 +495,11 @@ class NotificationWorkerLogicTest {
         postNotification: (WeatherNotification) -> Unit = {},
         todayLabel: String = TODAY_LABEL,
         isDailyWeatherNotificationEnabled: () -> Boolean = { true },
+        isBriefingEnabled: Boolean = true,
+        isWalkTimeEnabled: Boolean = false,
+        scheduleWalkTime: (Long) -> Unit = {},
     ) = NotificationWorkerLogic(
         getSavedLocations = { savedLocations },
-        getActiveIndex = { activeIndex },
         getUnits = { units },
         fetchCurrentWeather = fetchCurrentWeather,
         fetchForecast = fetchForecast,
@@ -423,10 +507,46 @@ class NotificationWorkerLogicTest {
         postNotification = postNotification,
         isDailyWeatherNotificationEnabled = isDailyWeatherNotificationEnabled,
         todayLabel = { _ -> todayLabel },
+        isBriefingEnabled = { isBriefingEnabled },
+        isWalkTimeEnabled = { isWalkTimeEnabled },
+        scheduleWalkTime = scheduleWalkTime,
+        nowEpochSeconds = { NOW },
     )
 
     private companion object {
         const val TODAY_LABEL = "Mon, Jan 1"
+        const val DAY_START = 1_704_067_200L // Mon, Jan 1 2024, 00:00 UTC
+        const val HOUR = 3600L
+        const val NOW = DAY_START + 8 * HOUR + 30 * 60 // 8:30 AM
+
+        fun slot(
+            hour: Int,
+            rain: Int,
+        ) = HourlySlot(
+            timeLabel = if (hour < 12) {
+                "$hour AM"
+            } else if (hour == 12) {
+                "12 PM"
+            } else {
+                "${hour - 12} PM"
+            },
+            iconCode = "01d",
+            description = "clear",
+            temperature = 70.0,
+            feelsLike = 70.0,
+            windSpeed = 3.0,
+            windDeg = 0,
+            humidity = 50,
+            pressure = 1013,
+            units = WeatherUnits.IMPERIAL,
+            precipitationChance = rain,
+            localHour = hour,
+            epochSeconds = DAY_START + hour * HOUR,
+        )
+
+        /** Rain until 11 AM, then dry. */
+        fun wetMorningDryLater() = (8..14).map { slot(it, rain = if (it < 11) 90 else 0) }
+
         val london = SavedLocation(label = "My Location", latitude = 51.5, longitude = -0.1)
         val cityByName = SavedLocation(label = "Austin, TX", latitude = null, longitude = null)
 
@@ -437,9 +557,11 @@ class NotificationWorkerLogicTest {
             tempMax: Double = 80.0,
             description: String = "clear sky",
             utcOffsetSeconds: Int = 0,
+            conditionMain: String = "Clear",
+            cloudPercent: Int = 0,
         ) = CurrentWeather(
             cityName = cityName,
-            conditionMain = "Clear",
+            conditionMain = conditionMain,
             description = description,
             iconCode = "01d",
             temperature = temperature,
@@ -451,7 +573,7 @@ class NotificationWorkerLogicTest {
             windSpeed = 5.0,
             windDeg = 180,
             visibilityMeters = 10000,
-            cloudPercent = 0,
+            cloudPercent = cloudPercent,
             units = WeatherUnits.IMPERIAL,
             utcOffsetSeconds = utcOffsetSeconds,
         )
@@ -460,6 +582,9 @@ class NotificationWorkerLogicTest {
             tempMin: Double = 55.0,
             tempMax: Double = 85.0,
             dateLabel: String = TODAY_LABEL,
+            rainChance: Int = 0,
+            slots: List<HourlySlot> = emptyList(),
+            quarters: List<QuarterHour> = emptyList(),
         ) = DayForecast(
             dateLabel = dateLabel,
             conditionMain = "Clear",
@@ -470,6 +595,9 @@ class NotificationWorkerLogicTest {
             tempMin = tempMin,
             tempMax = tempMax,
             units = WeatherUnits.IMPERIAL,
+            hourlySlots = slots,
+            precipitationChance = rainChance,
+            quarterHours = quarters,
         )
     }
 }
