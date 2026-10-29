@@ -191,21 +191,34 @@ build artifacts.
 
 ### Trying notifications
 
-Debug builds only (`app/src/debug`), from adb, to see each kind without waiting for 8:30 or the
-weather. `sample` posts made-up text for the notification city through the real posting code,
-following *I have a dog*; `run` runs the real worker now, so walk and rain often post nothing.
+Debug builds only (`app/src/debug`), from a computer with the phone on adb, to see each kind without
+waiting for 8:30 or the weather. Release builds don't include it, and only the shell can send it
+(the receiver needs `android.permission.DUMP`). Notifications must be allowed in the app.
+
+**Samples** post made-up weather for the real notification city (My Location, otherwise the top
+city) through the real posting code, so the look, the pet picture, the channel and the tap are all
+real. The text follows *I have a dog* the way the real ones do.
 
 ```bash
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode sample --es kind briefing
 adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode sample --es kind walk
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode sample --es kind rain
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode sample --es kind snow
 ```
 
-| `mode` | `kind` |
-|--------|--------|
-| `sample` | `briefing`, `walk`, `rain`, `snow` |
-| `run` | `briefing`, `walk`, `rain` (the background refresh) |
+**The real workers** run now, with live weather and the real rules, so they may post nothing: the
+walk nudge only when it's a great time for a walk right now (and there's a dog), rain only when the
+15-minute forecast has rain within the hour, between 7 AM and 9 PM.
 
-Only the shell can send it (the receiver needs `android.permission.DUMP`). Release builds don't
-include it.
+```bash
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode run --es kind briefing
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode run --es kind walk
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode run --es kind rain
+```
+
+`run briefing` is the 8:30 run, so it also plans that day's real Walk time nudge. With more than one
+device connected, add `-s <serial>` after `adb`. Forcing the scheduled job with
+`adb shell cmd jobscheduler run` doesn't work: WorkManager won't run work before its time.
 
 ## Analytics & privacy
 
