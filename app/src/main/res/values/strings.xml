@@ -289,7 +289,7 @@
     <string name="pavement_freezing">Below freezing</string>
     <string name="pavement_icy">Icy, watch for salt</string>
     <string name="wind_calm">Calm</string>
-    <string name="wind_light_air">Light air</string>
+    <string name="wind_light_air">Light wind</string>
     <string name="wind_light_breeze">Light breeze</string>
     <string name="wind_gentle_breeze">Gentle breeze</string>
     <string name="wind_moderate_breeze">Moderate breeze</string>

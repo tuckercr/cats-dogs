@@ -2,8 +2,10 @@ package com.fangjet.weather.model
 
 import android.Manifest
 import android.app.Application
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.fangjet.weather.domain.SavedLocation
@@ -40,6 +42,7 @@ class LocationPermissionViewModel internal constructor(
     application: Application,
     private val hasLocationPermissionProvider: () -> Boolean,
     private val locationFetcher: LocationFetcher,
+    private val denials: LocationDenialStore,
 ) : AndroidViewModel(application) {
 
     @Inject
@@ -47,6 +50,7 @@ class LocationPermissionViewModel internal constructor(
         application = application,
         hasLocationPermissionProvider = { application.hasAnyLocationPermission() },
         locationFetcher = PlayServicesLocationFetcher(application),
+        denials = SharedPreferencesLocationDenialStore(application),
     )
 
     private val _state = MutableStateFlow<LocationFetchState>(LocationFetchState.Idle)
@@ -59,6 +63,36 @@ class LocationPermissionViewModel internal constructor(
         if (_state.value is LocationFetchState.Located) _state.value = LocationFetchState.Idle
     }
 
+    /**
+     * Whether asking would still show the system dialog. Android doesn't say once it has stopped
+     * (a second "Don't allow", or "Don't allow" chosen in system settings), so this goes on what
+     * the earlier requests came back with; see [onPermissionResult].
+     */
+    fun canRequestPermission(): Boolean = !hasLocationPermission() && !denials.permanentlyDenied
+
+    /**
+     * The system dialog's answer. [rationaleBefore]/[rationaleAfter] are
+     * `shouldShowRequestPermissionRationale` either side of the request: Android only shows the
+     * dialog again after a refusal while it's true, so a refusal that leaves it false, following
+     * an earlier refusal or one it was true for, means it won't ask any more. A dialog dismissed
+     * without an answer leaves it false too, which is why a first refusal alone doesn't count.
+     */
+    fun onPermissionResult(
+        granted: Boolean,
+        rationaleBefore: Boolean,
+        rationaleAfter: Boolean,
+    ) {
+        if (granted) {
+            denials.deniedBefore = false
+            denials.permanentlyDenied = false
+            fetchLocation()
+            return
+        }
+        if (!rationaleAfter && (rationaleBefore || denials.deniedBefore)) denials.permanentlyDenied = true
+        denials.deniedBefore = true
+        onPermissionDenied()
+    }
+
     fun onPermissionDenied() {
         _state.value = LocationFetchState.PermissionDenied
     }
@@ -68,6 +102,11 @@ class LocationPermissionViewModel internal constructor(
             Timber.w("fetchLocation called but permission not granted")
             _state.value = LocationFetchState.PermissionDenied
             return
+        }
+        // Granted after all, in system settings say: any earlier refusal no longer counts.
+        if (denials.deniedBefore || denials.permanentlyDenied) {
+            denials.permanentlyDenied = false
+            denials.deniedBefore = false
         }
         Timber.d("fetchLocation: starting")
         _state.value = LocationFetchState.Locating
@@ -160,3 +199,28 @@ private fun android.location.Location.toDeviceLocation() =
         latitude = latitude,
         longitude = longitude,
     )
+
+/** What earlier permission requests came back with, kept across launches. */
+internal interface LocationDenialStore {
+    var deniedBefore: Boolean
+    var permanentlyDenied: Boolean
+}
+
+private class SharedPreferencesLocationDenialStore(
+    application: Application,
+) : LocationDenialStore {
+    private val prefs = application.getSharedPreferences("location_permission", Context.MODE_PRIVATE)
+
+    override var deniedBefore: Boolean
+        get() = prefs.getBoolean(KEY_DENIED_BEFORE, false)
+        set(value) = prefs.edit { putBoolean(KEY_DENIED_BEFORE, value) }
+
+    override var permanentlyDenied: Boolean
+        get() = prefs.getBoolean(KEY_PERMANENTLY_DENIED, false)
+        set(value) = prefs.edit { putBoolean(KEY_PERMANENTLY_DENIED, value) }
+
+    private companion object {
+        const val KEY_DENIED_BEFORE = "denied_before"
+        const val KEY_PERMANENTLY_DENIED = "permanently_denied"
+    }
+}

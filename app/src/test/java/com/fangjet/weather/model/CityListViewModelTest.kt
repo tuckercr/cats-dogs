@@ -175,6 +175,58 @@ class CityListViewModelTest {
 
     // --- removeLocation ---
 
+    // --- updateCurrentLocation ---
+
+    private val myLocation = SavedLocation("My Location", 40.0, -83.0, isCurrentLocation = true)
+
+    @Test
+    fun `updateCurrentLocation moves My Location after a real move and persists it`() =
+        runTest {
+            val persisted = mutableListOf<List<SavedLocation>>()
+            val viewModel = viewModel(
+                savedLocations = listOf(austin, myLocation),
+                onSetSavedLocations = { persisted += it },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            // About 11 km north.
+            viewModel.updateCurrentLocation(myLocation.copy(latitude = 40.1, longitude = -83.0))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            val moved = myLocation.copy(latitude = 40.1)
+            assertEquals(listOf(austin, moved), viewModel.locations.value)
+            assertEquals(listOf(listOf(austin, moved)), persisted)
+        }
+
+    @Test
+    fun `updateCurrentLocation ignores GPS wobble under a kilometre`() =
+        runTest {
+            val persisted = mutableListOf<List<SavedLocation>>()
+            val viewModel = viewModel(
+                savedLocations = listOf(myLocation),
+                onSetSavedLocations = { persisted += it },
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            // About 110 m.
+            viewModel.updateCurrentLocation(myLocation.copy(latitude = 40.001))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            assertEquals(listOf(myLocation), viewModel.locations.value)
+            assertEquals(emptyList<List<SavedLocation>>(), persisted)
+        }
+
+    @Test
+    fun `updateCurrentLocation does nothing without a saved My Location`() =
+        runTest {
+            val viewModel = viewModel(savedLocations = listOf(austin))
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.updateCurrentLocation(myLocation)
+
+            assertEquals(listOf(austin), viewModel.locations.value)
+        }
+
     @Test
     fun `removeLocation removes entry at index and persists`() =
         runTest {

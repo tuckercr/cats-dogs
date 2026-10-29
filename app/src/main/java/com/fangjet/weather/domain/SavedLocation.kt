@@ -26,3 +26,20 @@ data class SavedLocation(
  * on purpose, so looking at another city's tab doesn't move tomorrow's briefing there.
  */
 fun List<SavedLocation>.notificationLocation(): SavedLocation? = firstOrNull { it.isCurrentLocation } ?: firstOrNull()
+
+/** Great-circle distance in metres, for telling a real move from GPS wobble. */
+fun distanceMeters(
+    lat1: Double,
+    lon1: Double,
+    lat2: Double,
+    lon2: Double,
+): Double {
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLon = Math.toRadians(lon2 - lon1)
+    val a = kotlin.math.sin(dLat / 2).let { it * it } +
+        kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
+        kotlin.math.sin(dLon / 2).let { it * it }
+    return 2 * EARTH_RADIUS_METERS * kotlin.math.asin(kotlin.math.sqrt(a))
+}
+
+private const val EARTH_RADIUS_METERS = 6_371_000.0

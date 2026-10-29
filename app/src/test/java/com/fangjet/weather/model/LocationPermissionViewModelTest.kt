@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -136,6 +137,68 @@ class LocationPermissionViewModelTest {
         assertEquals(LocationFetchState.PermissionDenied, viewModel.state.value)
     }
 
+    // --- permission answers ---
+
+    @Test
+    fun `a first refusal can still be asked again`() {
+        val viewModel = viewModel(hasLocationPermission = false)
+
+        viewModel.onPermissionResult(granted = false, rationaleBefore = false, rationaleAfter = true)
+
+        assertEquals(LocationFetchState.PermissionDenied, viewModel.state.value)
+        assertTrue(viewModel.canRequestPermission())
+    }
+
+    @Test
+    fun `a second refusal stops the asking`() {
+        val viewModel = viewModel(hasLocationPermission = false)
+        viewModel.onPermissionResult(granted = false, rationaleBefore = false, rationaleAfter = true)
+
+        viewModel.onPermissionResult(granted = false, rationaleBefore = true, rationaleAfter = false)
+
+        assertFalse(viewModel.canRequestPermission())
+    }
+
+    @Test
+    fun `a dialog dismissed without an answer doesn't stop the asking`() {
+        val viewModel = viewModel(hasLocationPermission = false)
+
+        viewModel.onPermissionResult(granted = false, rationaleBefore = false, rationaleAfter = false)
+
+        assertTrue(viewModel.canRequestPermission())
+    }
+
+    @Test
+    fun `a refusal with no dialog after an earlier one stops the asking`() {
+        // "Don't allow" chosen in system settings: Android refuses at once, rationale stays false.
+        val viewModel = viewModel(hasLocationPermission = false)
+        viewModel.onPermissionResult(granted = false, rationaleBefore = false, rationaleAfter = false)
+
+        viewModel.onPermissionResult(granted = false, rationaleBefore = false, rationaleAfter = false)
+
+        assertFalse(viewModel.canRequestPermission())
+    }
+
+    @Test
+    fun `a grant clears earlier refusals and fetches the location`() =
+        runTest {
+            val denials = FakeDenialStore(deniedBefore = true, permanentlyDenied = true)
+            val fetcher = FakeLocationFetcher(lastLocation = DeviceLocation(40.0, -83.0))
+            val viewModel = viewModel(locationFetcher = fetcher, denials = denials)
+
+            viewModel.onPermissionResult(granted = true, rationaleBefore = false, rationaleAfter = false)
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertTrue(viewModel.state.value is LocationFetchState.Located)
+            assertFalse(denials.deniedBefore)
+            assertFalse(denials.permanentlyDenied)
+        }
+
+    @Test
+    fun `nothing to ask for while access is on`() {
+        assertFalse(viewModel(hasLocationPermission = true).canRequestPermission())
+    }
+
     @Test
     fun `onPermissionDenied records denied state`() {
         val viewModel = viewModel()
@@ -148,11 +211,18 @@ class LocationPermissionViewModelTest {
     private fun viewModel(
         hasLocationPermission: Boolean = true,
         locationFetcher: LocationFetcher = FakeLocationFetcher(),
+        denials: LocationDenialStore = FakeDenialStore(),
     ) = LocationPermissionViewModel(
         application = mockk<Application>(relaxed = true),
         hasLocationPermissionProvider = { hasLocationPermission },
         locationFetcher = locationFetcher,
+        denials = denials,
     )
+
+    private class FakeDenialStore(
+        override var deniedBefore: Boolean = false,
+        override var permanentlyDenied: Boolean = false,
+    ) : LocationDenialStore
 
     private class FakeLocationFetcher(
         private val lastLocation: DeviceLocation? = null,
