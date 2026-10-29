@@ -1,7 +1,6 @@
 package com.fangjet.weather.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,7 +44,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -60,10 +58,8 @@ import kotlin.math.roundToInt
 @Composable
 fun LocationsRoute(
     locations: List<SavedLocation>,
-    activeIndex: Int,
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onRemove: (index: Int) -> Unit,
-    onSetActive: (index: Int) -> Unit,
     onNavigateBack: () -> Unit,
     geoViewModel: GeoLocationViewModel,
     cityListViewModel: com.fangjet.weather.model.CityListViewModel,
@@ -160,10 +156,8 @@ fun LocationsRoute(
     ) { padding ->
         DraggableLocationList(
             locations = locations,
-            activeIndex = activeIndex,
             onReorder = onReorder,
             onRemove = onRemove,
-            onSetActive = onSetActive,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
@@ -174,18 +168,15 @@ fun LocationsRoute(
 @Composable
 internal fun DraggableLocationList(
     locations: List<SavedLocation>,
-    activeIndex: Int,
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onRemove: (index: Int) -> Unit,
-    onSetActive: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffsetY by remember { mutableFloatStateOf(0f) }
     var itemHeightPx by remember { mutableIntStateOf(1) }
 
-    // Resolved here: the semantics and clickable blocks below aren't composable.
-    val makeActiveLabel = stringResource(R.string.a11y_make_active)
+    // Resolved here: the semantics block below isn't composable.
     val moveUpLabel = stringResource(R.string.a11y_move_up)
     val moveDownLabel = stringResource(R.string.a11y_move_down)
 
@@ -228,7 +219,6 @@ internal fun DraggableLocationList(
                     .background(
                         when {
                             isDragging -> MaterialTheme.colorScheme.primaryContainer
-                            index == activeIndex -> MaterialTheme.colorScheme.surfaceVariant
                             else -> MaterialTheme.colorScheme.surface
                         },
                     ),
@@ -241,11 +231,7 @@ internal fun DraggableLocationList(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = if (index == activeIndex) {
-                                    stringResource(R.string.locations_active_label, location.label)
-                                } else {
-                                    location.label
-                                },
+                                text = location.label,
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                             if (index == notificationIndex) {
@@ -257,14 +243,15 @@ internal fun DraggableLocationList(
                                 )
                             }
                             Spacer(Modifier.weight(1f))
-                            IconButton(
-                                onClick = { onRemove(index) },
-                                enabled = locations.size > 1,
-                            ) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = stringResource(R.string.cd_delete_location, location.label),
-                                )
+                            // The last city stays, so the app always has one to show: no button
+                            // for it, rather than one that does nothing (as on iOS).
+                            if (locations.size > 1) {
+                                IconButton(onClick = { onRemove(index) }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.cd_delete_location, location.label),
+                                    )
+                                }
                             }
                         }
                     },
@@ -301,20 +288,12 @@ internal fun DraggableLocationList(
                             },
                         )
                     },
-                    // ListItem merges its children into one accessibility node, so the tap and the
-                    // actions go here, on the node that also carries the city name. Tapping an
-                    // inactive row makes that city active. Reordering is drag-only on screen, so
-                    // TalkBack and Switch Access get Move up / Move down actions instead.
+                    // ListItem merges its children into one accessibility node, so the actions go
+                    // here, on the node that also carries the city name. Reordering is drag-only on
+                    // screen, so TalkBack and Switch Access get Move up / Move down actions instead.
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (index == activeIndex) {
-                                Modifier
-                            } else {
-                                Modifier.clickable(onClickLabel = makeActiveLabel) { onSetActive(index) }
-                            },
-                        ).semantics {
-                            selected = index == activeIndex
+                        .semantics {
                             customActions = listOfNotNull(
                                 if (index > 0) {
                                     CustomAccessibilityAction(moveUpLabel) {

@@ -175,9 +175,9 @@ build artifacts.
      for each kind (*Morning briefing*, *Walk time*, *Rain alerts*). Walk time only shows with a
      dog, and a kind switched off in Remote Config is hidden. A hidden switch keeps its value.
    - **Location**: permission status, or a link to the app's system settings.
-   - **Locations**: *Manage Locations* to add, reorder, delete and set the active city (the same as
-     tapping its tab). A bell marks the city notifications are for: My Location, otherwise the top
-     city.
+   - **Locations**: *Manage Locations* to add, reorder and delete cities. A bell marks the city
+     notifications are for: My Location, otherwise the top city. The city tabs on the main screen
+     choose which city it shows.
    - **Cache**: clear cached data.
    - **Privacy**: *Share usage statistics*.
    - **About**: the OpenWeather and Open-Meteo attributions and the

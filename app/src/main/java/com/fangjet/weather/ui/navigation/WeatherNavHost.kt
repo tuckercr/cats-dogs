@@ -173,10 +173,8 @@ fun WeatherNavHost(
             )
             LocationsRoute(
                 locations = cityListViewModel.locations.collectAsStateWithLifecycle().value,
-                activeIndex = cityListViewModel.activeIndex.collectAsStateWithLifecycle().value,
                 onReorder = cityListViewModel::reorderLocations,
                 onRemove = cityListViewModel::removeLocation,
-                onSetActive = cityListViewModel::setActiveIndex,
                 onNavigateBack = { navController.popBackStack() },
                 geoViewModel = geoViewModel,
                 cityListViewModel = cityListViewModel,
