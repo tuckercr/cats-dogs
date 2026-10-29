@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -56,6 +57,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fangjet.weather.BuildConfig
 import com.fangjet.weather.R
 import com.fangjet.weather.domain.UnitOverride
 import com.fangjet.weather.model.SettingsViewModel
@@ -226,6 +228,22 @@ fun SettingsRoute(
                         Intent(Intent.ACTION_VIEW, privacyUrl.toUri()),
                     )
                 },
+            )
+
+            // "Version 1.0 (1)", plus "· Debug build" in debug builds, so a screenshot says what
+            // was tested. Debug's versionNameSuffix is left off: the line says it instead.
+            Text(
+                text = stringResource(
+                    if (BuildConfig.DEBUG) R.string.settings_version_debug else R.string.settings_version,
+                    BuildConfig.VERSION_NAME.removeSuffix("-debug"),
+                    BuildConfig.VERSION_CODE,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
