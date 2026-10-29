@@ -181,8 +181,8 @@ build artifacts.
    - **Cache**: clear cached data.
    - **Privacy**: *Share usage statistics*.
    - **About**: the OpenWeather and Open-Meteo attributions, the
-     [privacy policy](https://sunnyandmisty.com/privacy), and the version at the bottom ("Version 1.0
-     (1)", with "· Debug build" in debug builds).
+     [privacy policy](https://sunnyandmisty.com/privacy), and the version at the bottom ("Version 1.0",
+     with "· Debug build" in debug builds).
 7. **Notifications**: WorkManager runs the 8:30 AM briefing (unless `daily_weather_notifications_enabled`
    is off), which also plans the one-off walk-time nudge, and refreshes
    the notification city's cached data (My Location when saved, otherwise the first city) in the background every `weather_refresh_interval_minutes`; the

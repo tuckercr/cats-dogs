@@ -230,13 +230,12 @@ fun SettingsRoute(
                 },
             )
 
-            // "Version 1.0 (1)", plus "· Debug build" in debug builds, so a screenshot says what
+            // "Version 1.0", plus "· Debug build" in debug builds, so a screenshot says what
             // was tested. Debug's versionNameSuffix is left off: the line says it instead.
             Text(
                 text = stringResource(
                     if (BuildConfig.DEBUG) R.string.settings_version_debug else R.string.settings_version,
                     BuildConfig.VERSION_NAME.removeSuffix("-debug"),
-                    BuildConfig.VERSION_CODE,
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -125,8 +125,8 @@
     <string name="settings_attribution">Weather data by OpenWeather</string>
     <string name="settings_attribution_openmeteo">Forecast data by Open-Meteo.com</string>
     <string name="settings_openmeteo_url">https://open-meteo.com</string>
-    <string name="settings_version">Version %1$s (%2$d)</string>
-    <string name="settings_version_debug">Version %1$s (%2$d) · Debug build</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_version_debug">Version %1$s · Debug build</string>
     <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_share_usage_statistics">Share usage statistics</string>
     <string name="settings_share_usage_statistics_summary">Anonymous app usage to help improve Sunny &amp; Misty</string>
