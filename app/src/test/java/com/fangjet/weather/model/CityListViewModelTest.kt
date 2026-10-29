@@ -15,7 +15,9 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -424,4 +426,16 @@ class CityListViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun `My Location is checked for a move at most every 15 minutes`() =
+        runTest {
+            val viewModel = viewModel()
+            val start = 1_000_000L
+
+            assertTrue(viewModel.claimMyLocationCheck(start))
+            assertFalse(viewModel.claimMyLocationCheck(start + 60_000))
+            assertFalse(viewModel.claimMyLocationCheck(start + MY_LOCATION_CHECK_INTERVAL_MS - 1))
+            assertTrue(viewModel.claimMyLocationCheck(start + MY_LOCATION_CHECK_INTERVAL_MS))
+        }
 }

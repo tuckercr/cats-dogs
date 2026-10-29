@@ -1,6 +1,8 @@
 package com.fangjet.weather.worker
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -20,12 +22,42 @@ internal fun Context.canPostNotifications(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
 /**
+ * Creates (or, if it exists, just renames) the channel for [kind]. Safe to call again: Android keeps
+ * the user's own choices for a channel that already exists.
+ */
+internal fun Context.createNotificationChannel(kind: NotificationKind) {
+    val (id, name, description) = when (kind) {
+        NotificationKind.MORNING_BRIEFING -> Triple(
+            WeatherApplication.CHANNEL_MORNING_BRIEFING,
+            R.string.notif_channel_briefing_name,
+            R.string.notif_channel_briefing_description,
+        )
+        NotificationKind.WALK_TIME -> Triple(
+            WeatherApplication.CHANNEL_WALK_TIME,
+            R.string.notif_channel_walk_name,
+            R.string.notif_channel_walk_description,
+        )
+        NotificationKind.RAIN -> Triple(
+            WeatherApplication.CHANNEL_RAIN,
+            R.string.notif_channel_rain_name,
+            R.string.notif_channel_rain_description,
+        )
+    }
+    val channel = NotificationChannel(id, getString(name), NotificationManager.IMPORTANCE_DEFAULT).apply {
+        this.description = getString(description)
+    }
+    getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+}
+
+/**
  * Posts a [WeatherNotification] in the brand look: the accent blue, the pets in the notification's
  * mood, and the full text when expanded. Each kind has its own channel and id, so a walk nudge
  * never replaces the morning briefing.
  */
 internal fun Context.postWeatherNotification(notification: WeatherNotification) {
     if (!canPostNotifications()) return
+    // Made when needed: a notification never goes to a channel that doesn't exist yet.
+    createNotificationChannel(notification.kind)
     val tapIntent = Intent(this, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }

@@ -129,6 +129,20 @@ class CityListViewModel internal constructor(
         viewModelScope.launch { preferencesRepository.setSavedLocations(updated) }
     }
 
+    private var myLocationCheckedAt: Long? = null
+
+    /**
+     * Whether it's time to check whether My Location has moved, and if so, notes the time: at
+     * most every [MY_LOCATION_CHECK_INTERVAL_MS], so switching in and out of the app doesn't fetch
+     * the position each time. Adding My Location doesn't ask; it always fetches.
+     */
+    fun claimMyLocationCheck(nowMillis: Long = System.currentTimeMillis()): Boolean {
+        val last = myLocationCheckedAt
+        if (last != null && nowMillis - last < MY_LOCATION_CHECK_INTERVAL_MS) return false
+        myLocationCheckedAt = nowMillis
+        return true
+    }
+
     fun removeLocation(index: Int) {
         val updated = _locations.value.toMutableList().apply { removeAt(index) }
         val newIdx = _activeIndex.value.coerceIn(0, (updated.size - 1).coerceAtLeast(0))
@@ -175,3 +189,5 @@ class CityListViewModel internal constructor(
 
 /** How far the device has to move before My Location follows it. */
 internal const val MY_LOCATION_MOVE_METERS = 1_000.0
+
+internal const val MY_LOCATION_CHECK_INTERVAL_MS = 15 * 60 * 1000L

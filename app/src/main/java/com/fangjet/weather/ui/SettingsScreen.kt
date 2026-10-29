@@ -1,9 +1,9 @@
 package com.fangjet.weather.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +23,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -55,57 +57,37 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fangjet.weather.BuildConfig
 import com.fangjet.weather.R
 import com.fangjet.weather.domain.UnitOverride
 import com.fangjet.weather.model.SettingsViewModel
+import com.fangjet.weather.worker.canPostNotifications
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsRoute(
     onNavigateBack: () -> Unit,
+    onOpenNotifications: () -> Unit = {},
     onOpenLocations: () -> Unit = {},
 ) {
     val viewModel = hiltViewModel<SettingsViewModel>()
     val unitOverride by viewModel.unitOverride.collectAsStateWithLifecycle()
     val shareUsageStatistics by viewModel.shareUsageStatistics.collectAsStateWithLifecycle()
     val showWalkCard by viewModel.showWalkCard.collectAsStateWithLifecycle()
-    val notifyMorningBriefing by viewModel.notifyMorningBriefing.collectAsStateWithLifecycle()
-    val notifyWalkTime by viewModel.notifyWalkTime.collectAsStateWithLifecycle()
-    val notifyRain by viewModel.notifyRain.collectAsStateWithLifecycle()
+    val notificationsOnCount by viewModel.notificationsOnCount.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val cacheClearedMessage = stringResource(R.string.settings_cache_cleared)
 
-    fun isLocationGranted() =
+    val locationGranted = rememberGrantedOnResume {
         ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_COARSE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED
-
-    fun isNotificationGranted() =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-
-    var locationGranted by remember { mutableStateOf(isLocationGranted()) }
-    var notificationGranted by remember { mutableStateOf(isNotificationGranted()) }
-
-    // Re-check each time the screen returns to foreground (user may have toggled in App Settings).
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                locationGranted = isLocationGranted()
-                notificationGranted = isNotificationGranted()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val notificationGranted = rememberGrantedOnResume { context.canPostNotifications() }
 
     Scaffold(
         topBar = {
@@ -146,12 +128,24 @@ fun SettingsRoute(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader(stringResource(R.string.settings_section_main_screen))
+            SettingsSectionHeader(stringResource(R.string.settings_section_my_pets))
+            // One switch for everything dog: the walk card, Paw check and the walk notifications.
             SettingsSwitchRow(
                 label = stringResource(R.string.settings_show_walk_card),
                 summary = stringResource(R.string.settings_show_walk_card_summary),
                 checked = showWalkCard,
                 onCheckedChange = viewModel::setShowWalkCard,
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SettingsNavRow(
+                label = stringResource(R.string.settings_notifications),
+                value = if (notificationGranted && notificationsOnCount > 0) {
+                    stringResource(R.string.settings_notifications_on_count, notificationsOnCount)
+                } else {
+                    stringResource(R.string.settings_notifications_off)
+                },
+                onClick = onOpenNotifications,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -169,48 +163,7 @@ fun SettingsRoute(
             } else {
                 SettingsLinkRow(
                     label = stringResource(R.string.settings_location_required),
-                    onClick = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = "package:${context.packageName}".toUri()
-                            },
-                        )
-                    },
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SettingsSectionHeader(stringResource(R.string.settings_section_notifications))
-
-            if (notificationGranted) {
-                SettingsSwitchRow(
-                    label = stringResource(R.string.settings_notify_briefing),
-                    summary = stringResource(R.string.settings_notify_briefing_summary),
-                    checked = notifyMorningBriefing,
-                    onCheckedChange = viewModel::setNotifyMorningBriefing,
-                )
-                SettingsSwitchRow(
-                    label = stringResource(R.string.settings_notify_walk),
-                    summary = stringResource(R.string.settings_notify_walk_summary),
-                    checked = notifyWalkTime,
-                    onCheckedChange = viewModel::setNotifyWalkTime,
-                )
-                SettingsSwitchRow(
-                    label = stringResource(R.string.settings_notify_rain),
-                    summary = stringResource(R.string.settings_notify_rain_summary),
-                    checked = notifyRain,
-                    onCheckedChange = viewModel::setNotifyRain,
-                )
-            } else {
-                SettingsLinkRow(
-                    label = stringResource(R.string.settings_notifications_disabled),
-                    onClick = {
-                        context.startActivity(
-                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = "package:${context.packageName}".toUri()
-                            },
-                        )
-                    },
+                    onClick = context::openAppDetailsSettings,
                 )
             }
 
@@ -277,13 +230,51 @@ fun SettingsRoute(
                 },
             )
 
+            // "Version 1.0", plus "· Debug build" in debug builds, so a screenshot says what
+            // was tested. Debug's versionNameSuffix is left off: the line says it instead.
+            Text(
+                text = stringResource(
+                    if (BuildConfig.DEBUG) R.string.settings_version_debug else R.string.settings_version,
+                    BuildConfig.VERSION_NAME.removeSuffix("-debug"),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
+/** Re-checked each time the screen comes back to the foreground (it may have changed in App Settings). */
 @Composable
-private fun SettingsSectionHeader(title: String) {
+internal fun rememberGrantedOnResume(check: () -> Boolean): Boolean {
+    var granted by remember { mutableStateOf(check()) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) granted = check()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    return granted
+}
+
+internal fun Context.openAppDetailsSettings() {
+    startActivity(
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = "package:$packageName".toUri()
+        },
+    )
+}
+
+@Composable
+internal fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.labelSmall,
@@ -315,8 +306,38 @@ private fun UnitOptionRow(
     }
 }
 
+/** A row that opens another screen: its label, a short value ("2 on") and a chevron. */
 @Composable
-private fun SettingsLinkRow(
+private fun SettingsNavRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(start = 16.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
+
+@Composable
+internal fun SettingsLinkRow(
     label: String,
     onClick: () -> Unit,
 ) {
@@ -334,7 +355,7 @@ private fun SettingsLinkRow(
 }
 
 @Composable
-private fun SettingsSwitchRow(
+internal fun SettingsSwitchRow(
     label: String,
     summary: String? = null,
     checked: Boolean,

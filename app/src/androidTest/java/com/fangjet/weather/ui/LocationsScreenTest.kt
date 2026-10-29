@@ -4,16 +4,13 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.performClick
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.ui.theme.CatsDogsTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -28,17 +25,14 @@ class LocationsScreenTest {
     )
 
     private var reordered: Pair<Int, Int>? = null
-    private var activated: Int? = null
 
-    private fun setList(activeIndex: Int = 0) {
+    private fun setList(locations: List<SavedLocation> = this.locations) {
         composeRule.setContent {
             CatsDogsTheme {
                 DraggableLocationList(
                     locations = locations,
-                    activeIndex = activeIndex,
                     onReorder = { from, to -> reordered = from to to },
                     onRemove = {},
-                    onSetActive = { activated = it },
                 )
             }
         }
@@ -77,14 +71,12 @@ class LocationsScreenTest {
     }
 
     @Test
-    fun tappingAnInactiveRowMakesItActive() {
-        setList(activeIndex = 0)
+    fun rowsAreNotTappableAndTheBellMarksTheNotificationCity() {
+        setList()
 
-        row("Tokyo, JP").performClick()
-        assertEquals(1, activated)
-
-        row("London, GB (Active)").assert(hasClickAction().not()).assertIsSelected()
-        assertNull(reordered)
+        row("London, GB").assert(hasClickAction().not())
+        row("Tokyo, JP").assert(hasClickAction().not())
+        composeRule.onNodeWithContentDescription("Notifications").assertIsDisplayed()
     }
 
     @Test
@@ -93,5 +85,12 @@ class LocationsScreenTest {
 
         composeRule.onNodeWithContentDescription("Delete London, GB").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Delete Tokyo, JP").assertIsDisplayed()
+    }
+
+    @Test
+    fun theLastCityHasNoDeleteButton() {
+        setList(locations.take(1))
+
+        composeRule.onNodeWithContentDescription("Delete London, GB").assertDoesNotExist()
     }
 }

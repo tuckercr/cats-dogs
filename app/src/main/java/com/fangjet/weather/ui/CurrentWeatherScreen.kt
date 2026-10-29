@@ -1,5 +1,6 @@
 package com.fangjet.weather.ui
 
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -166,6 +167,8 @@ internal fun rememberAddMyLocation(
     autoAdd: Boolean = false,
     locationsLoaded: Boolean = true,
     onRefreshed: (SavedLocation) -> Unit = {},
+    // Whether a saved My Location is due a move check (at most every 15 minutes).
+    claimRefresh: () -> Boolean = { true },
     viewModel: LocationPermissionViewModel = hiltViewModel(),
 ): (() -> Unit)? {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -198,8 +201,10 @@ internal fun rememberAddMyLocation(
             when {
                 !granted -> Unit
                 currentHasCurrentLocation -> {
-                    fetchingToAdd = false
-                    viewModel.fetchLocation()
+                    if (claimRefresh()) {
+                        fetchingToAdd = false
+                        viewModel.fetchLocation()
+                    }
                 }
                 newlyGranted || !currentHasAnyLocation -> {
                     fetchingToAdd = true
@@ -209,7 +214,13 @@ internal fun rememberAddMyLocation(
         }
     }
 
+    val context = LocalContext.current
     LaunchedEffect(state) {
+        // The sheet has closed by now, so a fix that fails to add My Location says so here.
+        if (state == LocationFetchState.Failed && fetchingToAdd) {
+            fetchingToAdd = false
+            Toast.makeText(context, R.string.add_my_location_failed, Toast.LENGTH_LONG).show()
+        }
         val located = state as? LocationFetchState.Located ?: return@LaunchedEffect
         // Handled once: a Located still held when this screen comes back (from another screen,
         // or after rotation) must not re-add a My Location the user has since removed.
@@ -315,6 +326,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
         autoAdd = true,
         locationsLoaded = locationsLoaded,
         onRefreshed = cityListViewModel::updateCurrentLocation,
+        claimRefresh = { cityListViewModel.claimMyLocationCheck() },
     )
 
     var showAddSheet by remember { mutableStateOf(false) }

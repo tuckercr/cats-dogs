@@ -44,7 +44,12 @@ class WalkTimeWorker @AssistedInject constructor(
         },
         hasNotificationPermission = context::canPostNotifications,
         postNotification = context::postWeatherNotification,
-        isWalkTimeEnabled = { preferencesRepository.notifyWalkTime.first() },
+        // Checked again when it fires: the dog, or Remote Config, may have turned it off since.
+        isWalkTimeEnabled = {
+            remoteConfigRepository.walkTimeNotificationsEnabled() &&
+                preferencesRepository.notifyWalkTime.first() &&
+                preferencesRepository.showWalkCard.first()
+        },
         petWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
     )
 

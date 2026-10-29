@@ -25,7 +25,10 @@ data class SavedLocation(
  * The city notifications are about: My Location when it's saved, otherwise the first city. Fixed
  * on purpose, so looking at another city's tab doesn't move tomorrow's briefing there.
  */
-fun List<SavedLocation>.notificationLocation(): SavedLocation? = firstOrNull { it.isCurrentLocation } ?: firstOrNull()
+fun List<SavedLocation>.notificationLocation(): SavedLocation? = notificationIndex()?.let(::get)
+
+/** Where [notificationLocation] is in the list, for marking it in Manage Locations. */
+fun List<SavedLocation>.notificationIndex(): Int? = indexOfFirst { it.isCurrentLocation }.takeIf { it >= 0 } ?: indices.firstOrNull()
 
 /** Great-circle distance in metres, for telling a real move from GPS wobble. */
 fun distanceMeters(

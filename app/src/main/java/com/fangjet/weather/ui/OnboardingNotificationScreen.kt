@@ -36,6 +36,9 @@ fun OnboardingNotificationScreen(
     modifier: Modifier = Modifier,
     // The answer to the dog question just before: with a dog, the walk-time nudge is mentioned too.
     hasDog: Boolean = true,
+    // Remote Config: a kind switched off for everyone isn't mentioned.
+    walkTimeEnabled: Boolean = true,
+    rainEnabled: Boolean = true,
 ) {
     LaunchedEffect(Unit) {
         Timber.d("screen shown")
@@ -70,8 +73,9 @@ fun OnboardingNotificationScreen(
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = stringResource(if (hasDog) R.string.notif_onboarding_body_dog else R.string.notif_onboarding_body) +
-                "\n\n" + stringResource(R.string.notif_onboarding_rain_hint),
+            text = stringResource(
+                if (hasDog && walkTimeEnabled) R.string.notif_onboarding_body_dog else R.string.notif_onboarding_body,
+            ) + if (rainEnabled) "\n\n" + stringResource(R.string.notif_onboarding_rain_hint) else "",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
