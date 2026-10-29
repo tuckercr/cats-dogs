@@ -1,9 +1,31 @@
+<!--
+  The status bar icon: the paw print from the themed launcher icon (ic_launcher_monochrome), cropped
+  to fill the space. Android shows it as a white silhouette, so it has to be a single colour.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M6.76,4.84l-1.8,-1.79 -1.41,1.41 1.79,1.79 1.42,-1.41zM4,10.5H1v2h3v-2zm9,-9.95h-2V3.5h2V0.55zm7.45,3.91l-1.41,-1.41 -1.79,1.79 1.41,1.41 1.79,-1.79zm-3.21,13.7l1.79,1.8 1.41,-1.41 -1.8,-1.79 -1.4,1.4zM20,10.5v2h3v-2h-3zm-8,-5c-3.31,0 -6,2.69 -6,6s2.69,6 6,6 6,-2.69 6,-6 -2.69,-6 -6,-6zm-1,16.95h2V19.5h-2v2.95zm-7.45,-3.91l1.41,1.41 1.79,-1.8 -1.41,-1.41 -1.79,1.8z" />
+    android:viewportWidth="60"
+    android:viewportHeight="60">
+    <group
+        android:translateX="-25"
+        android:translateY="-30">
+        <!-- Toe beans -->
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M27.5,52 a6.5,8.5 0 1,0 13,0 a6.5,8.5 0 1,0 -13,0 z" />
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M41,44 a7,9 0 1,0 14,0 a7,9 0 1,0 -14,0 z" />
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M55,44 a7,9 0 1,0 14,0 a7,9 0 1,0 -14,0 z" />
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M69.5,52 a6.5,8.5 0 1,0 13,0 a6.5,8.5 0 1,0 -13,0 z" />
+        <!-- Main pad -->
+        <path
+            android:fillColor="@android:color/white"
+            android:pathData="M37,71 a18,15 0 1,0 36,0 a18,15 0 1,0 -36,0 z" />
+    </group>
 </vector>

@@ -111,6 +111,8 @@ class RemoteConfigRepositoryTest {
         set(RemoteConfigRepository.KEY_WALK_CARD_ENABLED, "false")
         set(RemoteConfigRepository.KEY_OPEN_METEO_ENABLED, "false")
         set(RemoteConfigRepository.KEY_DAILY_WEATHER_NOTIFICATIONS_ENABLED, "false")
+        set(RemoteConfigRepository.KEY_WALK_TIME_NOTIFICATIONS_ENABLED, "false")
+        set(RemoteConfigRepository.KEY_RAIN_NOTIFICATIONS_ENABLED, "false")
         set(RemoteConfigRepository.KEY_FOREGROUND_REFRESH_MIN_MINUTES, "15")
         set(RemoteConfigRepository.KEY_ANALYTICS_ENABLED, "false")
         val repo = RemoteConfigRepository(context)
@@ -121,6 +123,8 @@ class RemoteConfigRepositoryTest {
         assertFalse(repo.walkCardEnabled())
         assertFalse(repo.openMeteoEnabled())
         assertFalse(repo.dailyWeatherNotificationsEnabled())
+        assertFalse(repo.walkTimeNotificationsEnabled())
+        assertFalse(repo.rainNotificationsEnabled())
         assertEquals(15L, repo.foregroundRefreshMinMinutes())
         assertFalse(repo.analyticsEnabled())
     }
@@ -237,6 +241,8 @@ class RemoteConfigRepositoryTest {
             RemoteConfigRepository.DEFAULT_DAILY_WEATHER_NOTIFICATIONS_ENABLED,
             repo.dailyWeatherNotificationsEnabled(),
         )
+        assertEquals(RemoteConfigRepository.DEFAULT_WALK_TIME_NOTIFICATIONS_ENABLED, repo.walkTimeNotificationsEnabled())
+        assertEquals(RemoteConfigRepository.DEFAULT_RAIN_NOTIFICATIONS_ENABLED, repo.rainNotificationsEnabled())
         assertEquals(RemoteConfigRepository.DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES, repo.foregroundRefreshMinMinutes())
         assertEquals(RemoteConfigRepository.DEFAULT_ANALYTICS_ENABLED, repo.analyticsEnabled())
         assertNull(repo.openWeatherApiKey())

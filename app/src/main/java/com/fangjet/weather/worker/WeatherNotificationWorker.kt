@@ -46,6 +46,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
         hasNotificationPermission = context::canPostNotifications,
         postNotification = context::postWeatherNotification,
         isDailyWeatherNotificationEnabled = remoteConfigRepository::dailyWeatherNotificationsEnabled,
+        isWalkTimeRemotelyEnabled = remoteConfigRepository::walkTimeNotificationsEnabled,
         petWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
         isBriefingEnabled = { preferencesRepository.notifyMorningBriefing.first() },
         hasDog = { preferencesRepository.showWalkCard.first() },

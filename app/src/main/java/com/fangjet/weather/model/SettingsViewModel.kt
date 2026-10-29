@@ -3,9 +3,12 @@ package com.fangjet.weather.model
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fangjet.weather.data.PreferencesRepository
+import com.fangjet.weather.data.RemoteConfigRepository
 import com.fangjet.weather.domain.UnitOverride
+import com.fangjet.weather.worker.NotificationKind
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -13,6 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferencesRepository: PreferencesRepository,
+    private val remoteConfigRepository: RemoteConfigRepository,
 ) : ViewModel() {
 
     val unitOverride = preferencesRepository.unitOverride
@@ -30,7 +34,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferencesRepository.setShareUsageStatistics(enabled) }
     }
 
-    /** "Best walk time" on the main screen. */
+    /**
+     * "I have a dog": the walk card, Paw check, the briefing's walk sentence and Walk time. Walk time
+     * keeps its own value, so turning the dog back on brings it back as it was.
+     */
     val showWalkCard = preferencesRepository.showWalkCard
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
@@ -45,6 +52,26 @@ class SettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
     val notifyRain = preferencesRepository.notifyRain
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Whether a kind's switch shows in Settings: not while Remote Config has it off for everyone
+     * (Walk time also needs a dog, which the screen checks). A hidden switch keeps its value.
+     */
+    internal fun remotelyEnabled(kind: NotificationKind) = remoteConfigRepository.notificationsEnabled(kind)
+
+    /** For the Notifications row in Settings: how many of the shown switches are on. */
+    val notificationsOnCount = combine(
+        preferencesRepository.notifyMorningBriefing,
+        preferencesRepository.notifyWalkTime,
+        preferencesRepository.notifyRain,
+        preferencesRepository.showWalkCard,
+    ) { briefing, walk, rain, dog ->
+        listOf(
+            briefing && remotelyEnabled(NotificationKind.MORNING_BRIEFING),
+            walk && dog && remotelyEnabled(NotificationKind.WALK_TIME),
+            rain && remotelyEnabled(NotificationKind.RAIN),
+        ).count { it }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     fun setNotifyMorningBriefing(enabled: Boolean) {
         viewModelScope.launch { preferencesRepository.setNotifyMorningBriefing(enabled) }

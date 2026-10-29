@@ -32,7 +32,7 @@ WorkManager, and CI on GitHub Actions.
   below the warm-pavement limit (estimated, with Open-Meteo); when it is raining now, now never counts,
   whatever the hourly forecast says. A suggestion on the city's next calendar day reads "Tomorrow
   around…", judged in the city's own UTC offset. The paw is tinted by the rating, and a caption
-  explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn it off in Settings (*Dog walking*, which hides the Paw check tile too), and
+  explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn it off in Settings (*I have a dog*, which hides the Paw check tile too), and
   `walk_card_enabled` hides it remotely.
 - **Next rain** line under the top card, only when rain or snow is due in the next 2 hours: "Rain
   starting around 3:15 PM", "Rain stopping around 4:30 PM" or "Rain for the next 2 hours", from
@@ -65,8 +65,8 @@ WorkManager, and CI on GitHub Actions.
   - *Morning briefing* at 8:30 AM device time (on): "52° and partly cloudy in Knoxville / High
     70°, low 45°, 60% chance of rain. Sunny's picked 1 PM for a walk." The walk sentence only comes
     with a dog at home; the rain chance from 40%.
-  - *Walk time* (on with a dog, off without): the morning run plans a nudge for the day's best walk
-    time, which checks again when it's due and only goes if now is still a great time.
+  - *Walk time* (only with a dog): the morning run plans a nudge for the day's best walk time, which
+    checks again when it's due and only goes if now is still a great time (and there's still a dog).
   - *Rain alerts* (off): the background refresh alerts up to an hour before rain or snow starts,
     from the 15-minute forecast, between 7 AM and 9 PM city time, once per shower.
   `daily_weather_notifications_enabled` switches the briefing off remotely.
@@ -82,7 +82,7 @@ WorkManager, and CI on GitHub Actions.
 
 | Pets, walk time & hourly | Today tiles & Paw check | Radar & rest of week | Day detail | Settings |
 |---|---|---|---|---|
-| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, Dog walking and a switch for each notification](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, I have a dog and notifications](./screenshots/settings.png) |
 
 On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
 
@@ -165,16 +165,47 @@ build artifacts.
    every 10 minutes, so a timeline that old is refetched on resume and every 10 minutes while the
    screen is resumed; the current loop stays on screen during the refresh, and a failed refresh
    keeps it.
-6. **Settings**: choose temperature units (System default / Celsius / Fahrenheit), turn *Dog walking*
-   (the walk card and the Paw check tile) on or off, switch each notification on or off, see location and notification permission status, manage saved locations, clear cached data, open the
-   OpenWeather and Open-Meteo attributions, turn *Share usage statistics* off, and open the
-   [privacy policy](https://sunnyandmisty.com/privacy).
+6. **Settings**, top to bottom:
+   - **Units**: System default, Celsius (°C) or Fahrenheit (°F).
+   - **My Pets**: *I have a dog* turns on the walk card, the Paw check tile, the briefing's walk
+     sentence and the Walk time notification ("Walk times, pavement checks and walk reminders").
+     The Walk time notification channel is only created once there's a dog, and never deleted.
+   - **Notifications**: a row showing how many are on ("2 on", or "Off"), which opens its own
+     screen: a link to the app's system settings while notifications aren't allowed, then a switch
+     for each kind (*Morning briefing*, *Walk time*, *Rain alerts*). Walk time only shows with a
+     dog, and a kind switched off in Remote Config is hidden. A hidden switch keeps its value.
+   - **Location**: permission status, or a link to the app's system settings.
+   - **Locations**: *Manage Locations* to add, reorder, delete and set the active city (the same as
+     tapping its tab). A bell marks the city notifications are for: My Location, otherwise the top
+     city.
+   - **Cache**: clear cached data.
+   - **Privacy**: *Share usage statistics*.
+   - **About**: the OpenWeather and Open-Meteo attributions and the
+     [privacy policy](https://sunnyandmisty.com/privacy).
 7. **Notifications**: WorkManager runs the 8:30 AM briefing (unless `daily_weather_notifications_enabled`
    is off), which also plans the one-off walk-time nudge, and refreshes
    the notification city's cached data (My Location when saved, otherwise the first city) in the background every `weather_refresh_interval_minutes`; the
    schedule survives reboots.
 8. **Error handling**: network failures, HTTP errors, empty API keys, and malformed payloads all
    surface as inline error messages with *Retry* where appropriate.
+
+### Trying notifications
+
+Debug builds only (`app/src/debug`), from adb, to see each kind without waiting for 8:30 or the
+weather. `sample` posts made-up text for the notification city through the real posting code,
+following *I have a dog*; `run` runs the real worker now, so walk and rain often post nothing.
+
+```bash
+adb shell am broadcast -n com.fangjet.weather.debug/com.fangjet.weather.DebugNotifications --es mode sample --es kind walk
+```
+
+| `mode` | `kind` |
+|--------|--------|
+| `sample` | `briefing`, `walk`, `rain`, `snow` |
+| `run` | `briefing`, `walk`, `rain` (the background refresh) |
+
+Only the shell can send it (the receiver needs `android.permission.DUMP`). Release builds don't
+include it.
 
 ## Analytics & privacy
 
@@ -232,7 +263,9 @@ validated: a missing or bad value falls back to the default rather than crashing
 | `walk_card_enabled` | boolean | `true` | Shows the "Best walk time" card; false hides it for everyone (phone and tablet layouts). Users can also turn it off in Settings |
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `openweather_api_key` | string | `""` | Replacement OpenWeather API key, used from the next app start; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
-| `daily_weather_notifications_enabled` | boolean | `true` | Posts the 8:30 AM morning briefing; false skips it (the morning run still plans the walk-time nudge). Walk time and rain alerts have their own switches in Settings |
+| `daily_weather_notifications_enabled` | boolean | `true` | The 8:30 AM morning briefing; false skips it (the morning run still plans the walk-time nudge) and hides its switch in Settings |
+| `walk_time_notifications_enabled` | boolean | `true` | The Walk time nudge; false stops planning and posting it and hides its switch in Settings |
+| `rain_notifications_enabled` | boolean | `true` | Rain alerts; false stops them and hides their switch in Settings |
 | `foreground_refresh_min_minutes` | number | `0` | Skips the silent refresh on returning to the foreground if that city's weather (or forecast, tracked separately) was fetched within this many minutes in this session; outside 0–1440 falls back to 0, which always refreshes. Pull-to-refresh, retry and switching cities are never throttled |
 | `walk_hot_pavement_c` | number | `52` | Pavement °C at or above which the walk rating is *Paws hot* and that hour is not walkable; valid 40–70 |
 | `walk_warm_pavement_c` | number | `45` | Pavement °C at or above which the Today Paw check tile says *Getting hot* and that hour is not suggested for a walk (a walk now rates *Okay*); valid 30–65, and below `walk_hot_pavement_c` (otherwise 7 below it) |

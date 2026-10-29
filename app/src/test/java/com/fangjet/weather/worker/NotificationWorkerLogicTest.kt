@@ -325,10 +325,48 @@ class NotificationWorkerLogicTest {
             logic(
                 fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = wetMorningDryLater()))) },
                 isWalkTimeEnabled = true,
+                hasDog = true,
                 scheduleWalkTime = { planned = it },
             ).doWork()
 
             assertEquals(DAY_START + 11 * HOUR, planned)
+        }
+
+    @Test
+    fun `Remote Config can switch the walk nudge off for everyone`() =
+        runTest {
+            var planned: Long? = null
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = wetMorningDryLater()))) },
+                isWalkTimeEnabled = true,
+                isWalkTimeRemotelyEnabled = false,
+                hasDog = true,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+            assertEquals(null, planned)
+        }
+
+    @Test
+    fun `no walk nudge without a dog, even with its switch on`() =
+        runTest {
+            var planned: Long? = null
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(listOf(forecast(slots = wetMorningDryLater()))) },
+                isWalkTimeEnabled = true,
+                hasDog = false,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+            assertEquals(null, planned)
+
+            val dry = listOf(forecast(slots = (8..12).map { slot(it, rain = 0) }))
+            logic(
+                fetchForecast = { _, _, _, _ -> kotlin.Result.success(dry) },
+                isWalkTimeEnabled = true,
+                isBriefingEnabled = false,
+                hasDog = false,
+                scheduleWalkTime = { planned = it },
+            ).doWork()
+            assertEquals(null, planned)
         }
 
     @Test
@@ -356,7 +394,7 @@ class NotificationWorkerLogicTest {
                 _,
                 ->
                 kotlin.Result.success(dry)
-            }, isWalkTimeEnabled = true, scheduleWalkTime = { planned = it })
+            }, isWalkTimeEnabled = true, hasDog = true, scheduleWalkTime = { planned = it })
                 .doWork()
             assertEquals(null, planned)
 
@@ -364,6 +402,7 @@ class NotificationWorkerLogicTest {
                 fetchForecast = { _, _, _, _ -> kotlin.Result.success(dry) },
                 isWalkTimeEnabled = true,
                 isBriefingEnabled = false,
+                hasDog = true,
                 scheduleWalkTime = { planned = it },
             ).doWork()
             assertEquals(NOW, planned)
@@ -416,11 +455,18 @@ class NotificationWorkerLogicTest {
     }
 
     @Test
-    fun `rain alert text names the time and the city`() {
-        val (title, body) = buildRainAlertContent(NextRain.Starting(DAY_START + 15 * HOUR + 900, snow = false), "Knoxville", 0)
+    fun `rain alert text names the time and the city, and mentions the walk only with a dog`() {
+        val rain = NextRain.Starting(DAY_START + 15 * HOUR + 900, snow = false)
+        val (title, body) = buildRainAlertContent(rain, "Knoxville", 0, hasDog = true)
         assertEquals("Rain starting around 3:15 PM", title.replace('\u202F', ' '))
         assertEquals("Rain on the way in Knoxville. Walk now or wait it out.", body)
-        assertTrue(buildRainAlertContent(NextRain.Starting(DAY_START, snow = true), "Oslo", 0).first.startsWith("Snow starting"))
+        assertEquals(
+            "Rain on the way in Knoxville. Misty's staying in.",
+            buildRainAlertContent(rain, "Knoxville", 0, hasDog = false).second,
+        )
+        assertTrue(
+            buildRainAlertContent(NextRain.Starting(DAY_START, snow = true), "Oslo", 0, hasDog = true).first.startsWith("Snow starting"),
+        )
     }
 
     @Test
@@ -497,6 +543,8 @@ class NotificationWorkerLogicTest {
         isDailyWeatherNotificationEnabled: () -> Boolean = { true },
         isBriefingEnabled: Boolean = true,
         isWalkTimeEnabled: Boolean = false,
+        isWalkTimeRemotelyEnabled: Boolean = true,
+        hasDog: Boolean = false,
         scheduleWalkTime: (Long) -> Unit = {},
     ) = NotificationWorkerLogic(
         getSavedLocations = { savedLocations },
@@ -509,6 +557,8 @@ class NotificationWorkerLogicTest {
         todayLabel = { _ -> todayLabel },
         isBriefingEnabled = { isBriefingEnabled },
         isWalkTimeEnabled = { isWalkTimeEnabled },
+        isWalkTimeRemotelyEnabled = { isWalkTimeRemotelyEnabled },
+        hasDog = { hasDog },
         scheduleWalkTime = scheduleWalkTime,
         nowEpochSeconds = { NOW },
     )

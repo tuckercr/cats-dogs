@@ -3,6 +3,7 @@ package com.fangjet.weather.data
 import android.content.Context
 import com.fangjet.weather.R
 import com.fangjet.weather.domain.PetWeatherThresholds
+import com.fangjet.weather.worker.NotificationKind
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
@@ -78,12 +79,23 @@ class RemoteConfigRepository @Inject constructor(
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
 
-    /**
-     * Daily 9 / 13 / 19 weather-summary notifications. False skips posting them (the scheduled
-     * work still runs). Other notification types will have their own switches.
-     */
+    /** The morning briefing. False skips posting it (the 8:30 run still plans the walk nudge). */
     fun dailyWeatherNotificationsEnabled(): Boolean =
         boolean(KEY_DAILY_WEATHER_NOTIFICATIONS_ENABLED) ?: DEFAULT_DAILY_WEATHER_NOTIFICATIONS_ENABLED
+
+    /** The Walk time nudge. False stops planning and posting it. */
+    fun walkTimeNotificationsEnabled(): Boolean = boolean(KEY_WALK_TIME_NOTIFICATIONS_ENABLED) ?: DEFAULT_WALK_TIME_NOTIFICATIONS_ENABLED
+
+    /** Rain alerts. False stops posting them. */
+    fun rainNotificationsEnabled(): Boolean = boolean(KEY_RAIN_NOTIFICATIONS_ENABLED) ?: DEFAULT_RAIN_NOTIFICATIONS_ENABLED
+
+    /** Each kind of notification can be switched off for everyone; Settings then hides its switch. */
+    internal fun notificationsEnabled(kind: NotificationKind): Boolean =
+        when (kind) {
+            NotificationKind.MORNING_BRIEFING -> dailyWeatherNotificationsEnabled()
+            NotificationKind.WALK_TIME -> walkTimeNotificationsEnabled()
+            NotificationKind.RAIN -> rainNotificationsEnabled()
+        }
 
     /**
      * Minimum minutes between silent foreground-resume refreshes of the same city. 0 always
@@ -185,6 +197,10 @@ class RemoteConfigRepository @Inject constructor(
 
         const val KEY_DAILY_WEATHER_NOTIFICATIONS_ENABLED = "daily_weather_notifications_enabled"
         const val DEFAULT_DAILY_WEATHER_NOTIFICATIONS_ENABLED = true
+        const val KEY_WALK_TIME_NOTIFICATIONS_ENABLED = "walk_time_notifications_enabled"
+        const val DEFAULT_WALK_TIME_NOTIFICATIONS_ENABLED = true
+        const val KEY_RAIN_NOTIFICATIONS_ENABLED = "rain_notifications_enabled"
+        const val DEFAULT_RAIN_NOTIFICATIONS_ENABLED = true
 
         const val KEY_FOREGROUND_REFRESH_MIN_MINUTES = "foreground_refresh_min_minutes"
         const val DEFAULT_FOREGROUND_REFRESH_MIN_MINUTES = 0L

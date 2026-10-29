@@ -20,14 +20,17 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.fangjet.weather.model.CityListViewModel
+import com.fangjet.weather.model.SettingsViewModel
 import com.fangjet.weather.model.WelcomeViewModel
 import com.fangjet.weather.ui.CurrentWeatherRoute
 import com.fangjet.weather.ui.LocationsRoute
+import com.fangjet.weather.ui.NotificationSettingsRoute
 import com.fangjet.weather.ui.OnboardingDogScreen
 import com.fangjet.weather.ui.OnboardingLocationScreen
 import com.fangjet.weather.ui.OnboardingNotificationScreen
 import com.fangjet.weather.ui.SettingsRoute
 import com.fangjet.weather.ui.WelcomeScreen
+import com.fangjet.weather.worker.NotificationKind
 
 object WeatherDestinations {
     const val LOADING = "loading"
@@ -37,6 +40,7 @@ object WeatherDestinations {
     const val LOCATION_PERMISSION = "location_permission"
     const val CURRENT = "current"
     const val SETTINGS = "settings"
+    const val NOTIFICATION_SETTINGS = "notification_settings"
     const val LOCATIONS = "locations"
 }
 
@@ -104,8 +108,11 @@ fun WeatherNavHost(
         }
 
         composable(WeatherDestinations.NOTIFICATION_PERMISSION) {
+            val settingsViewModel = hiltViewModel<SettingsViewModel>()
             OnboardingNotificationScreen(
                 hasDog = answeredHasDog,
+                walkTimeEnabled = settingsViewModel.remotelyEnabled(NotificationKind.WALK_TIME),
+                rainEnabled = settingsViewModel.remotelyEnabled(NotificationKind.RAIN),
                 onDone = {
                     welcomeViewModel.completeNotificationOnboarding()
                     navController.navigate(WeatherDestinations.LOCATION_PERMISSION) {
@@ -147,10 +154,17 @@ fun WeatherNavHost(
         composable(WeatherDestinations.SETTINGS) {
             SettingsRoute(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenNotifications = {
+                    navController.navigate(WeatherDestinations.NOTIFICATION_SETTINGS)
+                },
                 onOpenLocations = {
                     navController.navigate(WeatherDestinations.LOCATIONS)
                 },
             )
+        }
+
+        composable(WeatherDestinations.NOTIFICATION_SETTINGS) {
+            NotificationSettingsRoute(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(WeatherDestinations.LOCATIONS) {

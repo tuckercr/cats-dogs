@@ -7,9 +7,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +52,7 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fangjet.weather.R
 import com.fangjet.weather.domain.SavedLocation
+import com.fangjet.weather.domain.notificationIndex
 import com.fangjet.weather.model.GeoLocationViewModel
 import kotlin.math.roundToInt
 
@@ -185,6 +189,8 @@ internal fun DraggableLocationList(
     val moveUpLabel = stringResource(R.string.a11y_move_up)
     val moveDownLabel = stringResource(R.string.a11y_move_down)
 
+    val notificationIndex = locations.notificationIndex()
+
     val targetIndex: Int? = draggingIndex?.let { from ->
         val steps = (dragOffsetY / itemHeightPx).roundToInt()
         (from + steps).coerceIn(0, locations.size - 1)
@@ -240,8 +246,17 @@ internal fun DraggableLocationList(
                                 } else {
                                     location.label
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f, fill = false),
                             )
+                            if (index == notificationIndex) {
+                                Icon(
+                                    Icons.Default.Notifications,
+                                    contentDescription = stringResource(R.string.cd_notification_city),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(start = 6.dp).size(16.dp),
+                                )
+                            }
+                            Spacer(Modifier.weight(1f))
                             IconButton(
                                 onClick = { onRemove(index) },
                                 enabled = locations.size > 1,
@@ -324,6 +339,23 @@ internal fun DraggableLocationList(
                     ),
                 )
             }
+        }
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Notifications,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = stringResource(R.string.locations_notification_footnote),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 6.dp),
+            )
         }
     }
 }

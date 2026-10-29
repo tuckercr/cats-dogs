@@ -29,5 +29,12 @@ class NotificationLocationTest {
     @Test
     fun `no cities, no notification city`() {
         assertNull(emptyList<SavedLocation>().notificationLocation())
+        assertNull(emptyList<SavedLocation>().notificationIndex())
+    }
+
+    @Test
+    fun `the bell in Manage Locations marks the same row`() {
+        assertEquals(2, listOf(paris, tokyo, here).notificationIndex())
+        assertEquals(0, listOf(tokyo, paris).notificationIndex())
     }
 }

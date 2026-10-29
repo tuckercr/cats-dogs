@@ -33,10 +33,17 @@
         <key>openweather_api_key</key>
         <value></value>
     </entry>
-    <!-- Post the daily 9 / 13 / 19 weather-summary notifications. Other notification types will
-         have their own switches. -->
+    <!-- Each kind of notification, for everyone: off stops it and hides its switch in Settings. -->
     <entry>
         <key>daily_weather_notifications_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>walk_time_notifications_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>rain_notifications_enabled</key>
         <value>true</value>
     </entry>
     <!-- Skip the silent foreground-resume refresh if this city was fetched within this many

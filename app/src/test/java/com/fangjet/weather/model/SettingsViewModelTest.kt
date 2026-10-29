@@ -1,7 +1,9 @@
 package com.fangjet.weather.model
 
 import com.fangjet.weather.data.PreferencesRepository
+import com.fangjet.weather.data.RemoteConfigRepository
 import com.fangjet.weather.domain.UnitOverride
+import com.fangjet.weather.worker.NotificationKind
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -15,6 +17,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestWatcher
@@ -46,7 +50,7 @@ class SettingsViewModelTest {
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
             every { repo.showWalkCard } returns flowOf(true)
-            val viewModel = SettingsViewModel(repo)
+            val viewModel = SettingsViewModel(repo, remoteConfig())
 
             viewModel.setUnitOverride(UnitOverride.METRIC)
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
@@ -61,7 +65,7 @@ class SettingsViewModelTest {
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
             every { repo.showWalkCard } returns flowOf(true)
-            val viewModel = SettingsViewModel(repo)
+            val viewModel = SettingsViewModel(repo, remoteConfig())
 
             viewModel.clearCache()
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
@@ -89,7 +93,7 @@ class SettingsViewModelTest {
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
             every { repo.showWalkCard } returns flowOf(true)
-            val viewModel = SettingsViewModel(repo)
+            val viewModel = SettingsViewModel(repo, remoteConfig())
 
             viewModel.setShareUsageStatistics(false)
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
@@ -117,7 +121,7 @@ class SettingsViewModelTest {
             every { repo.unitOverride } returns flowOf(UnitOverride.SYSTEM)
             every { repo.shareUsageStatistics } returns flowOf(true)
             every { repo.showWalkCard } returns flowOf(true)
-            val viewModel = SettingsViewModel(repo)
+            val viewModel = SettingsViewModel(repo, remoteConfig())
 
             viewModel.setShowWalkCard(false)
             mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
@@ -125,16 +129,60 @@ class SettingsViewModelTest {
             coVerify { repo.setShowWalkCard(false) }
         }
 
+    @Test
+    fun `kinds switched off remotely are left out of the count and hidden`() =
+        runTest {
+            val viewModel = viewModel(notifyRain = true, remoteOff = setOf(NotificationKind.MORNING_BRIEFING, NotificationKind.RAIN))
+            val collected = mutableListOf<Int>()
+            val job = backgroundScope.launch { viewModel.notificationsOnCount.collect { collected += it } }
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+            job.cancel()
+
+            assertEquals(1, collected.last())
+            assertFalse(viewModel.remotelyEnabled(NotificationKind.MORNING_BRIEFING))
+            assertTrue(viewModel.remotelyEnabled(NotificationKind.WALK_TIME))
+            assertFalse(viewModel.remotelyEnabled(NotificationKind.RAIN))
+        }
+
+    @Test
+    fun `the notification count leaves out Walk time without a dog`() =
+        runTest {
+            fun count(showWalkCard: Boolean): Int {
+                val viewModel = viewModel(showWalkCard = showWalkCard, notifyWalkTime = true, notifyRain = false)
+                val collected = mutableListOf<Int>()
+                val job = backgroundScope.launch { viewModel.notificationsOnCount.collect { collected += it } }
+                mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+                job.cancel()
+                return collected.last()
+            }
+
+            assertEquals(2, count(showWalkCard = true))
+            assertEquals(1, count(showWalkCard = false))
+        }
+
     private fun viewModel(
         unitOverride: UnitOverride = UnitOverride.SYSTEM,
         shareUsageStatistics: Boolean = true,
         showWalkCard: Boolean = true,
+        notifyMorningBriefing: Boolean = true,
+        notifyWalkTime: Boolean = true,
+        notifyRain: Boolean = false,
+        remoteOff: Set<NotificationKind> = emptySet(),
     ): SettingsViewModel {
         val repo = mockk<PreferencesRepository>(relaxed = true)
         every { repo.unitOverride } returns flowOf(unitOverride)
         every { repo.shareUsageStatistics } returns flowOf(shareUsageStatistics)
         every { repo.showWalkCard } returns flowOf(showWalkCard)
-        return SettingsViewModel(repo)
+        every { repo.notifyMorningBriefing } returns flowOf(notifyMorningBriefing)
+        every { repo.notifyWalkTime } returns flowOf(notifyWalkTime)
+        every { repo.notifyRain } returns flowOf(notifyRain)
+        return SettingsViewModel(repo, remoteConfig(remoteOff))
+    }
+
+    private fun remoteConfig(off: Set<NotificationKind> = emptySet()): RemoteConfigRepository {
+        val remote = mockk<RemoteConfigRepository>(relaxed = true)
+        every { remote.notificationsEnabled(any()) } answers { firstArg<NotificationKind>() !in off }
+        return remote
     }
 
     class MainDispatcherRule(

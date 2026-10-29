@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.fangjet.weather.data.PreferencesRepository
+import com.fangjet.weather.data.RemoteConfigRepository
 import com.fangjet.weather.data.WeatherRepository
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
@@ -21,6 +22,7 @@ class WeatherUpdateWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     preferencesRepository: PreferencesRepository,
     weatherRepository: WeatherRepository,
+    remoteConfigRepository: RemoteConfigRepository,
     json: Json,
 ) : CoroutineWorker(context, workerParams) {
 
@@ -59,14 +61,24 @@ class WeatherUpdateWorker @AssistedInject constructor(
             )
         },
         afterRefresh = { location, weather, forecast ->
-            if (weather != null && forecast != null && preferencesRepository.notifyRain.first() && context.canPostNotifications()) {
+            if (weather != null &&
+                forecast != null &&
+                remoteConfigRepository.rainNotificationsEnabled() &&
+                preferencesRepository.notifyRain.first() &&
+                context.canPostNotifications()
+            ) {
                 rainAlertFor(
                     forecast,
                     System.currentTimeMillis() / 1000,
                     weather.offsetSeconds,
                     preferencesRepository.lastRainAlertStart(),
                 )?.let { rain ->
-                    val (title, body) = buildRainAlertContent(rain, weather.cityName, weather.offsetSeconds)
+                    val (title, body) = buildRainAlertContent(
+                        rain,
+                        weather.cityName,
+                        weather.offsetSeconds,
+                        hasDog = preferencesRepository.showWalkCard.first(),
+                    )
                     val mood = if (rain.snow) PetMood.SNOW else PetMood.RAIN
                     val southern = (location.latitude ?: 0.0) < 0
                     context.postWeatherNotification(WeatherNotification(NotificationKind.RAIN, title, body, mood, southern))

@@ -67,6 +67,8 @@ internal class NotificationWorkerLogic(
     private val postNotification: (WeatherNotification) -> Unit,
     // Remote Config daily_weather_notifications_enabled: switches the briefing off for everyone.
     private val isDailyWeatherNotificationEnabled: () -> Boolean = { true },
+    // Remote Config walk_time_notifications_enabled: switches the walk nudge off for everyone.
+    private val isWalkTimeRemotelyEnabled: () -> Boolean = { true },
     // Remote Config pet-mood and walk thresholds: the same mood and walk advice as the app.
     private val petWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
     // Same label format as ForecastAggregator produces, in the city's local date (its UTC offset)
@@ -77,7 +79,7 @@ internal class NotificationWorkerLogic(
     // The user's switches in Settings.
     private val isBriefingEnabled: suspend () -> Boolean = { true },
     private val isWalkTimeEnabled: suspend () -> Boolean = { false },
-    // A dog at home (the dog question / walk card switch): the briefing then mentions the walk.
+    // A dog at home ("I have a dog"): the briefing then mentions the walk, and Walk time can nudge.
     private val hasDog: suspend () -> Boolean = { false },
     private val scheduleWalkTime: (epochSeconds: Long) -> Unit = {},
     private val nowEpochSeconds: () -> Long = { Instant.now().epochSecond },
@@ -112,9 +114,12 @@ internal class NotificationWorkerLogic(
             runCatching { isDailyWeatherNotificationEnabled() }.getOrDefault(true) &&
             isBriefingEnabled()
 
-        if (walk != null && isWalkTimeEnabled()) {
+        // Walk time only counts with a dog: Settings hides it otherwise, keeping its value.
+        val walkTimeOn = runCatching { isWalkTimeRemotelyEnabled() }.getOrDefault(true) && isWalkTimeEnabled() && hasDog()
+        if (walk != null && walkTimeOn) {
             when {
-                // Now is the time: the briefing says so, or, without one, the nudge goes now.
+                // Now is the time: the briefing says so (it mentions the walk with a dog, which the
+                // nudge needs too), or, without one, the nudge goes now.
                 walk.rating == WalkRating.GREAT -> if (!briefingOn) scheduleWalkTime(now)
                 !walk.bestTimeIsTomorrow ->
                     walk.bestTimeEpochSeconds
@@ -299,13 +304,18 @@ internal fun rainAlertFor(
     return next
 }
 
-/** "Rain starting around 3:15 PM" / "Rain on the way in Knoxville. Walk now or wait it out." */
+/**
+ * "Rain starting around 3:15 PM" / "Rain on the way in Knoxville. Walk now or wait it out.", or
+ * without a dog, "Misty's staying in."
+ */
 internal fun buildRainAlertContent(
     rain: NextRain.Starting,
     cityName: String,
     utcOffsetSeconds: Int,
+    hasDog: Boolean,
 ): Pair<String, String> {
     val what = if (rain.snow) "Snow" else "Rain"
     val time = formatEpochTime(rain.epochSeconds, utcOffsetSeconds)
-    return "$what starting around $time" to "$what on the way in $cityName. Walk now or wait it out."
+    val advice = if (hasDog) "Walk now or wait it out." else "Misty's staying in."
+    return "$what starting around $time" to "$what on the way in $cityName. $advice"
 }
