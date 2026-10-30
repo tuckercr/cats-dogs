@@ -83,6 +83,7 @@ class WalkCardTest {
     @Test
     fun `hot with no pavement estimate blames the heat`() {
         assertEquals(WalkText(R.string.walk_too_hot), walkCaption(advice(WalkRating.PAWS_HOT)))
+        assertEquals(WalkText(R.string.walk_bad_air), walkCaption(advice(WalkRating.BAD_AIR)))
     }
 
     @Test

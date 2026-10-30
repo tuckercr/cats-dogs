@@ -28,6 +28,25 @@ class WalkAdvisorTest {
     }
 
     @Test
+    fun `bad air now points at the first cleaner hour`() {
+        val advice = walkAdviceFor(
+            18.0,
+            listOf(slot("3 PM", 18.0, 0, airBand = 3), slot("4 PM", 18.0, 0, airBand = 4), slot("6 PM", 18.0, 0, airBand = 2)),
+        )
+        assertEquals(WalkAdvice(WalkRating.BAD_AIR, "6 PM"), advice)
+    }
+
+    @Test
+    fun `air that is only poor for some still allows a walk`() {
+        assertEquals(WalkRating.GREAT, walkAdviceFor(18.0, listOf(slot("3 PM", 18.0, 0, airBand = 2)))?.rating)
+    }
+
+    @Test
+    fun `heat outranks bad air`() {
+        assertEquals(WalkRating.PAWS_HOT, walkAdviceFor(33.0, listOf(slot("3 PM", 33.0, 0, airBand = 5)))?.rating)
+    }
+
+    @Test
     fun `paws hot above the heat threshold, pointing at the first cooler slot`() {
         val advice = walkAdviceFor(33.0, listOf(slot("3 PM", 33.0, 0), slot("7 PM", 24.0, 0)))
         assertEquals(WalkAdvice(WalkRating.PAWS_HOT, "7 PM"), advice)
@@ -263,6 +282,7 @@ class WalkAdvisorTest {
         hour: Int? = hourOf(label),
         epoch: Long? = null,
         icon: String = "01d",
+        airBand: Int? = null,
     ) = HourlySlot(
         timeLabel = label,
         iconCode = icon,
@@ -278,6 +298,7 @@ class WalkAdvisorTest {
         pavementTemperature = pavement,
         localHour = hour,
         epochSeconds = epoch,
+        airQualityBand = airBand,
     )
 
     /** Test-only: reads the hour from a "3 PM"-style label. */

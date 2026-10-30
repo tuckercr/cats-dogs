@@ -134,6 +134,17 @@ class RemoteConfigRepository @Inject constructor(
      */
     fun analyticsEnabled(): Boolean = boolean(KEY_ANALYTICS_ENABLED) ?: DEFAULT_ANALYTICS_ENABLED
 
+    /** Counts activations of newly fetched values, so callers can read Remote Config again. */
+    val activationCount: Flow<Int> = activations
+
+    /**
+     * Below this version the app is blocked until it's updated; below the recommended one a banner
+     * asks. Separate from iOS's keys. Null (unset or blank) never asks.
+     */
+    fun androidMinSupportedVersion(): String? = string(KEY_ANDROID_MIN_SUPPORTED_VERSION)
+
+    fun androidMinRecommendedVersion(): String? = string(KEY_ANDROID_MIN_RECOMMENDED_VERSION)
+
     /** [analyticsEnabled], re-emitted whenever newly activated Remote Config values may have changed it. */
     val analyticsEnabledUpdates: Flow<Boolean> =
         activations.map { analyticsEnabled() }.distinctUntilChanged()
@@ -184,6 +195,12 @@ class RemoteConfigRepository @Inject constructor(
     /** A NUMBER that must be a whole number ("7" or "7.0"); "7.5" or junk reads as missing. */
     private fun wholeNumber(key: String): Int? = double(key)?.takeIf { it.isFinite() && it == Math.floor(it) }?.toInt()
 
+    private fun string(key: String): String? =
+        value(key)
+            ?.let { runCatching { it.asString() }.getOrNull() }
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
     private fun boolean(key: String): Boolean? = value(key)?.let { runCatching { it.asBoolean() }.getOrNull() }
 
     companion object {
@@ -230,6 +247,9 @@ class RemoteConfigRepository @Inject constructor(
         const val KEY_OPEN_METEO_ENABLED = "open_meteo_enabled"
 
         const val KEY_OPENWEATHER_API_KEY = "openweather_api_key"
+
+        const val KEY_ANDROID_MIN_SUPPORTED_VERSION = "android_min_supported_version"
+        const val KEY_ANDROID_MIN_RECOMMENDED_VERSION = "android_min_recommended_version"
         const val DEFAULT_OPEN_METEO_ENABLED = true
     }
 }

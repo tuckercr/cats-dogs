@@ -67,7 +67,43 @@ class CityListViewModel internal constructor(
             _locations.value = locs
             _activeIndex.value = idx.coerceIn(0, (locs.size - 1).coerceAtLeast(0))
             _locationsLoaded.value = true
+            fillInMissingCoordinates()
         }
+    }
+
+    /** Labels being geocoded now, so launch and a quick return to the app don't look one up twice. */
+    private val geocodingLabels = mutableSetOf<String>()
+
+    /**
+     * Geocodes every name-only city. Runs on launch and whenever the app comes back, so a city whose
+     * lookup failed when it was added (offline, say) still gets its radar later. The entered label
+     * is kept so the duplicate check in [addLocation] still matches it.
+     */
+    fun fillInMissingCoordinates() {
+        _locations.value
+            .filter { it.latitude == null || it.longitude == null }
+            .forEach { location ->
+                val label = location.label
+                if (!geocodingLabels.add(label)) return@forEach
+                viewModelScope.launch {
+                    try {
+                        val suggestion = geocodingRepository.searchCities(label).getOrNull()?.firstOrNull()
+                            ?: return@launch
+                        // The list may have changed while geocoding was in flight.
+                        val index = _locations.value.indexOfFirst { it.label == label && it.latitude == null }
+                        if (index < 0) return@launch
+                        val updated = _locations.value.toMutableList()
+                        updated[index] = updated[index].copy(
+                            latitude = suggestion.weatherLat,
+                            longitude = suggestion.weatherLon,
+                        )
+                        _locations.value = updated
+                        preferencesRepository.setSavedLocations(updated)
+                    } finally {
+                        geocodingLabels.remove(label)
+                    }
+                }
+            }
     }
 
     fun addLocation(location: SavedLocation) {

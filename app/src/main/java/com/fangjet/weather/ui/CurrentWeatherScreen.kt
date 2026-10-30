@@ -98,6 +98,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.fangjet.weather.R
+import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.CitySuggestion
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
@@ -105,6 +106,7 @@ import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
+import com.fangjet.weather.model.AirQualityViewModel
 import com.fangjet.weather.model.CityListViewModel
 import com.fangjet.weather.model.GeoLocationViewModel
 import com.fangjet.weather.model.LoadingState
@@ -112,6 +114,7 @@ import com.fangjet.weather.model.LocationFetchState
 import com.fangjet.weather.model.LocationPermissionViewModel
 import com.fangjet.weather.model.RadarViewModel
 import com.fangjet.weather.model.SettingsViewModel
+import com.fangjet.weather.model.UpdatePromptViewModel
 import com.fangjet.weather.model.WeatherForecastViewModel
 import com.fangjet.weather.ui.pets.PetMood
 import com.fangjet.weather.ui.pets.PetScene
@@ -127,6 +130,7 @@ import com.fangjet.weather.ui.theme.StaleBannerBg
 import com.fangjet.weather.ui.theme.StaleBannerText
 import com.fangjet.weather.util.NextRain
 import com.fangjet.weather.util.ReadingDay
+import com.fangjet.weather.util.UpdatePrompt
 import com.fangjet.weather.util.forecastAsCurrent
 import com.fangjet.weather.util.fromCurrentSlot
 import com.fangjet.weather.util.isTooOldToShowAsNow
@@ -264,6 +268,11 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     // Same owner RadarCard uses, so this is the instance that would load the timeline.
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
     val settingsViewModel = hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
+    val airQualityViewModel = hiltViewModel<AirQualityViewModel>(viewModelStoreOwner = activity)
+    // The activity's instance, the one that decides whether the app is blocked for an update.
+    val updatePromptViewModel = hiltViewModel<UpdatePromptViewModel>(viewModelStoreOwner = activity)
+    val updatePrompt by updatePromptViewModel.prompt.collectAsStateWithLifecycle()
+    val airQuality by airQualityViewModel.readings.collectAsStateWithLifecycle()
     val unitOverride by settingsViewModel.unitOverride.collectAsStateWithLifecycle()
     // The user's Settings choice; Remote Config walk_card_enabled can also hide it for everyone.
     val showWalkCard by settingsViewModel.showWalkCard.collectAsStateWithLifecycle()
@@ -287,6 +296,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             weatherForecastViewModel.refreshCurrent(it)
             weatherForecastViewModel.refreshForecast(it)
         }
+        airQualityViewModel.load(activeLocation)
     }
 
     // Silent background refresh on every foreground resume (picks up new units or stale data)
@@ -299,6 +309,8 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     weatherForecastViewModel.backgroundRefreshCurrent(it)
                     weatherForecastViewModel.backgroundRefreshForecast(it)
                 }
+                airQualityViewModel.load(currentActiveLocation)
+                cityListViewModel.fillInMissingCoordinates()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -315,6 +327,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     weatherForecastViewModel.backgroundRefreshCurrent(it)
                     weatherForecastViewModel.backgroundRefreshForecast(it)
                 }
+                airQualityViewModel.load(currentActiveLocation)
             }
         }
     }
@@ -342,6 +355,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             radarEnabled = radarEnabled,
             walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
             dogWalking = showWalkCard,
+            airQuality = airQuality,
             petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
             onTabSelected = cityListViewModel::setActiveIndex,
             onOpenSettings = {
@@ -349,11 +363,20 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                 onOpenSettings()
             },
             onAddCityClick = { showAddSheet = true },
+            topBanner = {
+                if (updatePrompt == UpdatePrompt.RECOMMENDED) {
+                    UpdateBanner(
+                        onDismiss = updatePromptViewModel::dismissBanner,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                    )
+                }
+            },
             onRefresh = {
                 activeLocation?.let {
                     weatherForecastViewModel.refreshCurrent(it)
                     weatherForecastViewModel.refreshForecast(it)
                 }
+                airQualityViewModel.load(activeLocation)
             },
         ) {
             activeLocation?.let {
@@ -381,24 +404,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                 onCityInputChange = geoViewModel::onCityInputChange,
                 onSuggestionChosen = geoViewModel::onCitySuggestionChosen,
                 onAddCity = {
-                    val suggestion = selectedSuggestion
-                    if (suggestion != null) {
-                        cityListViewModel.addLocation(
-                            SavedLocation(
-                                label = suggestion.label,
-                                latitude = suggestion.weatherLat,
-                                longitude = suggestion.weatherLon,
-                            ),
-                        )
-                    } else if (cityInput.isNotBlank()) {
-                        cityListViewModel.addLocation(
-                            SavedLocation(
-                                label = cityInput.trim(),
-                                latitude = null,
-                                longitude = null,
-                            ),
-                        )
-                    }
+                    geoViewModel.locationToAdd()?.let(cityListViewModel::addLocation)
                     geoViewModel.reset()
                     showAddSheet = false
                 },
@@ -434,11 +440,15 @@ fun CurrentWeatherScreen(
     walkCardEnabled: Boolean = true,
     // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
     dogWalking: Boolean = true,
+    // Readings by SavedLocation.cacheKey; a city without one has no Air quality tile.
+    airQuality: Map<String, AirQuality> = emptyMap(),
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
     onRefresh: () -> Unit = {},
+    // Under the city tabs: the update banner, when a newer version is recommended.
+    topBanner: @Composable () -> Unit = {},
     onRetry: () -> Unit,
 ) {
     // Each pull also re-reads the clock, so the hourly strip and captions move on even when the
@@ -511,6 +521,7 @@ fun CurrentWeatherScreen(
                         }
                     }
                 }
+                topBanner()
             }
         },
     ) { padding ->
@@ -604,6 +615,7 @@ fun CurrentWeatherScreen(
                                         radarEnabled = radarEnabled,
                                         walkCardEnabled = walkCardEnabled,
                                         dogWalking = dogWalking,
+                                        airQuality = location?.let { airQuality[it.cacheKey] },
                                         petWeatherThresholds = petWeatherThresholds,
                                         refreshCount = pullCount,
                                         onForecastRetry = onRetry,
@@ -821,6 +833,7 @@ private fun CurrentWeatherContent(
     walkCardEnabled: Boolean = true,
     // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
     dogWalking: Boolean = true,
+    airQuality: AirQuality? = null,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     refreshCount: Int = 0,
     onForecastRetry: () -> Unit = {},
@@ -993,6 +1006,8 @@ private fun CurrentWeatherContent(
                 pavementNow = currentSlots.firstOrNull()?.pavementTemperature?.takeIf { dogWalking },
                 groundWet = currentSlots.firstOrNull()?.groundWet == true || isPrecipitating(weather.conditionMain),
                 uvIndex = currentSlots.firstOrNull()?.uvIndex?.takeUnless { isNight },
+                airQuality = airQuality,
+                hasDog = dogWalking,
                 nowEpochSeconds = nowEpochSeconds,
                 thresholds = petWeatherThresholds,
             )

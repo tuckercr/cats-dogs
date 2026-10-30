@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Grain
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Thermostat
@@ -28,12 +29,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,6 +58,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fangjet.weather.R
+import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.WeatherUnits
@@ -80,7 +86,7 @@ import com.fangjet.weather.util.windForce
 import kotlin.math.roundToInt
 
 /**
- * Today's details as a grid of tiles: feels like, wind, humidity and pavement in pairs, then
+ * Today's details as a grid of tiles: feels like, wind, humidity, pavement and air quality in pairs, then
  * daylight (with the UV index) and the sky across the full width. Each tile has a plain fact under its number; only
  * the pavement and sky tiles speak for the pets.
  */
@@ -96,6 +102,10 @@ internal fun TodayTiles(
     groundWet: Boolean,
     // Today's UV index, or null after dark or when not forecast.
     uvIndex: Double?,
+    // Null until it's fetched, or when it can't be.
+    airQuality: AirQuality?,
+    // Air quality speaks of walks with a dog, of people without one.
+    hasDog: Boolean,
     nowEpochSeconds: Long,
     thresholds: PetWeatherThresholds,
     modifier: Modifier = Modifier,
@@ -108,6 +118,7 @@ internal fun TodayTiles(
         add { WindTile(weather, it) }
         add { HumidityTile(weather, it) }
         if (pavementNow != null) add { PavementTile(pavementNow, groundWet, weather.feelsLike, units, thresholds, it) }
+        if (airQuality != null) add { AirQualityTile(airQuality, hasDog, it) }
         // UV normally rides in the Daylight tile's header; only without sunrise and sunset does it
         // need a tile of its own.
         if (uvIndex != null && (sunrise == null || sunset == null)) add { UvTile(uvIndex, it) }
@@ -360,6 +371,104 @@ private fun pavementTint(band: PavementBand): Color {
 
 @Composable
 private fun petLineTint(): Color = if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) WalkGreatBg else WalkGreatText
+
+@Composable
+private fun AirQualityTile(
+    air: AirQuality,
+    hasDog: Boolean,
+    modifier: Modifier,
+) {
+    val bandName = stringArrayResource(
+        if (air.scale == AirQuality.Scale.EUROPEAN) R.array.air_quality_bands_european else R.array.air_quality_bands_us,
+    )[air.band]
+    val line = stringArrayResource(if (hasDog) R.array.air_quality_lines_dog else R.array.air_quality_lines)[air.band]
+    val pollutant = air.mainPollutant?.let {
+        stringResource(
+            R.string.air_quality_mostly,
+            stringArrayResource(R.array.air_quality_pollutants)[it.ordinal],
+        )
+    }
+    Tile(Icons.Default.Grain, stringResource(R.string.label_air_quality), modifier) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            TileValue(air.index.toString())
+            Text(
+                bandName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 3.dp),
+            )
+        }
+        AirQualityBar(
+            position = air.barPosition.toFloat(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp)
+                .clearAndSetSemantics {},
+        )
+        // The pollutant behind it is for TalkBack only: another line would stretch every tile in
+        // the grid, which all take the tallest one's height.
+        TileNote(line, color = airTint(air.band), spoken = listOfNotNull(pollutant, line).joinToString(". "))
+    }
+}
+
+/** The six air quality bands, good to worst, with a mark where the reading sits. */
+@Composable
+private fun AirQualityBar(
+    position: Float,
+    modifier: Modifier = Modifier,
+) {
+    val mark = MaterialTheme.colorScheme.onSurface
+    Canvas(modifier.height(12.dp)) {
+        val barHeight = 6.dp.toPx()
+        val top = (size.height - barHeight) / 2
+        val bandWidth = size.width / AirQuality.BANDS
+        clipPath(
+            Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        0f,
+                        top,
+                        size.width,
+                        top + barHeight,
+                        CornerRadius(barHeight / 2),
+                    ),
+                )
+            },
+        ) {
+            AIR_QUALITY_BANDS.forEachIndexed { i, color ->
+                drawRect(color, Offset(i * bandWidth, top), Size(bandWidth + 1, barHeight))
+            }
+        }
+        val markWidth = 4.dp.toPx()
+        val x = (size.width * position - markWidth / 2).coerceIn(0f, size.width - markWidth)
+        drawRoundRect(
+            mark,
+            Offset(x, 0f),
+            Size(markWidth, size.height),
+            CornerRadius(markWidth / 2),
+        )
+    }
+}
+
+private val AIR_QUALITY_BANDS = listOf(
+    Color(0xFF4CAF50),
+    Color(0xFFE6C531),
+    Color(0xFFF08C2E),
+    Color(0xFFD94141),
+    Color(0xFF8E4AA8),
+    Color(0xFF7A2230),
+)
+
+/** The walk card's shades again: green for good air, amber for so-so, red from unhealthy up. */
+@Composable
+private fun airTint(band: Int): Color {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return when (band) {
+        0 -> if (dark) WalkGreatBg else WalkGreatText
+        1, 2 -> if (dark) WalkOkayBg else WalkOkayText
+        else -> if (dark) WalkHotBg else WalkHotText
+    }
+}
 
 @Composable
 private fun UvTile(

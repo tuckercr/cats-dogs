@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fangjet.weather.data.GeocodingRepository
 import com.fangjet.weather.domain.CitySuggestion
+import com.fangjet.weather.domain.SavedLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,6 +33,24 @@ class GeoLocationViewModel @Inject constructor(
     val selectedSuggestion: StateFlow<CitySuggestion?> = _selectedSuggestion.asStateFlow()
 
     private var suggestJob: Job? = null
+
+    /**
+     * What Add city adds: the picked suggestion, otherwise the top one showing, otherwise the typed
+     * name (its coordinates are looked up later, so a city can be added offline). Null with nothing
+     * typed.
+     */
+    fun locationToAdd(): SavedLocation? {
+        val suggestion = _selectedSuggestion.value ?: _citySuggestions.value.firstOrNull()
+        if (suggestion != null) {
+            return SavedLocation(
+                label = suggestion.label,
+                latitude = suggestion.weatherLat,
+                longitude = suggestion.weatherLon,
+            )
+        }
+        val typed = _cityInput.value.trim()
+        return if (typed.isEmpty()) null else SavedLocation(label = typed, latitude = null, longitude = null)
+    }
 
     fun onCityInputChange(value: String) {
         _cityInput.value = value
