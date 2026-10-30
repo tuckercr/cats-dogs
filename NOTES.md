@@ -6,11 +6,16 @@ Tick items off or delete them once done.
 
 ## Do soon
 
-- [ ] **iOS signing.** The project uses FangJet LLC's team (`3V3NR8HP58`) and Xcode is signed in.
-      Still to do: register an iPhone or iPad with the team (Xcode says "Your team has no devices"),
-      then do a signed device build and an archive. (10-30)
+- [x] **iOS signing** (10-30): FangJet LLC's team (`3V3NR8HP58`), your iPhone is registered, and a
+      Release archive exports with App Store signing.
+- [ ] **First TestFlight upload.** Create the app record in App Store Connect (`com.fangjet.weather`),
+      then upload from Xcode's Organizer. Archive from `main` once the open PRs merge. (10-30)
 - [ ] **Android location: "Ask every time" never clears the permanently-denied flag**, so
       "Add My Location" stays hidden after a reset in system settings (review finding 3). (10-29)
+- [ ] **Storms in the dog walking line, and maybe the hero text.** Warn about thunder in the walk
+      card ("Storms from 4 PM, walk before 3"), and possibly the pets' hero line. Check that both
+      forecast providers give thunderstorm codes hourly. Should storm hours also be dropped from
+      suggested walks, like bad air? (10-30)
 
 ## Air quality tile (built 10-30)
 
@@ -27,15 +32,15 @@ Tick items off or delete them once done.
       ("Good air for a long walk" … "Stay in. Potty breaks only").
 - [ ] The pollutant ("Mostly ozone") is only read out by VoiceOver and TalkBack: a fourth line made
       every tile in the grid taller. Show it somewhere else, such as a tap-through?
-- [ ] Five small tiles leave Air quality alone on its row. Fine, or rearrange?
+- [x] Five small tiles left Air quality alone on its row: an odd tile out now takes the full
+      width (10-30).
 - [ ] Not cached, so it doesn't show offline or until the first fetch returns.
 - Decided: the scale follows the city (European index for cities on a European clock, US
   everywhere else); "Unhealthy for sensitive groups" is shortened to "Poor for some".
 
 ## More tiles to consider (10-30)
 
-- [ ] Storm watch: thunder risk from Open-Meteo (`weather_code` 95–99, CAPE, lightning). Free and
-      worldwide; lots of dogs fear thunder.
+- Decided 10-30: no Storm watch tile (mocked up). Storms go in the walk line instead (Do soon).
 - [ ] Pollen: free from Open-Meteo for Europe only. The US needs a paid provider (Google Pollen,
       Tomorrow.io, Ambee).
 - [ ] A full UV tile (peak time, pale-nosed dogs). UV is only in the Daylight header now.

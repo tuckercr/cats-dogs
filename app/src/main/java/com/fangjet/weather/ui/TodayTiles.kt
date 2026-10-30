@@ -86,8 +86,8 @@ import com.fangjet.weather.util.windForce
 import kotlin.math.roundToInt
 
 /**
- * Today's details as a grid of tiles: feels like, wind, humidity, pavement and air quality in pairs, then
- * daylight (with the UV index) and the sky across the full width. Each tile has a plain fact under its number; only
+ * Today's details as a grid of tiles: feels like, wind, humidity, pavement and air quality in pairs (an odd
+ * one out takes the full width), then daylight (with the UV index) and the sky across the full width. Each tile has a plain fact under its number; only
  * the pavement and sky tiles speak for the pets.
  */
 @Composable
@@ -126,9 +126,13 @@ internal fun TodayTiles(
     // Two tiles side by side leave too little room for large text, so it gets one per row.
     val perRow = if (LocalDensity.current.fontScale >= LARGE_FONT_SCALE) 1 else 2
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+        // An odd tile out (usually Air quality, when Paw check is showing) takes the full width
+        // rather than leaving a gap beside it.
+        val paired = if (small.size % perRow == 0) small.size else small.size - 1
         EqualTileGrid(columns = perRow) {
-            small.forEach { tile -> tile(Modifier) }
+            small.take(paired).forEach { tile -> tile(Modifier) }
         }
+        small.drop(paired).forEach { tile -> tile(Modifier.fillMaxWidth()) }
         if (sunrise != null && sunset != null) {
             DaylightTile(daylight(nowEpochSeconds, sunrise, sunset), sunrise, sunset, weather.offsetSeconds, uvIndex)
         }
