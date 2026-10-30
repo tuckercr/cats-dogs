@@ -10,6 +10,9 @@ package com.fangjet.weather.data
 fun interface ForecastSourcePolicy {
     fun openMeteoEnabled(): Boolean
 
+    /** Remote Config `air_quality_enabled`: false skips the air quality fetch. */
+    fun airQualityEnabled(): Boolean = true
+
     companion object {
         /** Open-Meteo whenever coordinates are known — the behaviour before the switch existed. */
         val OpenMeteoPreferred = ForecastSourcePolicy { true }

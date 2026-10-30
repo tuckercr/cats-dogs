@@ -134,6 +134,16 @@
       "defaultValue": { "value": "" },
       "valueType": "STRING",
       "description": "Android versions below this show an update banner; Not now hides it for a week. Blank never asks."
+    },
+    "air_quality_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Kill switch for air quality: false stops fetching it, hides the Air quality tile, and the walk planner ignores the air"
+    },
+    "walk_bad_air_band": {
+      "defaultValue": { "value": "3" },
+      "valueType": "NUMBER",
+      "description": "Air quality band (0 good to 5 worst) from which hours aren't suggested for a walk and the walk rating is Bad air. 3 is US \"Unhealthy\" and Europe's \"Poor\". Valid 1–5; anything else uses 3."
     }
   }
 }

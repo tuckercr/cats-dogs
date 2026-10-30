@@ -1,6 +1,5 @@
 package com.fangjet.weather.ui.pets
 
-import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.util.PavementBand
@@ -52,14 +51,17 @@ private fun HourlySlot.isWalkable(t: PetWeatherThresholds): Boolean {
     val c = units.toCelsius(feelsLike)
     val pavementOk = (pavementC() ?: 0.0) < t.warmPavementC
     return isDaytime(t) &&
-        !hasBadAir() &&
+        !hasBadAir(t) &&
         pavementOk &&
         precipitationChance < t.maxRainChancePercent &&
         c in t.comfortMinC..t.comfortMaxC
 }
 
-/** Unhealthy air or worse (the Air quality tile's "Potty breaks only today"). Unknown counts as clean. */
-private fun HourlySlot.hasBadAir(): Boolean = (airQualityBand ?: 0) >= AirQuality.BAD_AIR_BAND
+/**
+ * Air at the Remote Config band or worse (by default Unhealthy, the Air quality tile's "Potty breaks
+ * only today"). Unknown counts as clean.
+ */
+private fun HourlySlot.hasBadAir(t: PetWeatherThresholds): Boolean = (airQuality?.band ?: 0) >= t.badAirBand
 
 /** Whether the current conditions are rain, drizzle, snow or a thunderstorm (as [petMoodFor] reads them). */
 fun isPrecipitating(conditionMain: String): Boolean = conditionMain.lowercase() in setOf("thunderstorm", "snow", "rain", "drizzle")
@@ -91,7 +93,7 @@ fun walkAdviceFor(
     val pavementHotNow = (slots.first().pavementC() ?: 0.0) >= thresholds.hotPavementC
     val rating = when {
         currentFeelsLikeC >= thresholds.petHotC || pavementHotNow -> WalkRating.PAWS_HOT
-        slots.first().hasBadAir() -> WalkRating.BAD_AIR
+        slots.first().hasBadAir(thresholds) -> WalkRating.BAD_AIR
         currentFeelsLikeC <= thresholds.petColdC -> WalkRating.TOO_COLD
         nowWalkable -> WalkRating.GREAT
         firstGood != null -> WalkRating.OKAY
