@@ -18,7 +18,8 @@ WorkManager, and CI on GitHub Actions.
 
 ## Features
 
-- **Current conditions** for any city: temperature, feels-like, daily min/max, humidity, wind
+- **Current conditions** for any city: temperature, feels-like, today's high and low (from the
+  day's forecast, over all of its hours), humidity, wind
   speed and direction ("0 mph", with no direction, when calm), visibility ("Clear" at
   OpenWeather's 10 km cap), cloud cover, UV index (daytime, from Open-Meteo), and sunrise/sunset.
 - **Pets that react to the weather**: Sunny the dog and Misty the cat, drawn in Compose, whose scene
@@ -34,6 +35,9 @@ WorkManager, and CI on GitHub Actions.
   around…", judged in the city's own UTC offset. The paw is tinted by the rating, and a caption
   explains hot pavement (naming the pavement only when it's the reason) or freezing weather. Users can turn it off in Settings (*I have a dog*, which hides the Paw check tile too), and
   `walk_card_enabled` hides it remotely.
+- **Bad air in the walk planner**: hours at US "Unhealthy" or worse (Europe's "Poor" and up) are
+  never suggested, and the walk card says "Bad air. Potty breaks only." when the air is bad now.
+  Heat still outranks it. The band is tunable with `walk_bad_air_band`.
 - **Next rain** line under the top card, only when rain or snow is due in the next 2 hours: "Rain
   starting around 3:15 PM", "Rain stopping around 4:30 PM" or "Rain for the next 2 hours", from
   Open-Meteo's 15-minute forecast (0.1 mm in 15 minutes counts; it stops after 30 dry minutes).
@@ -43,6 +47,16 @@ WorkManager, and CI on GitHub Actions.
   otherwise to the nearest 10%, as everywhere in the app). Hours that have
   already passed are dropped at display time (`fromCurrentSlot`), so a cached forecast or an app
   left open never shows or advises on past hours.
+- **Today tiles**: Feels like, Wind, Humidity, Paw check (with a dog) and Air quality in pairs, then
+  Daylight (with the UV index) and Sky across the full width. An odd tile out, usually Air quality
+  when Paw check is showing, takes the full width rather than leaving a gap.
+- **Air quality** tile: the index on the city's scale (Europe's for cities on a European clock, the
+  US one elsewhere), its band on a six-colour bar, and what it means for a walk, or for people
+  without a dog. It comes from Open-Meteo's hourly air quality forecast, fetched with the forecast in
+  one request and cached with it, so it shows offline too. `air_quality_enabled` switches it off.
+- **Update prompts**: below `android_min_supported_version` the app shows only "Time for an update";
+  below `android_min_recommended_version` a banner offers the update, and *Not now* hides it for a
+  week. Both open the Play Store listing.
 - **Weather icons** bundled as vector drawables, drawn in the pets' style with their navy outline so
   they read on light and dark cards. Night icons show the moon's phase for that hour, worked out
   from the date (no API).
@@ -80,15 +94,15 @@ WorkManager, and CI on GitHub Actions.
 
 ## Screenshots
 
-| Pets, walk time & hourly | Today tiles & Paw check | Radar & rest of week | Day detail | Settings |
+| Pets, walk time & hourly | Today tiles & air quality | Radar & rest of week | Day detail | Settings |
 |---|---|---|---|---|
-| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity, Paw check, daylight and sky](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, I have a dog and notifications](./screenshots/settings.png) |
+| ![Sunny and Misty react to the weather, with best walk time and the hourly strip](./screenshots/current.png) | ![Today's tiles: feels like, wind, humidity and Paw check in pairs, then Air quality, daylight and sky across the full width](./screenshots/today.png) | ![Animated RainViewer radar and the rest of the week](./screenshots/forecast.png) | ![Hour-by-hour temperature and rain chance for a day](./screenshots/day.png) | ![Settings with units, I have a dog and notifications](./screenshots/settings.png) |
 
 On tablets and in landscape, the pets sit beside today's details and the week splits into two columns:
 
-![Phone in landscape with the pets beside today's details](./screenshots/landscape.png)
+![Phone in landscape on a rainy day, with the pets beside today's details](./screenshots/landscape.png)
 
-![Tablet layout with the pets beside today's details](./screenshots/tablet.png)
+![Tablet layout with the pets beside today's tiles, Air quality across the full width](./screenshots/tablet.png)
 
 ## Getting started
 
@@ -125,6 +139,17 @@ also provides `KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWO
 they build unsigned. CI writes these from the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
 and `KEY_PASSWORD` Actions secrets when they are set, and uploads the debug and release APKs as
 build artifacts.
+
+### Play Store
+
+[`screenshots/play-store/`](screenshots/play-store/) holds the store screenshots, taken on an
+emulator with a clean status bar:
+
+- Phone, 1080 × 1920 (9:16; Play rejects anything longer than 2:1, so not the Pixel's 1080 × 2400).
+  Upload in this order: `01-welcome`, `02-today`, `03-rain-walk`, `04-radar-week`,
+  `05-day-detail`, `06-settings`.
+- Tablet: `tablet-01` (1600 × 2560, portrait) and `tablet-02` (2560 × 1600, landscape), for both
+  the 7-inch and 10-inch tablet slots.
 
 ## Architecture & tech stack
 
