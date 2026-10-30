@@ -120,9 +120,11 @@ The app supports Android 10+ (minSdk 29) and targets SDK 37. From the command li
 
 ### Release builds
 
-Release builds are minified and resource-shrunk with R8. They are signed when `local.properties`
-also provides `KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`; without those
-they build unsigned. CI writes these from the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
+Release builds are minified and resource-shrunk with R8, and signed with the keystore that
+`local.properties` names in `KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`.
+A release APK or bundle won't build without those or without `OWM_API_KEY`: the build stops at the
+start and lists what's missing, rather than producing an unsigned app or one with no weather. Debug
+builds, tests and lint don't need them. CI writes these from the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`,
 and `KEY_PASSWORD` Actions secrets when they are set, and uploads the debug and release APKs as
 build artifacts.
 

@@ -93,8 +93,8 @@ Tick items off or delete them once done.
 
 ## Infrastructure
 
-- [ ] The Android release build doesn't fail loudly when the signing key or weather API key is
-      missing. (10-27)
+- [x] The Android release build now stops at the start and lists what's missing when the signing
+      key or weather API key isn't in `local.properties` (10-27, done 10-30).
 - [x] iOS test runs left hundreds of `CatsDogsTests-*.plist` files on the test simulator (10-05).
       Tests now reuse 8 settings files (`CatsDogsTests-0` to `-7`); the system rewrites deleted ones,
       so zero would need in-memory settings. 60 old test-clone simulators (329 GB) deleted 10-30.
