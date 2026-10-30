@@ -3,6 +3,7 @@ package com.fangjet.weather.data
 import com.fangjet.weather.data.remote.OpenWeatherApi
 import com.fangjet.weather.data.remote.dto.OpenWeatherErrorResponse
 import com.fangjet.weather.di.WeatherNetworkModule
+import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
 import com.fangjet.weather.domain.WeatherUnits
@@ -24,7 +25,7 @@ class WeatherRepository @Inject constructor(
     private val zoneId: ZoneId,
     private val json: Json,
     private val forecastSourcePolicy: ForecastSourcePolicy = ForecastSourcePolicy.OpenMeteoPreferred,
-    // Hourly air quality for the walk planner; null leaves it out (tests).
+    // Hourly air quality for the tile and the walk planner; null leaves it out (tests).
     private val airQuality: AirQualitySource? = null,
 ) {
 
@@ -78,9 +79,16 @@ class WeatherRepository @Inject constructor(
         // unless Remote Config has switched it off.
         if (hasCoordinates && openMeteoEnabled()) {
             return coroutineScope {
-                // Air quality comes alongside for the walk planner; without it the forecast still stands.
-                val bands = async { airQuality?.fetchHourlyBands(latitude, longitude)?.getOrNull().orEmpty() }
-                openMeteo.fetch(units, latitude, longitude).mapApiFailure().map { withAirQuality(it, bands.await()) }
+                // Air quality comes alongside, for the tile and the walk planner; without it the
+                // forecast still stands.
+                val air = async {
+                    airQuality
+                        ?.takeIf { forecastSourcePolicy.airQualityEnabled() }
+                        ?.fetchHourly(latitude, longitude)
+                        ?.getOrNull()
+                        .orEmpty()
+                }
+                openMeteo.fetch(units, latitude, longitude).mapApiFailure().map { withAirQuality(it, air.await()) }
             }
         }
         val key = apiKey.trim()
@@ -218,13 +226,13 @@ class WeatherRepository @Inject constructor(
         }
 }
 
-/** Puts each hour's air quality band on its slot. */
+/** Puts each hour's air quality on its slot. */
 internal fun withAirQuality(
     days: List<DayForecast>,
-    bands: Map<Long, Int>,
+    byHour: Map<Long, AirQuality>,
 ): List<DayForecast> {
-    if (bands.isEmpty()) return days
+    if (byHour.isEmpty()) return days
     return days.map { day ->
-        day.copy(hourlySlots = day.hourlySlots.map { slot -> slot.copy(airQualityBand = slot.epochSeconds?.let { bands[it] }) })
+        day.copy(hourlySlots = day.hourlySlots.map { slot -> slot.copy(airQuality = slot.epochSeconds?.let { byHour[it] }) })
     }
 }

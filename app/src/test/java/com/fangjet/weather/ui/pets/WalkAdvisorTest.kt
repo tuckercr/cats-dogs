@@ -1,5 +1,6 @@
 package com.fangjet.weather.ui.pets
 
+import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.WeatherUnits
@@ -39,6 +40,19 @@ class WalkAdvisorTest {
     @Test
     fun `air that is only poor for some still allows a walk`() {
         assertEquals(WalkRating.GREAT, walkAdviceFor(18.0, listOf(slot("3 PM", 18.0, 0, airBand = 2)))?.rating)
+    }
+
+    @Test
+    fun `Remote Config can move the bad air band`() {
+        val stricter = PetWeatherThresholds.validated(badAirBand = 2)
+        assertEquals(WalkRating.BAD_AIR, walkAdviceFor(18.0, listOf(slot("3 PM", 18.0, 0, airBand = 2)), stricter)?.rating)
+    }
+
+    @Test
+    fun `a bad air band outside 1 to 5 uses the default`() {
+        assertEquals(3, PetWeatherThresholds.validated(badAirBand = 0).badAirBand)
+        assertEquals(3, PetWeatherThresholds.validated(badAirBand = 6).badAirBand)
+        assertEquals(5, PetWeatherThresholds.validated(badAirBand = 5).badAirBand)
     }
 
     @Test
@@ -298,7 +312,21 @@ class WalkAdvisorTest {
         pavementTemperature = pavement,
         localHour = hour,
         epochSeconds = epoch,
-        airQualityBand = airBand,
+        // The lowest US index in the band.
+        airQuality = airBand?.let {
+            AirQuality(
+                AirQuality.Scale.US.bandEdges[it]
+                    .toInt() + if (it ==
+                    0
+                ) {
+                    0
+                } else {
+                    1
+                },
+                AirQuality.Scale.US,
+                null,
+            )
+        },
     )
 
     /** Test-only: reads the hour from a "3 PM"-style label. */

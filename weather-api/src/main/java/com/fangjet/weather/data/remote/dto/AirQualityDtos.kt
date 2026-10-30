@@ -3,42 +3,33 @@ package com.fangjet.weather.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Open-Meteo's hourly air quality forecast with `timeformat=unixtime`, for the walk planner. */
+/**
+ * Open-Meteo's hourly air quality forecast with `timeformat=unixtime`: one request feeds both the
+ * walk planner and the Air quality tile, which shows the hour in progress.
+ */
 @Serializable
 data class AirQualityHourlyResponse(
     @SerialName("timezone") val timezone: String? = null,
     @SerialName("hourly") val hourly: AirQualityHourlyDto = AirQualityHourlyDto(),
 )
 
+/** One list per field, an entry per hour. */
 @Serializable
 data class AirQualityHourlyDto(
     @SerialName("time") val time: List<Long> = emptyList(),
     @SerialName("us_aqi") val usAqi: List<Int?> = emptyList(),
+    @SerialName("us_aqi_pm2_5") val usAqiPm25: List<Int?> = emptyList(),
+    @SerialName("us_aqi_pm10") val usAqiPm10: List<Int?> = emptyList(),
+    @SerialName("us_aqi_ozone") val usAqiOzone: List<Int?> = emptyList(),
+    @SerialName("us_aqi_nitrogen_dioxide") val usAqiNitrogenDioxide: List<Int?> = emptyList(),
+    @SerialName("us_aqi_sulphur_dioxide") val usAqiSulphurDioxide: List<Int?> = emptyList(),
+    @SerialName("us_aqi_carbon_monoxide") val usAqiCarbonMonoxide: List<Int?> = emptyList(),
     @SerialName("european_aqi") val europeanAqi: List<Int?> = emptyList(),
-)
-
-/** Open-Meteo's air quality response with `timezone=auto`, only the fields the tile uses. */
-@Serializable
-data class AirQualityResponse(
-    @SerialName("timezone") val timezone: String? = null,
-    @SerialName("current") val current: AirQualityCurrentDto = AirQualityCurrentDto(),
-)
-
-@Serializable
-data class AirQualityCurrentDto(
-    @SerialName("us_aqi") val usAqi: Int? = null,
-    @SerialName("us_aqi_pm2_5") val usAqiPm25: Int? = null,
-    @SerialName("us_aqi_pm10") val usAqiPm10: Int? = null,
-    @SerialName("us_aqi_ozone") val usAqiOzone: Int? = null,
-    @SerialName("us_aqi_nitrogen_dioxide") val usAqiNitrogenDioxide: Int? = null,
-    @SerialName("us_aqi_sulphur_dioxide") val usAqiSulphurDioxide: Int? = null,
-    @SerialName("us_aqi_carbon_monoxide") val usAqiCarbonMonoxide: Int? = null,
-    @SerialName("european_aqi") val europeanAqi: Int? = null,
-    @SerialName("european_aqi_pm2_5") val europeanAqiPm25: Int? = null,
-    @SerialName("european_aqi_pm10") val europeanAqiPm10: Int? = null,
-    @SerialName("european_aqi_ozone") val europeanAqiOzone: Int? = null,
-    @SerialName("european_aqi_nitrogen_dioxide") val europeanAqiNitrogenDioxide: Int? = null,
-    @SerialName("european_aqi_sulphur_dioxide") val europeanAqiSulphurDioxide: Int? = null,
+    @SerialName("european_aqi_pm2_5") val europeanAqiPm25: List<Int?> = emptyList(),
+    @SerialName("european_aqi_pm10") val europeanAqiPm10: List<Int?> = emptyList(),
+    @SerialName("european_aqi_ozone") val europeanAqiOzone: List<Int?> = emptyList(),
+    @SerialName("european_aqi_nitrogen_dioxide") val europeanAqiNitrogenDioxide: List<Int?> = emptyList(),
+    @SerialName("european_aqi_sulphur_dioxide") val europeanAqiSulphurDioxide: List<Int?> = emptyList(),
 ) {
     companion object {
         const val FIELDS =

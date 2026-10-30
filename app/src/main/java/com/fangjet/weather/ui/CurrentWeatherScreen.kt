@@ -98,7 +98,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.fangjet.weather.R
-import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.CitySuggestion
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
@@ -106,7 +105,6 @@ import com.fangjet.weather.domain.HourlySlot
 import com.fangjet.weather.domain.PetWeatherThresholds
 import com.fangjet.weather.domain.SavedLocation
 import com.fangjet.weather.domain.WeatherUnits
-import com.fangjet.weather.model.AirQualityViewModel
 import com.fangjet.weather.model.CityListViewModel
 import com.fangjet.weather.model.GeoLocationViewModel
 import com.fangjet.weather.model.LoadingState
@@ -268,11 +266,9 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     // Same owner RadarCard uses, so this is the instance that would load the timeline.
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
     val settingsViewModel = hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
-    val airQualityViewModel = hiltViewModel<AirQualityViewModel>(viewModelStoreOwner = activity)
     // The activity's instance, the one that decides whether the app is blocked for an update.
     val updatePromptViewModel = hiltViewModel<UpdatePromptViewModel>(viewModelStoreOwner = activity)
     val updatePrompt by updatePromptViewModel.prompt.collectAsStateWithLifecycle()
-    val airQuality by airQualityViewModel.readings.collectAsStateWithLifecycle()
     val unitOverride by settingsViewModel.unitOverride.collectAsStateWithLifecycle()
     // The user's Settings choice; Remote Config walk_card_enabled can also hide it for everyone.
     val showWalkCard by settingsViewModel.showWalkCard.collectAsStateWithLifecycle()
@@ -296,7 +292,6 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             weatherForecastViewModel.refreshCurrent(it)
             weatherForecastViewModel.refreshForecast(it)
         }
-        airQualityViewModel.load(activeLocation)
     }
 
     // Silent background refresh on every foreground resume (picks up new units or stale data)
@@ -309,7 +304,6 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     weatherForecastViewModel.backgroundRefreshCurrent(it)
                     weatherForecastViewModel.backgroundRefreshForecast(it)
                 }
-                airQualityViewModel.load(currentActiveLocation)
                 cityListViewModel.fillInMissingCoordinates()
             }
         }
@@ -327,7 +321,6 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     weatherForecastViewModel.backgroundRefreshCurrent(it)
                     weatherForecastViewModel.backgroundRefreshForecast(it)
                 }
-                airQualityViewModel.load(currentActiveLocation)
             }
         }
     }
@@ -355,7 +348,7 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
             radarEnabled = radarEnabled,
             walkCardEnabled = weatherForecastViewModel.walkCardEnabled && showWalkCard,
             dogWalking = showWalkCard,
-            airQuality = airQuality,
+            airQualityEnabled = weatherForecastViewModel.airQualityEnabled,
             petWeatherThresholds = weatherForecastViewModel.petWeatherThresholds,
             onTabSelected = cityListViewModel::setActiveIndex,
             onOpenSettings = {
@@ -376,7 +369,6 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                     weatherForecastViewModel.refreshCurrent(it)
                     weatherForecastViewModel.refreshForecast(it)
                 }
-                airQualityViewModel.load(activeLocation)
             },
         ) {
             activeLocation?.let {
@@ -440,8 +432,8 @@ fun CurrentWeatherScreen(
     walkCardEnabled: Boolean = true,
     // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
     dogWalking: Boolean = true,
-    // Readings by SavedLocation.cacheKey; a city without one has no Air quality tile.
-    airQuality: Map<String, AirQuality> = emptyMap(),
+    // Remote Config air_quality_enabled: off hides the Air quality tile.
+    airQualityEnabled: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     onTabSelected: (Int) -> Unit,
     onOpenSettings: () -> Unit = {},
@@ -615,7 +607,7 @@ fun CurrentWeatherScreen(
                                         radarEnabled = radarEnabled,
                                         walkCardEnabled = walkCardEnabled,
                                         dogWalking = dogWalking,
-                                        airQuality = location?.let { airQuality[it.cacheKey] },
+                                        airQualityEnabled = airQualityEnabled,
                                         petWeatherThresholds = petWeatherThresholds,
                                         refreshCount = pullCount,
                                         onForecastRetry = onRetry,
@@ -833,7 +825,7 @@ private fun CurrentWeatherContent(
     walkCardEnabled: Boolean = true,
     // Settings' Dog walking switch: off hides the Paw check tile (the walk card follows walkCardEnabled).
     dogWalking: Boolean = true,
-    airQuality: AirQuality? = null,
+    airQualityEnabled: Boolean = true,
     petWeatherThresholds: PetWeatherThresholds = PetWeatherThresholds.DEFAULT,
     refreshCount: Int = 0,
     onForecastRetry: () -> Unit = {},
@@ -1006,7 +998,8 @@ private fun CurrentWeatherContent(
                 pavementNow = currentSlots.firstOrNull()?.pavementTemperature?.takeIf { dogWalking },
                 groundWet = currentSlots.firstOrNull()?.groundWet == true || isPrecipitating(weather.conditionMain),
                 uvIndex = currentSlots.firstOrNull()?.uvIndex?.takeUnless { isNight },
-                airQuality = airQuality,
+                // The forecast's hour in progress, so it shows offline too.
+                airQuality = currentSlots.firstOrNull()?.airQuality?.takeIf { airQualityEnabled },
                 hasDog = dogWalking,
                 nowEpochSeconds = nowEpochSeconds,
                 thresholds = petWeatherThresholds,

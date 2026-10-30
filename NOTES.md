@@ -24,17 +24,18 @@ Tick items off or delete them once done.
       only." when it's bad now. Heat still outranks it.
 - [ ] The walk reminder and morning briefing just skip bad-air hours; they don't say why. Add a
       line ("Smoky air today, so a short one")?
-- [ ] Make the bad-air band a Remote Config threshold, like the pavement ones?
-- [ ] The tile fetches air quality now, and the forecast fetches it hourly: two requests to the same
-      service. Could the tile read the forecast's current hour instead?
-- [ ] Add a Remote Config switch (`air_quality_enabled`) like the radar and walk card have?
+- [x] The bad-air band is a Remote Config threshold, `walk_bad_air_band` (default 3, valid 1–5). (10-30)
+- [x] One request: the forecast fetches each hour's full reading and the tile shows the hour in
+      progress. (10-30)
+- [x] Remote Config switch `air_quality_enabled`: off stops the fetch, hides the tile, and the walk
+      planner ignores the air. (10-30)
 - [ ] Review the copy without a dog ("Fresh air all round" … "Stay indoors") and with one
       ("Good air for a long walk" … "Stay in. Potty breaks only").
 - [ ] The pollutant ("Mostly ozone") is only read out by VoiceOver and TalkBack: a fourth line made
       every tile in the grid taller. Show it somewhere else, such as a tap-through?
 - [x] Five small tiles left Air quality alone on its row: an odd tile out now takes the full
       width (10-30).
-- [ ] Not cached, so it doesn't show offline or until the first fetch returns.
+- [x] Cached with the forecast, so it shows offline too. (10-30)
 - Decided: the scale follows the city (European index for cities on a European clock, US
   everywhere else); "Unhealthy for sensitive groups" is shortened to "Poor for some".
 

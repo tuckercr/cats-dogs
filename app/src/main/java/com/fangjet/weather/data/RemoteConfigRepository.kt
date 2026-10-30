@@ -69,6 +69,12 @@ class RemoteConfigRepository @Inject constructor(
     fun openMeteoEnabled(): Boolean = boolean(KEY_OPEN_METEO_ENABLED) ?: DEFAULT_OPEN_METEO_ENABLED
 
     /**
+     * False stops fetching air quality: no Air quality tile, and the walk planner ignores the air.
+     * Air quality comes from Open-Meteo, so it also needs [openMeteoEnabled].
+     */
+    fun airQualityEnabled(): Boolean = boolean(KEY_AIR_QUALITY_ENABLED) ?: DEFAULT_AIR_QUALITY_ENABLED
+
+    /**
      * Replacement OpenWeather API key, so a leaked key can be rotated without an app update.
      * Null when unset or blank; the key built into the app is used then. Not a secret: Remote
      * Config values reach every device.
@@ -125,6 +131,7 @@ class RemoteConfigRepository @Inject constructor(
                 walkHoursEnd = wholeNumber(KEY_WALK_HOURS_END),
                 petHotC = double(KEY_PET_HOT_THRESHOLD_C),
                 petColdC = double(KEY_PET_COLD_THRESHOLD_C),
+                badAirBand = wholeNumber(KEY_WALK_BAD_AIR_BAND),
             )
         }.getOrDefault(PetWeatherThresholds.DEFAULT)
 
@@ -234,6 +241,7 @@ class RemoteConfigRepository @Inject constructor(
         const val KEY_WALK_HOURS_END = "walk_hours_end"
         const val KEY_PET_HOT_THRESHOLD_C = "pet_hot_threshold_c"
         const val KEY_PET_COLD_THRESHOLD_C = "pet_cold_threshold_c"
+        const val KEY_WALK_BAD_AIR_BAND = "walk_bad_air_band"
 
         const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
         const val DEFAULT_ANALYTICS_ENABLED = true
@@ -245,6 +253,9 @@ class RemoteConfigRepository @Inject constructor(
         const val DEFAULT_WALK_CARD_ENABLED = true
 
         const val KEY_OPEN_METEO_ENABLED = "open_meteo_enabled"
+
+        const val KEY_AIR_QUALITY_ENABLED = "air_quality_enabled"
+        const val DEFAULT_AIR_QUALITY_ENABLED = true
 
         const val KEY_OPENWEATHER_API_KEY = "openweather_api_key"
 

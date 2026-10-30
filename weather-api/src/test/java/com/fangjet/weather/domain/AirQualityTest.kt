@@ -2,13 +2,11 @@ package com.fangjet.weather.domain
 
 import com.fangjet.weather.data.AirQualitySource
 import com.fangjet.weather.data.remote.dto.AirQualityHourlyResponse
-import com.fangjet.weather.data.remote.dto.AirQualityResponse
 import com.fangjet.weather.data.withAirQuality
 import com.fangjet.weather.domain.AirQuality.Pollutant
 import com.fangjet.weather.domain.AirQuality.Scale
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AirQualityTest {
@@ -51,41 +49,44 @@ class AirQualityTest {
     }
 
     @Test
-    fun `parses the index and names the biggest pollutant for the city's scale`() {
+    fun `parses each hour's index and names the biggest pollutant for the city's scale`() {
         val response = json.decodeFromString(
-            AirQualityResponse.serializer(),
-            """{"timezone":"Europe/London","current":{"us_aqi":67,"us_aqi_pm2_5":67,"us_aqi_ozone":1,
-            "european_aqi":50,"european_aqi_pm2_5":45,"european_aqi_nitrogen_dioxide":50,"european_aqi_ozone":1}}""",
+            AirQualityHourlyResponse.serializer(),
+            """{"timezone":"Europe/London","hourly":{"time":[100,3700],"us_aqi":[67,40],"us_aqi_pm2_5":[67,40],
+            "european_aqi":[50,90],"european_aqi_pm2_5":[45,90],"european_aqi_nitrogen_dioxide":[50,10]}}""",
         )
 
         assertEquals(
-            AirQuality(50, Scale.EUROPEAN, Pollutant.NITROGEN_DIOXIDE),
-            AirQualitySource.toAirQuality(response),
+            mapOf(
+                100L to AirQuality(50, Scale.EUROPEAN, Pollutant.NITROGEN_DIOXIDE),
+                3700L to AirQuality(90, Scale.EUROPEAN, Pollutant.FINE_PARTICLES),
+            ),
+            AirQualitySource.toHourly(response),
         )
     }
 
     @Test
     fun `a tie goes to the first listed pollutant`() {
         val response = json.decodeFromString(
-            AirQualityResponse.serializer(),
-            """{"timezone":"America/New_York","current":{"us_aqi":46,"us_aqi_pm2_5":46,"us_aqi_ozone":46}}""",
+            AirQualityHourlyResponse.serializer(),
+            """{"timezone":"America/New_York","hourly":{"time":[100],"us_aqi":[46],"us_aqi_pm2_5":[46],"us_aqi_ozone":[46]}}""",
         )
 
-        assertEquals(Pollutant.FINE_PARTICLES, AirQualitySource.toAirQuality(response)?.mainPollutant)
+        assertEquals(Pollutant.FINE_PARTICLES, AirQualitySource.toHourly(response)[100L]?.mainPollutant)
     }
 
     @Test
-    fun `hourly bands use the city's scale`() {
+    fun `an hour without an index has no reading`() {
         val response = json.decodeFromString(
             AirQualityHourlyResponse.serializer(),
-            """{"timezone":"Europe/Paris","hourly":{"time":[100,3700],"us_aqi":[40,40],"european_aqi":[50,90]}}""",
+            """{"timezone":"America/New_York","hourly":{"time":[100,3700],"us_aqi":[null,30]}}""",
         )
 
-        assertEquals(mapOf(100L to 2, 3700L to 4), AirQualitySource.toHourlyBands(response))
+        assertEquals(mapOf(3700L to AirQuality(30, Scale.US, null)), AirQualitySource.toHourly(response))
     }
 
     @Test
-    fun `each slot gets its hour's band`() {
+    fun `each slot gets its hour's air quality`() {
         val slot = HourlySlot("1 AM", "01n", "clear", 10.0, 10.0, 1.0, 0, 50, 1013, WeatherUnits.METRIC, epochSeconds = 100)
         val day =
             DayForecast(
@@ -100,19 +101,29 @@ class AirQualityTest {
                 WeatherUnits.METRIC,
                 hourlySlots = listOf(slot, slot.copy(epochSeconds = 3700)),
             )
+        val air = AirQuality(172, Scale.US, Pollutant.OZONE)
 
-        val bands = withAirQuality(listOf(day), mapOf(3700L to 4)).single().hourlySlots.map { it.airQualityBand }
+        val slots = withAirQuality(listOf(day), mapOf(3700L to air)).single().hourlySlots.map { it.airQuality }
 
-        assertEquals(listOf(null, 4), bands)
+        assertEquals(listOf(null, air), slots)
     }
 
     @Test
-    fun `no index means no reading`() {
-        val response = json.decodeFromString(
-            AirQualityResponse.serializer(),
-            """{"timezone":"America/New_York","current":{"us_aqi":null}}""",
+    fun `air quality is cached with the forecast`() {
+        val slot = HourlySlot(
+            "1 AM",
+            "01n",
+            "clear",
+            10.0,
+            10.0,
+            1.0,
+            0,
+            50,
+            1013,
+            WeatherUnits.METRIC,
+            airQuality = AirQuality(120, Scale.EUROPEAN, Pollutant.OZONE),
         )
 
-        assertNull(AirQualitySource.toAirQuality(response))
+        assertEquals(slot, json.decodeFromString(HourlySlot.serializer(), json.encodeToString(HourlySlot.serializer(), slot)))
     }
 }

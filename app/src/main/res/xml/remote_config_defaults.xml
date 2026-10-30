@@ -27,6 +27,11 @@
         <key>open_meteo_enabled</key>
         <value>true</value>
     </entry>
+    <!-- False stops fetching air quality: no Air quality tile, and the walk planner ignores the air. -->
+    <entry>
+        <key>air_quality_enabled</key>
+        <value>true</value>
+    </entry>
     <!-- Replacement OpenWeather API key for rotating a leaked one without an update. Empty uses
          the key built into the app. -->
     <entry>
@@ -106,6 +111,12 @@
     <entry>
         <key>pet_cold_threshold_c</key>
         <value>0</value>
+    </entry>
+    <!-- Air quality band (0 good to 5 worst) from which hours aren't suggested for a walk. 3 is US
+         "Unhealthy" and Europe's "Poor". Valid 1-5; anything else uses 3. -->
+    <entry>
+        <key>walk_bad_air_band</key>
+        <value>3</value>
     </entry>
     <!-- Analytics kill switch: false drops every analytics event and turns Firebase Analytics
          collection off on every install, on top of the user's own "Share usage statistics" setting. -->

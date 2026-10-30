@@ -1,8 +1,7 @@
 package com.fangjet.weather.data
 
-import com.fangjet.weather.data.remote.dto.AirQualityCurrentDto
+import com.fangjet.weather.data.remote.dto.AirQualityHourlyDto
 import com.fangjet.weather.data.remote.dto.AirQualityHourlyResponse
-import com.fangjet.weather.data.remote.dto.AirQualityResponse
 import com.fangjet.weather.domain.AirQuality
 import com.fangjet.weather.domain.AirQuality.Pollutant
 import com.fangjet.weather.domain.AirQuality.Scale
@@ -15,30 +14,25 @@ import okhttp3.Request
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** The air quality now, from Open-Meteo's air quality endpoint: free, keyless and worldwide. */
+/** Hourly air quality from Open-Meteo's air quality endpoint: free, keyless and worldwide. */
 @Singleton
 class AirQualitySource @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val json: Json,
 ) {
-    suspend fun fetch(
+    /**
+     * Each hour's air quality for the next two days (the walk planner's day ahead), by its start in
+     * Unix seconds, with every index the tile needs for the hour in progress.
+     */
+    suspend fun fetchHourly(
         latitude: Double,
         longitude: Double,
-    ): Result<AirQuality?> =
-        get(latitude, longitude, mapOf("current" to AirQualityCurrentDto.FIELDS)) { body ->
-            toAirQuality(json.decodeFromString(AirQualityResponse.serializer(), body))
-        }
-
-    /** Each hour's band for the next two days (the walk planner's day ahead), by its start in Unix seconds. */
-    suspend fun fetchHourlyBands(
-        latitude: Double,
-        longitude: Double,
-    ): Result<Map<Long, Int>> =
+    ): Result<Map<Long, AirQuality>> =
         get(
             latitude,
             longitude,
-            mapOf("hourly" to "us_aqi,european_aqi", "timeformat" to "unixtime", "forecast_days" to "2"),
-        ) { body -> toHourlyBands(json.decodeFromString(AirQualityHourlyResponse.serializer(), body)) }
+            mapOf("hourly" to AirQualityHourlyDto.FIELDS, "timeformat" to "unixtime", "forecast_days" to "2"),
+        ) { body -> toHourly(json.decodeFromString(AirQualityHourlyResponse.serializer(), body)) }
 
     private suspend fun <T> get(
         latitude: Double,
@@ -67,36 +61,35 @@ class AirQualitySource @Inject constructor(
     companion object {
         private const val BASE_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
 
-        internal fun toHourlyBands(response: AirQualityHourlyResponse): Map<Long, Int> {
+        internal fun toHourly(response: AirQualityHourlyResponse): Map<Long, AirQuality> {
             val scale = Scale.forTimeZone(response.timezone)
-            val indices = if (scale == Scale.EUROPEAN) response.hourly.europeanAqi else response.hourly.usAqi
-            return response.hourly.time
-                .zip(indices)
-                .mapNotNull { (time, index) -> index?.let { time to AirQuality(it, scale, null).band } }
-                .toMap()
+            val h = response.hourly
+            return h.time
+                .mapIndexedNotNull { row, time ->
+                    AirQuality
+                        .from(scale) {
+                            when (it) {
+                                Scale.US -> h.usAqi.at(row) to listOf(
+                                    Pollutant.FINE_PARTICLES to h.usAqiPm25.at(row),
+                                    Pollutant.COARSE_PARTICLES to h.usAqiPm10.at(row),
+                                    Pollutant.OZONE to h.usAqiOzone.at(row),
+                                    Pollutant.NITROGEN_DIOXIDE to h.usAqiNitrogenDioxide.at(row),
+                                    Pollutant.SULPHUR_DIOXIDE to h.usAqiSulphurDioxide.at(row),
+                                    Pollutant.CARBON_MONOXIDE to h.usAqiCarbonMonoxide.at(row),
+                                )
+                                Scale.EUROPEAN -> h.europeanAqi.at(row) to listOf(
+                                    Pollutant.FINE_PARTICLES to h.europeanAqiPm25.at(row),
+                                    Pollutant.COARSE_PARTICLES to h.europeanAqiPm10.at(row),
+                                    Pollutant.OZONE to h.europeanAqiOzone.at(row),
+                                    Pollutant.NITROGEN_DIOXIDE to h.europeanAqiNitrogenDioxide.at(row),
+                                    Pollutant.SULPHUR_DIOXIDE to h.europeanAqiSulphurDioxide.at(row),
+                                )
+                            }
+                        }?.let { time to it }
+                }.toMap()
         }
 
-        internal fun toAirQuality(response: AirQualityResponse): AirQuality? {
-            val c = response.current
-            return AirQuality.from(response.timezone) { scale ->
-                when (scale) {
-                    Scale.US -> c.usAqi to listOf(
-                        Pollutant.FINE_PARTICLES to c.usAqiPm25,
-                        Pollutant.COARSE_PARTICLES to c.usAqiPm10,
-                        Pollutant.OZONE to c.usAqiOzone,
-                        Pollutant.NITROGEN_DIOXIDE to c.usAqiNitrogenDioxide,
-                        Pollutant.SULPHUR_DIOXIDE to c.usAqiSulphurDioxide,
-                        Pollutant.CARBON_MONOXIDE to c.usAqiCarbonMonoxide,
-                    )
-                    Scale.EUROPEAN -> c.europeanAqi to listOf(
-                        Pollutant.FINE_PARTICLES to c.europeanAqiPm25,
-                        Pollutant.COARSE_PARTICLES to c.europeanAqiPm10,
-                        Pollutant.OZONE to c.europeanAqiOzone,
-                        Pollutant.NITROGEN_DIOXIDE to c.europeanAqiNitrogenDioxide,
-                        Pollutant.SULPHUR_DIOXIDE to c.europeanAqiSulphurDioxide,
-                    )
-                }
-            }
-        }
+        // A field missing from the response, or shorter than `time`, counts as no reading.
+        private fun List<Int?>.at(row: Int): Int? = getOrNull(row)
     }
 }

@@ -77,10 +77,10 @@ data class HourlySlot(
      */
     val groundWet: Boolean = false,
     /**
-     * The hour's air quality band, 0 (good) to 5, on the city's scale ([AirQuality.band]). Null when
-     * unknown, which the walk planner treats as clean air.
+     * The hour's air quality on the city's scale. Null when unknown, which the walk planner treats
+     * as clean air.
      */
-    val airQualityBand: Int? = null,
+    val airQuality: AirQuality? = null,
 )
 
 @Serializable

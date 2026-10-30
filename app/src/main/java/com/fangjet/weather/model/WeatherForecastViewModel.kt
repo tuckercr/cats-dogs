@@ -54,6 +54,7 @@ class WeatherForecastViewModel internal constructor(
     private val onError: (errorKey: String) -> Unit = {},
     private val onSettingsOpened: () -> Unit = {},
     isWalkCardEnabled: () -> Boolean = { true },
+    isAirQualityEnabled: () -> Boolean = { true },
     readPetWeatherThresholds: () -> PetWeatherThresholds = { PetWeatherThresholds.DEFAULT },
     // Remote Config foreground_refresh_min_minutes, read on every foreground resume. 0 = never throttle.
     private val foregroundRefreshMinMinutes: () -> Long = { 0L },
@@ -117,12 +118,19 @@ class WeatherForecastViewModel internal constructor(
         onError = { key -> analyticsRepository.logWeatherError(key) },
         onSettingsOpened = { analyticsRepository.logSettingsOpened() },
         isWalkCardEnabled = remoteConfigRepository::walkCardEnabled,
+        isAirQualityEnabled = remoteConfigRepository::airQualityEnabled,
         readPetWeatherThresholds = remoteConfigRepository::petWeatherThresholds,
         foregroundRefreshMinMinutes = remoteConfigRepository::foregroundRefreshMinMinutes,
     )
 
     /** Remote Config `walk_card_enabled`: false hides the "time to walk the dog" card. */
     val walkCardEnabled: Boolean = isWalkCardEnabled()
+
+    /**
+     * Remote Config `air_quality_enabled`. The fetch checks it too; this hides a reading in a
+     * forecast cached before it went off.
+     */
+    val airQualityEnabled: Boolean = isAirQualityEnabled()
 
     /** Remote Config pet-mood and walk-advice thresholds (validated; Celsius). */
     val petWeatherThresholds: PetWeatherThresholds = readPetWeatherThresholds()
