@@ -2,6 +2,7 @@ package com.fangjet.weather.model
 
 import com.fangjet.weather.data.GeocodingRepository
 import com.fangjet.weather.domain.CitySuggestion
+import com.fangjet.weather.domain.SavedLocation
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -136,6 +137,57 @@ class GeoLocationViewModelTest {
             assertFalse(viewModel.citySuggestLoading.value)
             assertNull(viewModel.selectedSuggestion.value)
         }
+
+    // --- locationToAdd ---
+
+    @Test
+    fun `add city takes the top suggestion when none is picked`() =
+        runTest {
+            coEvery { geocodingRepository.searchCities(any()) } returns
+                Result.success(listOf(londonGb, londonOntario))
+            val viewModel = GeoLocationViewModel(geocodingRepository)
+
+            viewModel.onCityInputChange("London")
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(
+                SavedLocation(label = "London, GB", latitude = 51.51, longitude = -0.13),
+                viewModel.locationToAdd(),
+            )
+        }
+
+    @Test
+    fun `add city takes the picked suggestion over the top one`() =
+        runTest {
+            val viewModel = GeoLocationViewModel(geocodingRepository)
+
+            viewModel.onCitySuggestionChosen(londonOntario)
+
+            assertEquals(
+                SavedLocation(label = "London, Ontario, CA", latitude = 42.98, longitude = -81.25),
+                viewModel.locationToAdd(),
+            )
+        }
+
+    @Test
+    fun `add city falls back to the typed name without suggestions`() =
+        runTest {
+            coEvery { geocodingRepository.searchCities(any()) } returns Result.failure(java.io.IOException())
+            val viewModel = GeoLocationViewModel(geocodingRepository)
+
+            viewModel.onCityInputChange("  London ")
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            assertEquals(SavedLocation(label = "London", latitude = null, longitude = null), viewModel.locationToAdd())
+        }
+
+    @Test
+    fun `add city has nothing to add with nothing typed`() {
+        assertNull(GeoLocationViewModel(geocodingRepository).locationToAdd())
+    }
+
+    private val londonGb = CitySuggestion("London, GB", 51.51, -0.13)
+    private val londonOntario = CitySuggestion("London, Ontario, CA", 42.98, -81.25)
 
     class MainDispatcherRule(
         val testDispatcher: TestDispatcher = StandardTestDispatcher(),

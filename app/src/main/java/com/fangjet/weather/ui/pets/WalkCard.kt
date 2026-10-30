@@ -123,6 +123,7 @@ internal fun walkCaption(advice: WalkAdvice): WalkText? {
         // Hot or cold air, not the pavement.
         WalkRating.PAWS_HOT -> WalkText(R.string.walk_too_hot)
         WalkRating.TOO_COLD -> WalkText(R.string.walk_too_cold)
+        WalkRating.BAD_AIR -> WalkText(R.string.walk_bad_air)
         else -> null
     }
 }
@@ -138,7 +139,7 @@ private fun ratingTint(rating: WalkRating): Color {
         WalkRating.GREAT -> if (dark) WalkGreatBg else WalkGreatText
         WalkRating.OKAY -> if (dark) WalkOkayBg else WalkOkayText
         WalkRating.POOR -> if (dark) WalkPoorBg else WalkPoorText
-        WalkRating.PAWS_HOT -> if (dark) WalkHotBg else WalkHotText
+        WalkRating.PAWS_HOT, WalkRating.BAD_AIR -> if (dark) WalkHotBg else WalkHotText
         WalkRating.TOO_COLD -> if (dark) WalkColdBg else WalkColdText
     }
 }

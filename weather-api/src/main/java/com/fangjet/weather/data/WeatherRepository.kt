@@ -6,6 +6,8 @@ import com.fangjet.weather.di.WeatherNetworkModule
 import com.fangjet.weather.domain.CurrentWeather
 import com.fangjet.weather.domain.DayForecast
 import com.fangjet.weather.domain.WeatherUnits
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import retrofit2.HttpException
 import java.io.IOException
@@ -22,6 +24,8 @@ class WeatherRepository @Inject constructor(
     private val zoneId: ZoneId,
     private val json: Json,
     private val forecastSourcePolicy: ForecastSourcePolicy = ForecastSourcePolicy.OpenMeteoPreferred,
+    // Hourly air quality for the walk planner; null leaves it out (tests).
+    private val airQuality: AirQualitySource? = null,
 ) {
 
     suspend fun fetchCurrentWeather(
@@ -73,7 +77,11 @@ class WeatherRepository @Inject constructor(
         // Prefer Open-Meteo (true hourly, UV, pavement heat) whenever we have coordinates,
         // unless Remote Config has switched it off.
         if (hasCoordinates && openMeteoEnabled()) {
-            return openMeteo.fetch(units, latitude, longitude).mapApiFailure()
+            return coroutineScope {
+                // Air quality comes alongside for the walk planner; without it the forecast still stands.
+                val bands = async { airQuality?.fetchHourlyBands(latitude, longitude)?.getOrNull().orEmpty() }
+                openMeteo.fetch(units, latitude, longitude).mapApiFailure().map { withAirQuality(it, bands.await()) }
+            }
         }
         val key = apiKey.trim()
         if (key.isEmpty()) {
@@ -208,4 +216,15 @@ class WeatherRepository @Inject constructor(
 
             else -> throwable
         }
+}
+
+/** Puts each hour's air quality band on its slot. */
+internal fun withAirQuality(
+    days: List<DayForecast>,
+    bands: Map<Long, Int>,
+): List<DayForecast> {
+    if (bands.isEmpty()) return days
+    return days.map { day ->
+        day.copy(hourlySlots = day.hourlySlots.map { slot -> slot.copy(airQualityBand = slot.epochSeconds?.let { bands[it] }) })
+    }
 }

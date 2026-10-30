@@ -94,24 +94,7 @@ fun LocationsRoute(
                 onCityInputChange = geoViewModel::onCityInputChange,
                 onSuggestionChosen = geoViewModel::onCitySuggestionChosen,
                 onAddCity = {
-                    val suggestion = selectedSuggestion
-                    if (suggestion != null) {
-                        cityListViewModel.addLocation(
-                            SavedLocation(
-                                label = suggestion.label,
-                                latitude = suggestion.weatherLat,
-                                longitude = suggestion.weatherLon,
-                            ),
-                        )
-                    } else if (cityInput.isNotBlank()) {
-                        cityListViewModel.addLocation(
-                            SavedLocation(
-                                label = cityInput.trim(),
-                                latitude = null,
-                                longitude = null,
-                            ),
-                        )
-                    }
+                    geoViewModel.locationToAdd()?.let(cityListViewModel::addLocation)
                     geoViewModel.reset()
                     showAddSheet = false
                 },

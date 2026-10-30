@@ -2,12 +2,15 @@ package com.fangjet.weather.model
 
 import com.fangjet.weather.data.GeocodingRepository
 import com.fangjet.weather.data.PreferencesRepository
+import com.fangjet.weather.domain.CitySuggestion
 import com.fangjet.weather.domain.SavedLocation
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
@@ -390,6 +393,54 @@ class CityListViewModelTest {
             assertEquals(denver, viewModel.activeLocation.value)
         }
 
+    // --- fillInMissingCoordinates ---
+
+    /** A city whose lookup failed when it was added gets its coordinates the next time the app opens. */
+    @Test
+    fun `a name-only city saved earlier is geocoded on launch`() =
+        runTest {
+            val geocodingRepo = mockk<GeocodingRepository>()
+            coEvery { geocodingRepo.searchCities("London") } returns
+                Result.success(listOf(CitySuggestion("London, England, GB", 51.51, -0.13)))
+            var saved: List<SavedLocation>? = null
+            val viewModel = viewModel(
+                savedLocations = listOf(SavedLocation(label = "London", latitude = null, longitude = null)),
+                onSetSavedLocations = { saved = it },
+                geocodingRepo = geocodingRepo,
+            )
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            val geocoded = SavedLocation(label = "London", latitude = 51.51, longitude = -0.13)
+            assertEquals(listOf(geocoded), viewModel.locations.value)
+            assertEquals(listOf(geocoded), saved)
+        }
+
+    @Test
+    fun `retrying while a lookup is in flight does not look it up twice`() =
+        runTest {
+            val geocodingRepo = mockk<GeocodingRepository>()
+            coEvery { geocodingRepo.searchCities(any()) } coAnswers {
+                delay(1_000)
+                Result.success(listOf(CitySuggestion("London, England, GB", 51.51, -0.13)))
+            }
+            val viewModel = viewModel(
+                savedLocations = listOf(SavedLocation(label = "London", latitude = null, longitude = null)),
+                geocodingRepo = geocodingRepo,
+            )
+            mainDispatcherRule.testDispatcher.scheduler.runCurrent()
+
+            viewModel.fillInMissingCoordinates()
+            mainDispatcherRule.testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { geocodingRepo.searchCities("London") }
+            assertEquals(
+                51.51,
+                viewModel.locations.value
+                    .single()
+                    .latitude,
+            )
+        }
+
     // --- helpers ---
 
     private fun viewModel(
@@ -399,6 +450,9 @@ class CityListViewModelTest {
         onSetSavedLocations: (List<SavedLocation>) -> Unit = {},
         onSetActiveIndex: (Int) -> Unit = {},
         onCityAdded: () -> Unit = {},
+        geocodingRepo: GeocodingRepository = mockk<GeocodingRepository>(relaxed = true).also {
+            coEvery { it.searchCities(any()) } returns Result.success(emptyList())
+        },
     ): CityListViewModel {
         val repo = mockk<PreferencesRepository>(relaxed = true)
         every { repo.savedLocations } returns flowOf(savedLocations)
@@ -410,8 +464,6 @@ class CityListViewModelTest {
         coEvery { repo.setActiveLocationIndex(any()) } answers {
             onSetActiveIndex(firstArg())
         }
-        val geocodingRepo = mockk<GeocodingRepository>(relaxed = true)
-        coEvery { geocodingRepo.searchCities(any()) } returns Result.success(emptyList())
         return CityListViewModel(repo, geocodingRepo, onCityAdded = onCityAdded)
     }
 

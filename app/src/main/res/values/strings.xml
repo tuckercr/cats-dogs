@@ -226,6 +226,7 @@
     <string name="walk_none">Not a good day for walkies</string>
     <string name="walk_too_hot">Too hot for paws.</string>
     <string name="walk_too_cold">Too cold for paws.</string>
+    <string name="walk_bad_air">Bad air. Potty breaks only.</string>
 
     <!-- UV index -->
     <string name="label_uv_index">UV index</string>
@@ -246,6 +247,52 @@
     <string name="label_sky">Sky</string>
     <string name="today_actual">Actual %1$s</string>
     <string name="today_dew_point">Dew point %1$s</string>
+    <string name="label_air_quality">Air quality</string>
+    <string name="air_quality_mostly">Mostly %1$s</string>
+    <!-- "Unhealthy for sensitive groups" doesn't fit on a tile. -->
+    <string-array name="air_quality_bands_us">
+        <item>Good</item>
+        <item>Moderate</item>
+        <item>Poor for some</item>
+        <item>Unhealthy</item>
+        <item>Very unhealthy</item>
+        <item>Hazardous</item>
+    </string-array>
+    <string-array name="air_quality_bands_european">
+        <item>Good</item>
+        <item>Fair</item>
+        <item>Moderate</item>
+        <item>Poor</item>
+        <item>Very poor</item>
+        <item>Extremely poor</item>
+    </string-array>
+    <!-- One per band, good to worst, for someone with a dog. -->
+    <string-array name="air_quality_lines_dog">
+        <item>Good air for a long walk</item>
+        <item>Fine for most walks</item>
+        <item>Short walks for older and flat-faced dogs</item>
+        <item>Potty breaks only today</item>
+        <item>Potty breaks only today</item>
+        <item>Stay in. Potty breaks only</item>
+    </string-array>
+    <!-- One per band, good to worst, without a dog. -->
+    <string-array name="air_quality_lines">
+        <item>Fresh air all round</item>
+        <item>Fine for most people</item>
+        <item>Sensitive people should take it easy</item>
+        <item>Limit time outdoors</item>
+        <item>Limit time outdoors</item>
+        <item>Stay indoors</item>
+    </string-array>
+    <!-- In AirQuality.Pollutant's order. -->
+    <string-array name="air_quality_pollutants">
+        <item>fine particles</item>
+        <item>coarse particles</item>
+        <item>ozone</item>
+        <item>nitrogen dioxide</item>
+        <item>sulphur dioxide</item>
+        <item>carbon monoxide</item>
+    </string-array>
     <string name="today_uv">UV %1$d · %2$s</string>
     <!-- What screen readers hear on the Wind tile, which shows the direction only as an arrow. -->
     <string name="today_wind_from_spoken">From the %1$s, %2$s</string>
