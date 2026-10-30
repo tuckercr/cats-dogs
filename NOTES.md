@@ -76,8 +76,8 @@ Tick items off or delete them once done.
 - [ ] TestFlight build for Jessica. (10-24)
 - [x] Update prompts (10-30): `ios_`/`android_min_supported_version` block the app until it's
       updated, `ios_`/`android_min_recommended_version` show a banner ("Not now" hides it a week).
-- [ ] Add those five keys in the Firebase console (empty), including `ios_app_store_url`, which
-      needs the App Store link once the app record exists. Until then iOS has no Update button.
+- [x] The five keys are live in Remote Config, all empty (deployed 10-30).
+- [ ] Set `ios_app_store_url` once the App Store record exists. Until then iOS has no Update button.
 - [ ] Debug builds can show either prompt: launch iOS with `-updatePrompt required` (or
       `recommended`); on Android, `adb shell am start -n com.fangjet.weather.debug/com.fangjet.weather.MainActivity --es updatePrompt required`.
 - [ ] Store screenshot captions in the pets' voice. (10-26)

@@ -99,6 +99,41 @@
       "defaultValue": { "value": "true" },
       "valueType": "BOOLEAN",
       "description": "Kill switch: false stops all usage-analytics events and turns Firebase Analytics collection off on every install, on top of the user's own Share usage statistics setting."
+    },
+    "rain_notifications_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Kill switch for rain and snow alerts, for everyone: false stops them and hides their switch in Settings (users' own choice is kept)"
+    },
+    "walk_time_notifications_enabled": {
+      "defaultValue": { "value": "true" },
+      "valueType": "BOOLEAN",
+      "description": "Kill switch for the Walk time nudge, for everyone: false stops it and hides its switch in Settings (users' own choice is kept)"
+    },
+    "ios_min_supported_version": {
+      "defaultValue": { "value": "" },
+      "valueType": "STRING",
+      "description": "iOS versions below this (for example 1.2) show only an update screen. Blank never asks."
+    },
+    "ios_min_recommended_version": {
+      "defaultValue": { "value": "" },
+      "valueType": "STRING",
+      "description": "iOS versions below this show an update banner; Not now hides it for a week. Blank never asks."
+    },
+    "ios_app_store_url": {
+      "defaultValue": { "value": "" },
+      "valueType": "STRING",
+      "description": "App Store link for the iOS Update button. Blank: the update screen says to update from the App Store."
+    },
+    "android_min_supported_version": {
+      "defaultValue": { "value": "" },
+      "valueType": "STRING",
+      "description": "Android versions below this (for example 1.2) show only an update screen. Blank never asks."
+    },
+    "android_min_recommended_version": {
+      "defaultValue": { "value": "" },
+      "valueType": "STRING",
+      "description": "Android versions below this show an update banner; Not now hides it for a week. Blank never asks."
     }
   }
 }
