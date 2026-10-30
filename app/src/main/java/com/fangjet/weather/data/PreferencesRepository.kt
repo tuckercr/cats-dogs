@@ -151,6 +151,13 @@ class PreferencesRepository internal constructor(
         dataStore.edit { it[KEY_SHOW_WALK_CARD] = show }
     }
 
+    /** When "Not now" was last tapped on the update banner, in epoch milliseconds. */
+    val updateBannerDismissedAt: Flow<Long?> = dataStore.data.map { it[KEY_UPDATE_BANNER_DISMISSED_AT] }
+
+    suspend fun setUpdateBannerDismissedAt(epochMillis: Long) {
+        dataStore.edit { it[KEY_UPDATE_BANNER_DISMISSED_AT] = epochMillis }
+    }
+
     /** The 8:30 AM weather briefing. On unless they turn it off. */
     val notifyMorningBriefing: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[KEY_NOTIFY_MORNING_BRIEFING] ?: true
@@ -217,5 +224,6 @@ class PreferencesRepository internal constructor(
         private val KEY_NOTIFY_WALK_TIME = booleanPreferencesKey("notify_walk_time")
         private val KEY_NOTIFY_RAIN = booleanPreferencesKey("notify_rain")
         private val KEY_LAST_RAIN_ALERT_START = longPreferencesKey("last_rain_alert_start")
+        private val KEY_UPDATE_BANNER_DISMISSED_AT = longPreferencesKey("update_banner_dismissed_at")
     }
 }

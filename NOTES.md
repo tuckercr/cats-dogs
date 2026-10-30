@@ -6,12 +6,9 @@ Tick items off or delete them once done.
 
 ## Do soon
 
-- [ ] **Commit today's work to a new branch.** Both repos are still on `feature/my-pets-notifications`,
-      whose PRs merged on 10-29. Uncommitted: name-only cities get coordinates later, Add city uses
-      the top suggestion, and the Air quality tile. (10-30)
-- [ ] **iOS signing.** The project now uses FangJet LLC's team (`3V3NR8HP58`). Still to do: sign in
-      to colin@fangjet.com in Xcode (Settings, then Accounts) so it can create the certificates and
-      register `com.fangjet.weather`, then do a device build. (10-30)
+- [ ] **iOS signing.** The project uses FangJet LLC's team (`3V3NR8HP58`) and Xcode is signed in.
+      Still to do: register an iPhone or iPad with the team (Xcode says "Your team has no devices"),
+      then do a signed device build and an archive. (10-30)
 - [ ] **Android location: "Ask every time" never clears the permanently-denied flag**, so
       "Add My Location" stays hidden after a reset in system settings (review finding 3). (10-29)
 
@@ -77,8 +74,12 @@ Tick items off or delete them once done.
 - [ ] Website store buttons need the real App Store and Play links on launch day, ideally the
       official badges. (10-27)
 - [ ] TestFlight build for Jessica. (10-24)
-- [ ] "Please update" screen driven by a `min_supported_version` Remote Config key, before a wider
-      release. (10-13)
+- [x] Update prompts (10-30): `ios_`/`android_min_supported_version` block the app until it's
+      updated, `ios_`/`android_min_recommended_version` show a banner ("Not now" hides it a week).
+- [x] The five keys are live in Remote Config, all empty (deployed 10-30).
+- [ ] Set `ios_app_store_url` once the App Store record exists. Until then iOS has no Update button.
+- [ ] Debug builds can show either prompt: launch iOS with `-updatePrompt required` (or
+      `recommended`); on Android, `adb shell am start -n com.fangjet.weather.debug/com.fangjet.weather.MainActivity --es updatePrompt required`.
 - [ ] Store screenshot captions in the pets' voice. (10-26)
 
 ## Testing
@@ -94,11 +95,13 @@ Tick items off or delete them once done.
 
 - [ ] The Android release build doesn't fail loudly when the signing key or weather API key is
       missing. (10-27)
-- [ ] iOS test runs leave hundreds of `CatsDogsTests-*.plist` files on the test simulator. (10-05)
+- [x] iOS test runs left hundreds of `CatsDogsTests-*.plist` files on the test simulator (10-05).
+      Tests now reuse 8 settings files (`CatsDogsTests-0` to `-7`); the system rewrites deleted ones,
+      so zero would need in-memory settings. 60 old test-clone simulators (329 GB) deleted 10-30.
 - [ ] After the first release: rename the Xcode project and targets ("Cats&Dogs") and the Android
       folder (`cats-dogs`) in their own PRs. (10-28)
 - [ ] Rename the "Furcast-Shots" and "Furcast-iPad-Shots" simulators. (10-28)
-- [ ] Clean up old local branches (about ten per repo). (10-26)
+- [x] Clean up old local branches (10-26, done 10-30).
 
 ## Ideas
 
@@ -111,5 +114,7 @@ Tick items off or delete them once done.
 ## Outside the apps
 
 - [ ] Résumé PDF still links the old repo. (10-26)
-- [ ] fangjet.com: take down the old WordPress install on IONOS if it's still running; tidy the
-      Tailwind one-off values; the AI page is out of the navigation but still in the sitemap. (10-24)
+- [ ] fangjet.com: the old WordPress install is no longer served (10-30), but its files and MySQL
+      database may still sit in the IONOS webspace. Back up and delete them, leaving Rolo alone.
+      Also tidy the Tailwind one-off values; the AI page is out of the navigation but still in the
+      sitemap. (10-24)

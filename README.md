@@ -277,6 +277,8 @@ validated: a missing or bad value falls back to the default rather than crashing
 | `walk_card_enabled` | boolean | `true` | Shows the "Best walk time" card; false hides it for everyone (phone and tablet layouts). Users can also turn it off in Settings |
 | `open_meteo_enabled` | boolean | `true` | Forecasts for cities with coordinates come from Open-Meteo; false falls back to the OpenWeatherMap 3-hourly forecast by lat/lon (foreground, background refresh, and notifications) |
 | `openweather_api_key` | string | `""` | Replacement OpenWeather API key, used from the next app start; empty uses the key built into the app. Lets a leaked key be rotated without an update. Not secret: Remote Config values reach every device |
+| `android_min_supported_version` | string | `""` | Below this version (e.g. `1.1`) the app shows only "Time for an update" until it's updated. Empty never asks. iOS has its own key |
+| `android_min_recommended_version` | string | `""` | Below this version a banner under the city tabs suggests updating; "Not now" hides it for a week. Empty never asks |
 | `daily_weather_notifications_enabled` | boolean | `true` | The 8:30 AM morning briefing; false skips it (the morning run still plans the walk-time nudge) and hides its switch in Settings |
 | `walk_time_notifications_enabled` | boolean | `true` | The Walk time nudge; false stops planning and posting it and hides its switch in Settings |
 | `rain_notifications_enabled` | boolean | `true` | Rain alerts; false stops them and hides their switch in Settings |

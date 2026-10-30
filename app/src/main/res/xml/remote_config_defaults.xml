@@ -33,6 +33,14 @@
         <key>openweather_api_key</key>
         <value></value>
     </entry>
+    <entry>
+        <key>android_min_supported_version</key>
+        <value></value>
+    </entry>
+    <entry>
+        <key>android_min_recommended_version</key>
+        <value></value>
+    </entry>
     <!-- Each kind of notification, for everyone: off stops it and hides its switch in Settings. -->
     <entry>
         <key>daily_weather_notifications_enabled</key>
