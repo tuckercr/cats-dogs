@@ -247,6 +247,12 @@
     <string name="label_sky">Sky</string>
     <string name="today_actual">Actual %1$s</string>
     <string name="today_dew_point">Dew point %1$s</string>
+    <string name="update_required_title">Time for an update</string>
+    <string name="update_required_body">This version of Sunny &amp; Misty has stopped working. Sunny\'s packed, Misty\'s pretending not to notice. Update to keep the walks coming.</string>
+    <string name="update_banner_title">A new version is out</string>
+    <string name="update_banner_body">Update for the latest features and fixes.</string>
+    <string name="update_button">Update</string>
+    <string name="update_not_now">Not now</string>
     <string name="label_air_quality">Air quality</string>
     <string name="air_quality_mostly">Mostly %1$s</string>
     <!-- "Unhealthy for sensitive groups" doesn't fit on a tile. -->

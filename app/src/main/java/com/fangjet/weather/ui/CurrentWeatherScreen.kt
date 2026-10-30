@@ -114,6 +114,7 @@ import com.fangjet.weather.model.LocationFetchState
 import com.fangjet.weather.model.LocationPermissionViewModel
 import com.fangjet.weather.model.RadarViewModel
 import com.fangjet.weather.model.SettingsViewModel
+import com.fangjet.weather.model.UpdatePromptViewModel
 import com.fangjet.weather.model.WeatherForecastViewModel
 import com.fangjet.weather.ui.pets.PetMood
 import com.fangjet.weather.ui.pets.PetScene
@@ -129,6 +130,7 @@ import com.fangjet.weather.ui.theme.StaleBannerBg
 import com.fangjet.weather.ui.theme.StaleBannerText
 import com.fangjet.weather.util.NextRain
 import com.fangjet.weather.util.ReadingDay
+import com.fangjet.weather.util.UpdatePrompt
 import com.fangjet.weather.util.forecastAsCurrent
 import com.fangjet.weather.util.fromCurrentSlot
 import com.fangjet.weather.util.isTooOldToShowAsNow
@@ -267,6 +269,9 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
     val radarEnabled = hiltViewModel<RadarViewModel>().radarEnabled
     val settingsViewModel = hiltViewModel<SettingsViewModel>(viewModelStoreOwner = activity)
     val airQualityViewModel = hiltViewModel<AirQualityViewModel>(viewModelStoreOwner = activity)
+    // The activity's instance, the one that decides whether the app is blocked for an update.
+    val updatePromptViewModel = hiltViewModel<UpdatePromptViewModel>(viewModelStoreOwner = activity)
+    val updatePrompt by updatePromptViewModel.prompt.collectAsStateWithLifecycle()
     val airQuality by airQualityViewModel.readings.collectAsStateWithLifecycle()
     val unitOverride by settingsViewModel.unitOverride.collectAsStateWithLifecycle()
     // The user's Settings choice; Remote Config walk_card_enabled can also hide it for everyone.
@@ -358,6 +363,14 @@ fun CurrentWeatherRoute(onOpenSettings: () -> Unit = {}) {
                 onOpenSettings()
             },
             onAddCityClick = { showAddSheet = true },
+            topBanner = {
+                if (updatePrompt == UpdatePrompt.RECOMMENDED) {
+                    UpdateBanner(
+                        onDismiss = updatePromptViewModel::dismissBanner,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                    )
+                }
+            },
             onRefresh = {
                 activeLocation?.let {
                     weatherForecastViewModel.refreshCurrent(it)
@@ -434,6 +447,8 @@ fun CurrentWeatherScreen(
     onOpenSettings: () -> Unit = {},
     onAddCityClick: () -> Unit,
     onRefresh: () -> Unit = {},
+    // Under the city tabs: the update banner, when a newer version is recommended.
+    topBanner: @Composable () -> Unit = {},
     onRetry: () -> Unit,
 ) {
     // Each pull also re-reads the clock, so the hourly strip and captions move on even when the
@@ -506,6 +521,7 @@ fun CurrentWeatherScreen(
                         }
                     }
                 }
+                topBanner()
             }
         },
     ) { padding ->
