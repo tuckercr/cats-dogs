@@ -101,6 +101,13 @@ class OpenMeteoForecastSource @Inject constructor(
                 shortwaveRadiationWm2 = h.time.indices.map { i -> h.shortwaveRadiation.getOrNull(i) },
                 isDay = h.time.indices.map { i -> h.isDay.getOrNull(i) == 1 },
             )
+            // Each local day's range over all of its hours, including the ones dropped below, so
+            // late in the evening today's high is still the afternoon's, not the next few hours'.
+            val localDate = { epoch: Long -> Instant.ofEpochSecond(epoch).atZone(zone).toLocalDate() }
+            val dayRanges = h.time.indices
+                .mapNotNull { i -> h.temperature.getOrNull(i)?.let { localDate(h.time[i]) to it } }
+                .groupBy({ it.first }, { it.second })
+                .mapValues { (_, temps) -> temps.min() to temps.max() }
             val slots = h.time.indices.mapNotNull { i ->
                 val epoch = h.time[i]
                 val temp = h.temperature.getOrNull(i) ?: return@mapNotNull null
@@ -111,6 +118,8 @@ class OpenMeteoForecastSource @Inject constructor(
                     epochSeconds = epoch,
                     temperature = temp,
                     feelsLike = h.apparentTemperature.getOrNull(i) ?: temp,
+                    tempMin = dayRanges[localDate(epoch)]?.first ?: temp,
+                    tempMax = dayRanges[localDate(epoch)]?.second ?: temp,
                     conditionMain = condition.main,
                     description = condition.description,
                     iconCode = condition.iconCode,
