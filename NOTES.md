@@ -4,13 +4,11 @@ Open ideas, decisions and loose ends for Sunny & Misty, both apps. The same file
 repos (cats-dogs-iOS and cats-dogs); keep them in step. Dates are when the item came up (2026).
 Finished items move to Done at the bottom.
 
-## Open PRs (10-30)
+## Open PRs (10-31)
 
-Merge in this order; each stacked PR moves onto main or master once the one below it merges.
-
-- iOS: #34 tile gaps and empty state, then #35 air quality; #36 Xcode settings and the
-  `nilIfBlank` fix stands alone.
-- Android: #94 tile gaps, then #95 air quality; #96 release build checks stands alone.
+- iOS: #35 air quality, the high/low fix, README and fresh screenshots. #34 and #36 are merged.
+- Android: #94 tile gaps, then #95 air quality, the high/low fix, README and Play Store
+  screenshots. #96 is merged.
 
 ## Do soon
 
@@ -83,6 +81,14 @@ Merge in this order; each stacked PR moves onto main or master once the one belo
   `recommended`); on Android,
   `adb shell am start -n com.fangjet.weather.debug/com.fangjet.weather.MainActivity --es updatePrompt required`.
 
+## Small fixes found while taking screenshots (10-30)
+
+- [ ] City search shows the same suggestion twice ("Amsterdam, North Holland, NL"). Drop duplicates.
+- [ ] On the day clocks fall back, the day detail lists "1 AM" twice. That's right, but the
+      second could say so (for example "1 AM PST").
+- [ ] My Location shows the reverse-geocoded neighbourhood ("Horinouchi" for central Tokyo), not
+      the city. Prefer the city name?
+
 ## Testing
 
 - [ ] On an Android device: the full-width odd tile and the Air quality tile now read from the
@@ -118,6 +124,7 @@ Merge in this order; each stacked PR moves onto main or master once the one belo
 
 ## Done
 
+- [x] The day detail's empty row under the header (two dividers in a row) is gone. (10-30)
 - [x] iOS signing: FangJet LLC's team (`3V3NR8HP58`), your iPhone registered, and a Release archive
       that exports with App Store signing. (10-30)
 - [x] Update prompts: `ios_`/`android_min_supported_version` block the app until it's updated,
@@ -136,3 +143,7 @@ Merge in this order; each stacked PR moves onto main or master once the one belo
       test-clone simulators (329 GB) deleted. (10-05, done 10-30)
 - [x] Xcode 27.1 recommended settings, and the `nilIfBlank` isolation error. (10-30)
 - [x] Old local and merged branches cleaned up. (10-26, done 10-30)
+- [x] The hero's high and low came from OpenWeather's current reading (the spread across nearby
+      stations right now) and today's forecast only covered the hours left. Both now show the
+      whole day from the forecast. (10-30)
+- [x] Fresh README, App Store and Play Store screenshots. (10-30)
