@@ -126,8 +126,6 @@ private fun DayDetailContent(
                 items(day.hourlySlots) { slot -> HourlySlotColumn(slot = slot) }
             }
         } else {
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()

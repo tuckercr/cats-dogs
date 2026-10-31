@@ -86,7 +86,6 @@ Merge in this order; each stacked PR moves onto main or master once the one belo
 ## Small fixes found while taking screenshots (10-30)
 
 - [ ] City search shows the same suggestion twice ("Amsterdam, North Holland, NL"). Drop duplicates.
-- [ ] The day detail sheet has a thin empty row between the day's header and 12 AM.
 - [ ] On the day clocks fall back, the day detail lists "1 AM" twice. That's right, but the
       second could say so (for example "1 AM PST").
 - [ ] My Location shows the reverse-geocoded neighbourhood ("Horinouchi" for central Tokyo), not
@@ -127,6 +126,7 @@ Merge in this order; each stacked PR moves onto main or master once the one belo
 
 ## Done
 
+- [x] The day detail's empty row under the header (two dividers in a row) is gone. (10-30)
 - [x] iOS signing: FangJet LLC's team (`3V3NR8HP58`), your iPhone registered, and a Release archive
       that exports with App Store signing. (10-30)
 - [x] Update prompts: `ios_`/`android_min_supported_version` block the app until it's updated,
