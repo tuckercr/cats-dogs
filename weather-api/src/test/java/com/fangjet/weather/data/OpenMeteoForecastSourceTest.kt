@@ -51,6 +51,22 @@ class OpenMeteoForecastSourceTest {
     }
 
     @Test
+    fun `today's high and low cover the whole day, not just the hours left`() {
+        // 24 hours peaking at 2 PM (25°) with a 2 AM low (5°); now is 9 PM.
+        val temps = List(24) { hour -> 15.0 + 10.0 * Math.sin((hour - 8) * Math.PI / 12) }
+        val r = response(24)
+        val response = r.copy(hourly = r.hourly.copy(temperature = temps))
+        val now = dayStart + 21 * 3600
+
+        val today = OpenMeteoForecastSource.toDayForecasts(response, WeatherUnits.METRIC, now).first()
+
+        assertEquals("9 PM", today.hourlySlots.first().timeLabel)
+        assertEquals(temps.max(), today.tempMax, 0.0001)
+        assertEquals(temps[14], today.tempMax, 0.0001)
+        assertEquals(temps.min(), today.tempMin, 0.0001)
+    }
+
+    @Test
     fun `groups and labels hours in the city's own timezone`() {
         // UTC+10: midnight UTC is 10 AM local on the same date, and 14:00 UTC is midnight next day.
         val days = OpenMeteoForecastSource.toDayForecasts(response(24, offset = 36_000), WeatherUnits.METRIC, dayStart)
