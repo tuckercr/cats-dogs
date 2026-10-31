@@ -1,9 +1,13 @@
 package com.fangjet.weather.domain
 
+import kotlinx.serialization.Serializable
+
 /**
- * The air quality right now: an index on the scale the city uses (Europe's, or the US one
- * everywhere else), and the pollutant behind it. Same rules as iOS's `AirQuality`.
+ * An hour's air quality: an index on the scale the city uses (Europe's, or the US one everywhere
+ * else), and the pollutant behind it. Same rules as iOS's `AirQuality`. Serializable, as it's
+ * cached with the forecast.
  */
+@Serializable
 data class AirQuality(
     val index: Int,
     val scale: Scale,
@@ -41,15 +45,11 @@ data class AirQuality(
     companion object {
         const val BANDS = 6
 
-        /** From this band up (US "Unhealthy", Europe's "Poor") an hour is no good for a walk. */
-        const val BAD_AIR_BAND = 3
-
-        /** Picks the scale for the city and the pollutant with the highest sub-index. Null without an index. */
+        /** Picks the pollutant with the highest sub-index on [scale]. Null without an index. */
         fun from(
-            timezone: String?,
+            scale: Scale,
             subIndices: (Scale) -> Pair<Int?, List<Pair<Pollutant, Int?>>>,
         ): AirQuality? {
-            val scale = Scale.forTimeZone(timezone)
             val (index, pollutants) = subIndices(scale)
             if (index == null) return null
             // The first listed wins a tie.

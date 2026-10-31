@@ -34,9 +34,16 @@ object AppConfigModule {
     @Singleton
     fun provideDefaultZoneId(): ZoneId = ZoneId.systemDefault()
 
-    /** Remote Config `open_meteo_enabled`, read on every forecast fetch (foreground and workers). */
+    /**
+     * Remote Config `open_meteo_enabled` and `air_quality_enabled`, read on every forecast fetch
+     * (foreground and workers).
+     */
     @Provides
     @Singleton
     fun provideForecastSourcePolicy(remoteConfig: RemoteConfigRepository): ForecastSourcePolicy =
-        ForecastSourcePolicy { remoteConfig.openMeteoEnabled() }
+        object : ForecastSourcePolicy {
+            override fun openMeteoEnabled() = remoteConfig.openMeteoEnabled()
+
+            override fun airQualityEnabled() = remoteConfig.airQualityEnabled()
+        }
 }

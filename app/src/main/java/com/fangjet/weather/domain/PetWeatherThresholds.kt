@@ -28,6 +28,11 @@ data class PetWeatherThresholds(
     val icyPavementC: Double = 0.0,
     /** Pavement at or above this (about 135 F) is dangerously hot: worse than [hotPavementC]. */
     val dangerousPavementC: Double = 57.2,
+    /**
+     * Hours in this air quality band or worse aren't suggested for a walk: 3 is US "Unhealthy" and
+     * Europe's "Poor" (`AirQuality.band`, 0 to 5).
+     */
+    val badAirBand: Int = 3,
 ) {
     companion object {
         /** The compiled-in values; also the fallback for anything invalid. */
@@ -50,6 +55,9 @@ data class PetWeatherThresholds(
         val PET_HOT_RANGE = 20.0..45.0
         val PET_COLD_RANGE = -20.0..10.0
 
+        /** 0 would rule out every hour, even in good air. */
+        val BAD_AIR_BAND_RANGE = 1..5
+
         /**
          * Builds thresholds from raw (possibly missing or bad) values. A null or out-of-range
          * value falls back to its default; then any pair that is not strictly ordered
@@ -71,6 +79,7 @@ data class PetWeatherThresholds(
             walkHoursEnd: Int? = null,
             petHotC: Double? = null,
             petColdC: Double? = null,
+            badAirBand: Int? = null,
         ): PetWeatherThresholds {
             val d = DEFAULT
             val comfortMin = comfortMinC.inRangeOr(COMFORT_MIN_RANGE, d.comfortMinC)
@@ -98,6 +107,7 @@ data class PetWeatherThresholds(
                 walkHoursEnd = if (hoursOrdered) hoursEnd else d.walkHoursEnd,
                 petHotC = if (petOrdered) hot else d.petHotC,
                 petColdC = if (petOrdered) cold else d.petColdC,
+                badAirBand = badAirBand.inRangeOr(BAD_AIR_BAND_RANGE, d.badAirBand),
             )
         }
 
