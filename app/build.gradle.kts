@@ -26,6 +26,34 @@ val localProps = Properties().also { props ->
 }
 val owmApiKey: String = localProps.getProperty("OWM_API_KEY") ?: ""
 
+// What a release APK or bundle would be missing. Without the key the app shows no weather, and
+// without the keystore it's unsigned, which Play won't take, so packaging a release stops here
+// (before R8) instead of quietly producing one. Debug builds, tests and lint don't need either.
+val releaseProblems: List<String> =
+    buildList {
+        if (owmApiKey.isBlank()) add("OWM_API_KEY is missing, so the app would show no weather")
+        val keystorePath = localProps.getProperty("KEYSTORE_PATH")
+        when {
+            keystorePath.isNullOrBlank() -> add("KEYSTORE_PATH is missing, so the release would be unsigned")
+            !file(keystorePath).exists() ->
+                add("KEYSTORE_PATH points to a file that doesn't exist ($keystorePath)")
+        }
+        listOf("KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD")
+            .filter { localProps.getProperty(it).isNullOrBlank() }
+            .forEach { add("$it is missing") }
+    }
+
+gradle.taskGraph.whenReady {
+    val packagesRelease = allTasks.any { it.project == project && it.name in setOf("packageRelease", "packageReleaseBundle") }
+    if (packagesRelease && releaseProblems.isNotEmpty()) {
+        throw GradleException(
+            "Can't build a release, local.properties isn't complete:\n" +
+                releaseProblems.joinToString("\n") { "  - $it" } +
+                "\nSee the README's Release builds section.",
+        )
+    }
+}
+
 android {
     namespace = "com.fangjet.weather"
     compileSdk = 37
