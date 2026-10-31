@@ -4,13 +4,11 @@ Open ideas, decisions and loose ends for Sunny & Misty, both apps. The same file
 repos (cats-dogs-iOS and cats-dogs); keep them in step. Dates are when the item came up (2026).
 Finished items move to Done at the bottom.
 
-## Open PRs (10-30)
+## Open PRs (10-31)
 
-Merge in this order; each stacked PR moves onto main or master once the one below it merges.
-
-- iOS: #34 tile gaps and empty state, then #35 air quality; #36 Xcode settings and the
-  `nilIfBlank` fix stands alone.
-- Android: #94 tile gaps, then #95 air quality; #96 release build checks stands alone.
+- iOS: #35 air quality, the high/low fix, README and fresh screenshots. #34 and #36 are merged.
+- Android: #94 tile gaps, then #95 air quality, the high/low fix, README and Play Store
+  screenshots. #96 is merged.
 
 ## Do soon
 
